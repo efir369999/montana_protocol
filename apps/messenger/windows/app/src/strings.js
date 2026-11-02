@@ -55,6 +55,11 @@ const RU = {
   "The identity could not be stored on this device": "Личность не удалось сохранить на устройстве",
   "Nothing was created. Unlock the device and try again — an identity that is not stored cannot be opened at the next launch.":
     "Ничего не создано. Разблокируйте устройство и попробуйте снова — несохранённую личность не открыть при следующем запуске.",
+  "This computer keeps another person's data": "На этом компьютере есть данные другого человека",
+  "Nothing was created and nothing was changed: the words, the conversations and the keys of the person who sat here stay as they are. A new person needs another seat of Montana.":
+    "Ничего не создано и не изменено: слова, переписки и ключи прежнего человека остались нетронутыми. Новой личности нужно другое место в Montana.",
+  "This computer keeps another person's data: nothing was changed. A new person needs another seat of Montana.":
+    "На этом компьютере есть данные другого человека: ничего не изменено. Новой личности нужно другое место в Montana.",
   "Got it": "Понятно",
   "First name": "Имя",
   "Done": "Готово",

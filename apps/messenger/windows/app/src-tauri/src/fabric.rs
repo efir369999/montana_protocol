@@ -320,14 +320,15 @@ fn write_chain(st: &State) {
     let _ = std::fs::write(dir.join("wallet-fabric.jsonl"), body);
 }
 
-fn pair(st: &mut State, conv: &str, secret: &[u8]) -> Option<[u8; 32]> {
+/// The pipe's hash: the fingerprint material it keeps for good (PipeKey::kept), the same before the floor and after.
+fn pair(st: &mut State, conv: &str, key: &crate::pipekey::PipeKey) -> Option<[u8; 32]> {
     if let Some(p) = st.pairs.get(conv) {
         return Some(*p);
     }
-    if secret.len() != 32 {
+    if !key.is_whole() {
         return None;
     }
-    let p = fingerprint_material(secret);
+    let p = key.kept().fingerprint;
     st.pairs.insert(conv.to_string(), p);
     Some(p)
 }
@@ -350,7 +351,7 @@ pub fn spoke(conv: &str) {
 /// A LIVE ACT CAME FROM A CORRESPONDENT: when this machine spoke to them within the last half of τ₂ and gave them no testimony
 /// this segment, a testimony is made ready -- the window it heard them in and its own ceiling -- for the walk to sign and give by
 /// the pair's own road. A person who only writes is given none.
-pub fn heard(conv: &str, secret: &[u8]) {
+pub fn heard(conv: &str, key: &crate::pipekey::PipeKey) {
     if conv.is_empty() || crate::groups::is_group(conv) {
         return;
     }
@@ -364,7 +365,7 @@ pub fn heard(conv: &str, secret: &[u8]) {
     if st.kept.given.get(conv) == Some(&segment(w)) {
         return crate::trace_line("fabric_tx given this segment"); // one a segment to one correspondent (Canon)
     }
-    let Some(named) = pair(st, conv, secret) else { return };
+    let Some(named) = pair(st, conv, key) else { return };
     let Some(c) = st.ceiling else { return crate::trace_line("fabric_tx held: this life has not read its own levels yet") };
     let t = Testimony { suite: SUITE, addressee: named, window: w, ceiling: c.clamp(0, 255) as u8 };
     st.kept.given.insert(conv.to_string(), segment(w));
@@ -420,7 +421,7 @@ fn verify(pk: &[u8], msg: &[u8], sig: &[u8]) -> bool {
 /// its length, what it states of itself, that it names this correspondence, that its window stands no more than one window past
 /// this machine's reading and inside the last τ₂, that its signature holds under the key it came with. One a segment from one key
 /// is kept, the one stating the lower ceiling.
-pub fn received(payload: &str, conv: &str, secret: &[u8]) {
+pub fn received(payload: &str, conv: &str, pipe: &crate::pipekey::PipeKey) {
     let refuse = |why: &str| crate::trace_line(&format!("fabric_refused why={why}"));
     let Ok(o) = serde_json::from_str::<Value>(payload) else { return refuse("unreadable") };
     if o.get("t").is_none() {
@@ -437,7 +438,7 @@ pub fn received(payload: &str, conv: &str, secret: &[u8]) {
     let w = window_now();
     let mut g = STATE.lock().unwrap();
     let Some(st) = g.as_mut() else { return };
-    if pair(st, conv, secret) != Some(t.addressee) {
+    if pair(st, conv, pipe) != Some(t.addressee) {
         drop(g);
         return refuse("addressee");
     }

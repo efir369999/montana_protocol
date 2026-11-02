@@ -239,7 +239,7 @@ pub fn send(d: &Desk, store: &Store, chat: &str, name: &str, qt: &str, qm: &str)
 pub fn ask(d: &Desk, pack: &str) -> bool {
     let b = load(d.vault);
     // the conversation the set's passport came on: the one who handed it over is asked there
-    let Some(chat) = b.givers.get(pack).cloned().filter(|c| d.book.secret(c).is_some()) else { return false };
+    let Some(chat) = b.givers.get(pack).cloned().filter(|c| d.book.holds(c)) else { return false };
     say(d, &chat, &json!({ "t": "ask", "p": pack }));
     true
 }

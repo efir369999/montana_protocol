@@ -9,7 +9,7 @@
 
 use crate::groups::{self, Group};
 use crate::post::Desk;
-use crate::wire::{self, b64, body_key, conv_w, hex, sha, sub_id, unb64};
+use crate::wire::{self, b64, hex, sha, sub_id, unb64};
 use crate::{abi, aesgcm, crypto, doors};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -1018,8 +1018,9 @@ fn close_lanes(twin: &str) {
 
 /// One lane long-polled while it lives (iOS fetchSignals on the room's set): its words, opened, go to the room.
 fn listen_lane(name: &str, secret: &[u8], twin: &str, stop: &AtomicBool) {
+    let key = crate::pipekey::PipeKey::new(secret); // a room's lane stands on the room's own key and is never floored
     while !stop.load(Ordering::SeqCst) {
-        let cw = conv_w(secret, wire::day());
+        let cw = key.conv_w(wire::day());
         let dev = hex(&sha(&[b"mt-lane-dev\0", format!("windows-room-{}", std::process::id()).as_bytes(), b"\0", cw.as_bytes()])[..8]);
         let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "wait": 10, "dev": dev });
         let mut any = false;
@@ -1032,7 +1033,7 @@ fn listen_lane(name: &str, secret: &[u8], twin: &str, stop: &AtomicBool) {
             any = true;
             for e in v.as_ref().and_then(|v| v["envs"].as_array()).cloned().unwrap_or_default() {
                 let Some(e) = e.as_str().filter(|e| *e != "box") else { continue };
-                if let Some((_, epoch, bytes)) = crate::presence::Presence::open(secret, e, None) {
+                if let Some((_, epoch, bytes)) = crate::presence::Presence::open(&key, e, None) {
                     if epoch == "room" {
                         got.push(bytes);
                     }
@@ -1099,9 +1100,10 @@ pub fn send(twin: &str, seat: &str, c: &str, gen: i64, sdp: Option<String>, ice:
 
 /// twin ‖ 0 ‖ «room» ‖ 0 ‖ raw DEFLATE of the word, sealed under the lane's minute key (iOS postSignal), at every living door.
 fn post_lane(twin: &str, secret: &[u8], payload: &[u8]) -> bool {
+    let key = crate::pipekey::PipeKey::new(secret);
     let plain = [twin.as_bytes(), &[0], b"room", &[0], &miniz_oxide::deflate::compress_to_vec(payload, 6)].concat();
-    let Some(env) = crypto::seal(&body_key(secret, wire::minute()), &plain) else { return false };
-    let cw = conv_w(secret, wire::day());
+    let Some(env) = crypto::seal(&key.body_key(wire::minute()), &plain) else { return false };
+    let cw = key.conv_w(wire::day());
     let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "env": b64(&env) });
     let mut ok = false;
     for door in doors::all() {

@@ -7,6 +7,7 @@
 
 use crate::abi::*;
 use crate::book::{Book, Msg};
+use crate::pipekey::PipeKey;
 use crate::wire::{self, hex, hmac, sha, unb64};
 use crate::{crypto, doors, media, seed};
 use chacha20poly1305::aead::{Aead, KeyInit, Payload};
@@ -57,6 +58,11 @@ impl Drop for Keys {
 }
 
 pub fn keys(words: &str) -> Option<Keys> {
+    // THE FROZEN VECTORS FIRST (iOS MontanaArchive.deriveKeys): a pipe that would not derive as the Canon's does writes no
+    // history and no head (pipekey::agrees says so in the trace)
+    if !crate::pipekey::agrees() {
+        return None;
+    }
     let c = CString::new(seed::normal(words)).ok()?;
     let mut k = Keys { entropy: [0; 32], hk: [0; 32], mk: [0; 32], owner: [0; 32] };
     // SAFETY: a NUL-terminated phrase and 32-byte buffers
@@ -468,9 +474,12 @@ pub(crate) fn arc_mid(at: u64, mine: bool, text: &str) -> String {
     format!("arc:{}", hex(&sha(&[format!("{at}|{}|{text}", if mine { 1 } else { 0 }).as_bytes()])[..12]))
 }
 
-/// THE COPY LAID BACK (iOS MontanaBackup.restore + MontanaArchive.restore): the heads give the pipes back («s:» the secret,
-/// «n:» the name, «x:» closed -- the last head decides), the blocks are kept in this machine's archive, the letters become rows;
-/// an attachment the copy carries is kept beside its row.
+/// THE COPY LAID BACK (iOS MontanaBackup.restore + MontanaArchive.restore): the heads give the pipes back («s:» the pipe in
+/// either form, the secret's 32 bytes or the floor's 249, read in the form of the book's day; «n:» the name, «x:» closed -- the
+/// last head decides, and of two heads of one pipe the one further down the walk: a copy made before the erase day and laid
+/// back after it gives the floor, never the secret), the blocks are kept in this machine's archive, the letters become rows;
+/// an attachment the copy carries is kept beside its row. The heads are taken in the order of their writers' moments (iOS
+/// reads them in the order of the log); one moment keeps the log's order.
 pub fn restore(archive: &Archive, book: &Book, store: &media::Store, faces: Option<&media::Store>, records: &[Record]) -> Restored {
     let mut done = Restored::default();
     // a feed of Saved Messages held here is the truth -- its deletions too: the blocks are kept, no row laid (iOS restoreFromArchive)
@@ -484,15 +493,20 @@ pub fn restore(archive: &Archive, book: &Book, store: &media::Store, faces: Opti
     let files: std::collections::HashMap<&str, &[u8]> = records.iter().filter(|r| r.kind == KIND_STORE).map(|r| (r.name.as_str(), r.data.as_slice())).collect();
     let blocks: Vec<(&Record, Vec<Item>)> = records.iter().filter(|r| r.kind == KIND_BLOCK).map(|r| (r, archive.open_block(&r.data))).collect();
     // the heads first: which correspondence each SHA-256 of a reference is, and its name
-    type Head = (Option<Vec<u8>>, bool, Option<String>);
+    type Head = (Option<PipeKey>, bool, Option<String>);
     let mut heads: std::collections::HashMap<[u8; 32], Head> = Default::default();
     let mut ordered: Vec<&Item> = blocks.iter().flat_map(|(_, it)| it.iter()).filter(|i| i.dir == HEAD_DIR).collect();
     ordered.sort_by_key(|i| i.at);
+    let day = book.restore_day();
     for i in ordered {
         let s = String::from_utf8_lossy(&i.content).into_owned();
         let h = heads.entry(i.conv).or_default();
-        if let Some(sec) = s.strip_prefix("s:").and_then(unb64).filter(|x| x.len() == 32) {
-            h.0 = Some(sec);
+        if let Some(key) = PipeKey::from_archive_head(&s, day) {
+            // the last head decides (iOS); with MONTANA_D3_SAME_PIPE, of two heads of one pipe the one further down the walk
+            h.0 = Some(match h.0.take() {
+                Some(had) if crate::rules::get().d3_same_pipe && had.same_pipe(&key) => PipeKey::forward(&had, &key),
+                _ => key,
+            });
             h.1 = false;
         } else if s.starts_with("x:") {
             h.1 = true;
@@ -501,15 +515,15 @@ pub fn restore(archive: &Archive, book: &Book, store: &media::Store, faces: Opti
         }
     }
     let mut refs: std::collections::HashMap<[u8; 32], String> = Default::default();
-    for (conv, (secret, closed, name)) in &heads {
-        let Some(secret) = secret else { continue };
-        let r = wire::reference(secret);
+    for (conv, (key, closed, name)) in &heads {
+        let Some(key) = key else { continue };
+        let Some(r) = key.reference() else { continue };
         if sha(&[r.as_bytes()]) != *conv {
             continue; // a head that does not belong to its folder
         }
         // A PIPE CLOSED AT THE OTHER END STANDS BY ITS NAME, NEVER ANSWERED (iOS restore: «x:» -- the name, no revival): its letters
-        // are the person's history all the same, kept and laid; a secret the book refused to keep keeps its letters too
-        if !*closed && book.establish(secret).is_none() {
+        // are the person's history all the same, kept and laid; a pipe the book refused to keep keeps its letters too
+        if !*closed && book.establish(key).is_none() {
             continue;
         }
         let fresh = book.chat(&r).is_none();
@@ -710,9 +724,9 @@ pub fn archive_media(mid: &str, text: &str) -> String {
 /// box's term and never confirmed (it stays for the others); the newest copy of each writer fetched by its road, checked
 /// against its digest, read. The copies' records, newest writer first.
 pub fn take_light(words: &str, twin: &str, dev: &str, entropy: &[u8]) -> Vec<Vec<Record>> {
-    let Some(light) = seed::role_seed(words, b"mt-keep-light") else { return vec![] };
+    let Some(light) = seed::role_seed(words, b"mt-keep-light").map(|s| PipeKey::new(&s)) else { return vec![] };
     let w0 = wire::day();
-    let subs: Vec<String> = ((w0 - 8)..=(w0 + 1)).map(|d| wire::conv_w(&light, d)).collect();
+    let subs: Vec<String> = ((w0 - 8)..=(w0 + 1)).map(|d| light.conv_w(d)).collect();
     // this machine's name under each label rides the page as iOS 2306 sends it; the light pipe is never confirmed
     let page = json!({ "subs": subs, "sids": subs.iter().map(|c| wire::sub_id(c, twin)).collect::<Vec<_>>(),
                        "devs": subs.iter().map(|c| wire::sub_id(c, dev)).collect::<Vec<_>>() });
@@ -750,7 +764,7 @@ pub fn take_light(words: &str, twin: &str, dev: &str, entropy: &[u8]) -> Vec<Vec
 /// (never this person's own reference: the node keeps a letter from the sid that laid it, and every device of the words reads
 /// under that reference). Generation `g`; true when a door boxed the letter.
 pub fn lay_light(words: &str, archive: &Archive, g: u64, card: Option<Record>) -> bool {
-    let Some(light) = seed::role_seed(words, b"mt-keep-light") else { return false };
+    let Some(light) = seed::role_seed(words, b"mt-keep-light").map(|s| PipeKey::new(&s)) else { return false };
     let mut records: Vec<Record> = archive.blocks().into_iter().map(|b| Record { kind: KIND_BLOCK, name: String::new(), data: b }).collect();
     if records.is_empty() {
         return false;
@@ -805,13 +819,13 @@ pub(crate) fn fetch_road_into(o: &Value, store: &media::Store, mid: &str) -> Opt
 }
 
 /// One letter into a derived pipe (iOS MTNodeWire.knockLetter): mid‖0 words‖0‖0‖0 padded to one envelope, no author field,
-/// silent; the first door that boxes it ends the walk.
-pub(crate) fn knock(secret: &[u8], sender: &str, text: &str) -> bool {
-    knock_as(secret, sender, text, true)
+/// silent; the first door that boxes it ends the walk. A derived pipe stands on the seed and is never floored.
+pub(crate) fn knock(key: &PipeKey, sender: &str, text: &str) -> bool {
+    knock_as(key, sender, text, true)
 }
 
 /// The same knock, silent or loud: a loud one rings the keeper's screen (iOS MTKeeping.knock silent: false).
-pub(crate) fn knock_as(secret: &[u8], sender: &str, text: &str, silent: bool) -> bool {
+pub(crate) fn knock_as(key: &PipeKey, sender: &str, text: &str, silent: bool) -> bool {
     let Some(r) = crypto::random(16) else { return false };
     let h = hex(&r).to_uppercase();
     let mid = format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32]);
@@ -820,9 +834,9 @@ pub(crate) fn knock_as(secret: &[u8], sender: &str, text: &str, silent: bool) ->
         return false;
     }
     body.resize(wire::ENVELOPE, 0);
-    let cw = wire::conv_w(secret, wire::day());
+    let cw = key.conv_w(wire::day());
     for door in doors::write_order() {
-        let Some(env) = wire::seal(&wire::body_key(secret, wire::minute()), &body) else { return false };
+        let Some(env) = wire::seal(&key.body_key(wire::minute()), &body) else { return false };
         let req = json!({ "conv": cw, "from_id": wire::sub_id(&cw, sender), "mid": mid, "env": wire::b64(&env), "silent": silent });
         if doors::post_at(&door, "/wake", &req, crate::http::POST_DEADLINE_MS).0 == 200 {
             return true;
@@ -920,7 +934,7 @@ mod tests {
         let book = Book::new(crate::vault::Vault::at(&root.join("v")).unwrap());
         let store = media::Store::at(&root.join("m")).unwrap();
         let secret = vec![7u8; 32];
-        let r = book.establish(&secret).unwrap();
+        let r = book.establish(&PipeKey::new(&secret)).unwrap();
         book.open(&r, "Боб", false);
         assert!(a.append(&r, HEAD_DIR, 100, format!("s:{}", b64(&secret)).as_bytes()));
         assert!(a.append(&r, HEAD_DIR, 101, "n:Боб".as_bytes()));
@@ -963,7 +977,7 @@ mod tests {
         let words = seed::generate().unwrap();
         let a = Archive::new(&root.join("a"), keys(&words).unwrap(), [1; 16]);
         let secret = vec![5u8; 32];
-        let r = wire::reference(&secret);
+        let r = PipeKey::new(&secret).reference().unwrap();
         assert!(a.append(&r, HEAD_DIR, 100, format!("s:{}", b64(&secret)).as_bytes()));
         assert!(a.append(&r, HEAD_DIR, 101, "n:Боб".as_bytes()));
         assert!(a.append(&r, 1, 102, "привет".as_bytes()));
@@ -978,7 +992,7 @@ mod tests {
         assert_eq!(items.iter().filter(|i| i.dir != HEAD_DIR).count(), 2);
         // a new machine, the same words: the copy gives the pipe, the name and the letters back
         let v = crate::vault::Vault::at(&root.join("v")).unwrap();
-        let book = Book::new(v);
+        let book = Book::new_on(v, std::sync::Arc::new(|| crate::pipekey::ERASE_DAY - 1));
         let store = media::Store::at(&root.join("m")).unwrap();
         let file = make_copy(&a, &Book::new(crate::vault::Vault::at(&root.join("v0")).unwrap()), &store, None).unwrap();
         let b = Archive::new(&root.join("b"), keys(&words).unwrap(), [2; 16]);
@@ -987,7 +1001,7 @@ mod tests {
         assert_eq!(done, Restored { chats: 1, records: 2, media: 0, faces: 1 });
         assert_eq!(faces.get(&r).as_deref(), Some(&b"their face"[..]), "the face rides with the letters");
         assert_eq!(book.chat(&r).unwrap().face_at, 1);
-        assert_eq!(book.secret(&r), Some(secret));
+        assert_eq!(book.key(&r), Some(PipeKey::new(&secret)), "before the erase day the head gives the secret back");
         let c = book.chat(&r).unwrap();
         assert_eq!((c.name.as_str(), c.msgs.len(), c.msgs[0].text.as_str(), c.msgs[1].mine), ("Боб", 2, "привет", true));
         assert_eq!(restore(&b, &book, &store, Some(&faces), &read_copy(&keys(&words).unwrap().entropy, &file).unwrap()), Restored::default(), "twice is once");
@@ -1001,7 +1015,7 @@ mod tests {
         let words = seed::generate().unwrap();
         let a = Archive::new(&root.join("a"), keys(&words).unwrap(), [1; 16]);
         let (open, closed) = (vec![5u8; 32], vec![6u8; 32]);
-        let (r, rc) = (wire::reference(&open), wire::reference(&closed));
+        let (r, rc) = (PipeKey::new(&open).reference().unwrap(), PipeKey::new(&closed).reference().unwrap());
         assert!(a.append(&r, HEAD_DIR, 100, format!("s:{}", b64(&open)).as_bytes()));
         assert!(a.append(&r, 1, 102, "привет".as_bytes()));
         assert!(a.append(&r, 0, 103, "и тебе".as_bytes()));
@@ -1016,7 +1030,7 @@ mod tests {
         let file = make_copy(&a, &Book::new(crate::vault::Vault::at(&root.join("v0")).unwrap()), &store, None).unwrap();
         // the living feed: the same letters under their wire names, one deleted here, nothing of the closed pipe
         let book = Book::new(crate::vault::Vault::at(&root.join("v")).unwrap());
-        assert!(book.establish(&open).is_some());
+        assert!(book.establish(&PipeKey::new(&open)).is_some());
         let (m1, m2, m3) = ("t102000-A".to_string(), "t103000-B".to_string(), "t104000-C".to_string());
         book.edit(&r, |c| {
             c.msgs.push(Msg { mid: m1.clone(), text: "привет".into(), mine: false, at: 102_000, ..Default::default() });
@@ -1031,7 +1045,7 @@ mod tests {
         // the closed pipe stands by its name with its letters, never answered; the unnamed folder is kept whole in the archive
         let gone = book.chat(&rc).expect("the closed pipe's history stands");
         assert_eq!((gone.name.as_str(), gone.msgs.len()), ("Ушедший", 1));
-        assert!(book.secret(&rc).is_none(), "a closed pipe is not revived");
+        assert!(!book.holds(&rc), "a closed pipe is not revived");
         let unnamed = hex(&sha(&[b"grp:someone"]));
         assert!(b.folders().contains(&unnamed), "the block no head names is kept under its conversation's SHA-256");
         let _ = std::fs::remove_dir_all(&root);
@@ -1043,7 +1057,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         let words = seed::generate().unwrap();
         let a = Archive::new(&root.join("a"), keys(&words).unwrap(), [1; 16]);
-        let (ra, rb) = (wire::reference(&[5u8; 32]), wire::reference(&[6u8; 32]));
+        let (ra, rb) = (PipeKey::new(&[5u8; 32]).reference().unwrap(), PipeKey::new(&[6u8; 32]).reference().unwrap());
         for (r, said) in [(&ra, "с Анной"), (&rb, "с Борисом")] {
             assert!(a.append(r, HEAD_DIR, 100, format!("s:{}", b64(&[0u8; 32])).as_bytes()));
             assert!(a.append(r, 1, 102, said.as_bytes()));
@@ -1078,6 +1092,77 @@ mod tests {
         let v = crate::vault::Vault::at(&root.join("v")).unwrap();
         assert!(plan.save(&v));
         assert_eq!(Plan::load(&v), plan, "the plan is kept on this computer");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// A COPY MADE BEFORE THE ERASE DAY, LAID BACK ON OR AFTER IT (the owner's word 25.10.2026 19:1x): its 32-byte head gives the
+    /// floor at once -- the book holds no secret, nothing on its disk holds one, the letters all come back -- and a copy laid on a
+    /// book that already holds a later floor never rolls it back; «s» then «f» gives the floor, «f» then a later 32-byte head gives
+    /// the floor of the later head read on the day; a head of 249 bytes restores alone.
+    #[test]
+    fn an_old_copy_laid_back_after_the_erase_day_gives_the_floor_and_never_the_secret() {
+        use crate::pipekey::{ERASE_DAY, FLOOR_LAG};
+        let root = std::env::temp_dir().join(format!("montana-history-floor-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let words = seed::generate().unwrap();
+        let a = Archive::new(&root.join("a"), keys(&words).unwrap(), [1; 16]);
+        let secret: Vec<u8> = (0..32).collect();
+        let pipe = PipeKey::new(&secret);
+        let r = pipe.reference().unwrap();
+        // the copy of 31.10: the head as every build before 2311 wrote it
+        assert!(a.append(&r, HEAD_DIR, 100, format!("s:{}", b64(&secret)).as_bytes()));
+        assert!(a.append(&r, HEAD_DIR, 101, "n:Боб".as_bytes()));
+        assert!(a.append(&r, 1, 102, "привет".as_bytes()));
+        assert!(a.append(&r, 0, 103, "и тебе".as_bytes()));
+        let store = media::Store::at(&root.join("m")).unwrap();
+        let file = make_copy(&a, &Book::new_on(crate::vault::Vault::at(&root.join("v0")).unwrap(), std::sync::Arc::new(|| ERASE_DAY - 3)), &store, None).unwrap();
+        let recs = read_copy(&keys(&words).unwrap().entropy, &file).unwrap();
+        for d in [ERASE_DAY, ERASE_DAY + 2] {
+            let v = crate::vault::Vault::at(&root.join(format!("v{d}"))).unwrap();
+            let book = Book::new_on(v.clone(), std::sync::Arc::new(move || d));
+            let b = Archive::new(&root.join(format!("b{d}")), keys(&words).unwrap(), [2; 16]);
+            let done = restore(&b, &book, &store, None, &recs);
+            assert_eq!((done.chats, done.records), (1, 2), "every letter comes back ({d})");
+            let k = book.key(&r).unwrap();
+            assert_eq!((k.holds_origin(), k.floor_day()), (false, Some(d - FLOOR_LAG)), "the floor of the day at once ({d})");
+            assert!(k.same_pipe(&pipe) && k.kept() == pipe.kept(), "the same pipe: its name, its safety number, its face ({d})");
+            let disk = v.get("pipeSecrets").unwrap_or_default();
+            assert!(!disk.windows(32).any(|w| w == secret.as_slice()), "no byte run of the secret on the disk ({d})");
+            assert!(!String::from_utf8_lossy(&disk).contains(&b64(&secret)), "nor its base64 ({d})");
+            // a book that already holds a later floor: the old copy laid again changes nothing
+            if d == ERASE_DAY + 2 {
+                let later = Book::new_on(v.clone(), std::sync::Arc::new(move || d));
+                assert_eq!(restore(&b, &later, &store, None, &recs), Restored::default());
+                assert_eq!(later.key(&r).unwrap().floor_day(), Some(d - FLOOR_LAG), "never rolled back");
+            }
+        }
+        // the folder's heads in the order written: «s» then «f» gives the floor even read before the erase day; «f» then a later
+        // 32-byte head is the later head read on the day, floored; a 249-byte head alone restores
+        let a2 = Archive::new(&root.join("a2"), keys(&words).unwrap(), [3; 16]);
+        let floor = String::from_utf8(pipe.floored(ERASE_DAY).archive_head()).unwrap();
+        assert!(a2.append(&r, HEAD_DIR, 200, format!("s:{}", b64(&secret)).as_bytes()));
+        assert!(a2.append(&r, HEAD_DIR, 201, floor.as_bytes()));
+        assert!(a2.append(&r, 1, 202, "после".as_bytes()));
+        let file2 = make_copy(&a2, &Book::new_on(crate::vault::Vault::at(&root.join("v1")).unwrap(), std::sync::Arc::new(|| ERASE_DAY)), &store, None).unwrap();
+        let recs2 = read_copy(&keys(&words).unwrap().entropy, &file2).unwrap();
+        let early = Book::new_on(crate::vault::Vault::at(&root.join("ve")).unwrap(), std::sync::Arc::new(|| ERASE_DAY - 1));
+        restore(&Archive::new(&root.join("be"), keys(&words).unwrap(), [4; 16]), &early, &store, None, &recs2);
+        assert_eq!(early.key(&r).unwrap().floor_day(), Some(ERASE_DAY - FLOOR_LAG), "«s» then «f»: the floor, the secret not taken back");
+        let a3 = Archive::new(&root.join("a3"), keys(&words).unwrap(), [5; 16]);
+        assert!(a3.append(&r, HEAD_DIR, 300, floor.as_bytes()));
+        assert!(a3.append(&r, HEAD_DIR, 301, format!("s:{}", b64(&secret)).as_bytes()));
+        let recs3 = read_copy(&keys(&words).unwrap().entropy, &make_copy(&a3, &early, &store, None).unwrap()).unwrap();
+        let late = Book::new_on(crate::vault::Vault::at(&root.join("vl")).unwrap(), std::sync::Arc::new(|| ERASE_DAY + 1));
+        restore(&Archive::new(&root.join("bl"), keys(&words).unwrap(), [6; 16]), &late, &store, None, &recs3);
+        assert_eq!(late.key(&r).unwrap().floor_day(), Some(ERASE_DAY + 1 - FLOOR_LAG), "«f» then a later «s»: the later head, floored on reading");
+        let a4 = Archive::new(&root.join("a4"), keys(&words).unwrap(), [7; 16]);
+        assert!(a4.append(&r, HEAD_DIR, 400, floor.as_bytes()));
+        assert!(a4.append(&r, 1, 401, "только пол".as_bytes()));
+        let recs4 = read_copy(&keys(&words).unwrap().entropy, &make_copy(&a4, &early, &store, None).unwrap()).unwrap();
+        let alone = Book::new_on(crate::vault::Vault::at(&root.join("va")).unwrap(), std::sync::Arc::new(|| ERASE_DAY));
+        let done = restore(&Archive::new(&root.join("ba"), keys(&words).unwrap(), [8; 16]), &alone, &store, None, &recs4);
+        assert_eq!((done.chats, done.records), (1, 1));
+        assert!(alone.key(&r).unwrap().same_pipe(&pipe), "a floor head alone gives the pipe back");
         let _ = std::fs::remove_dir_all(&root);
     }
 }

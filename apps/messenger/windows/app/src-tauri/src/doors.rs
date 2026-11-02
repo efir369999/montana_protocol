@@ -147,7 +147,7 @@ fn learn() {
     let known: Vec<String> = MACHINES.lock().unwrap().0.iter().flat_map(|(_, d)| d.clone()).collect();
     let shipped: Vec<String> = ordered(&SHIPPED.iter().flat_map(|(_, d)| d.iter().map(|s| s.to_string())).collect::<Vec<_>>());
     for door in shipped.into_iter().chain(known) {
-        let Some((200, body)) = http::get(&format!("{door}/doors"), 8_000, 64 * 1024, false) else {
+        let Some((200, body)) = http::get_door(&format!("{door}/doors"), 8_000, 64 * 1024) else {
             failed(&door); // a door that did not answer is not the first asked next
             continue;
         };
@@ -204,7 +204,7 @@ pub fn wall() -> Vec<MachineSeen> {
             let door = d.clone();
             (i, d.clone(), std::thread::spawn(move || {
                 let t0 = std::time::Instant::now();
-                match http::get(&format!("{door}/doors"), 8_000, 64 * 1024, false) {
+                match http::get_door(&format!("{door}/doors"), 8_000, 64 * 1024) {
                     Some((200, _)) => Some(t0.elapsed().as_millis() as u64),
                     _ => None,
                 }

@@ -18,28 +18,33 @@ $pic = Join-Path $Root "montana-test.png"; $bmp.Save($pic, [System.Drawing.Imagi
 $doc = Join-Path $Root "Отчёт о проверке.txt"
 [IO.File]::WriteAllText($doc, ("Montana: файл через узлы.`r`n" * 2000), (New-Object Text.UTF8Encoding $false))
 
-$A = Start-Montana -DataDir "$Root\A"; Front-Montana -X 0 -Y 40 -Width 900 -Height 900
-$B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -Height 900
-"B picks a picture with a caption"
-Click-Named "Алиса Тест"
-Type-Into "Сообщение..." "Картинка с Windows"
-Files-Key; Pick-File $pic
-Says "Картинка с Windows"
-Says "Отправлено" 60
-"B picks a document"
-Files-Key; Pick-File $doc
-Says "Отчёт о проверке.txt" 30
-Start-Sleep -Seconds 3
-Snap "11-B-files"
+$A = $null; $B = $null
+try {
+    $A = Start-Montana -DataDir "$Root\A"; Front-Montana -X 0 -Y 40 -Width 900 -Height 900
+    $B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -Height 900
+    "B picks a picture with a caption"
+    Click-Named "Алиса Тест"
+    Type-Into "Сообщение..." "Картинка с Windows"
+    Files-Key; Pick-File $pic; Send-Tray
+    Says "Картинка с Windows"
+    Says "Отправлено" 60
+    "B picks a document"
+    Files-Key; Pick-File $doc; Send-Tray
+    Says "Отчёт о проверке.txt" 30
+    Start-Sleep -Seconds 3
+    Snap "11-B-files"
 
-"A receives both"
-Use-Montana $A; Front-Montana
-Click-Named "Борис Тест"
-Says "Картинка с Windows" 90
-Says "Отчёт о проверке.txt" 90
-Start-Sleep -Seconds 8
-Snap "12-A-files"
-$texts = Get-Texts
-if ($texts -contains "Не получено") { throw "a file was not received" }
-"done in $([int]((Get-Date) - $t0).TotalSeconds) s"
-Use-Montana $A; Stop-Montana; Use-Montana $B; Stop-Montana
+    "A receives both"
+    Use-Montana $A; Front-Montana
+    Click-Named "Борис Тест"
+    Says "Картинка с Windows" 90
+    Says "Отчёт о проверке.txt" 90
+    Start-Sleep -Seconds 8
+    Snap "12-A-files"
+    $texts = Get-Texts
+    if ($texts -contains "Не получено") { throw "a file was not received" }
+    "done in $([int]((Get-Date) - $t0).TotalSeconds) s"
+} finally {
+    try { Stop-Montana } catch {}
+    foreach ($p in @($A, $B)) { if ($p) { Use-Montana $p; try { Stop-Montana } catch {} } }
+}

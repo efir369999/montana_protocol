@@ -37,6 +37,8 @@ pub const TIME_CUT: i64 = 1_792_702_800;
 /// taken from the same second. The node's TX_ONLINE_CUT, 26.10.2026 00:00 MSK.
 pub const ONLINE_CUT: i64 = 1_792_962_000;
 pub const MINT_FRESH: i64 = 120;
+/// A client lays no MINT from this node second (fold-9, decision 362 a): only the consensus core coins a window.
+pub const MINT_STOP: i64 = 1_793_361_600;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
@@ -107,11 +109,6 @@ pub fn verify(pk: &[u8], msg: &[u8], sig: &[u8]) -> bool {
 
 pub fn key_tag(pk: &[u8]) -> String {
     hex(&sha(&[pk]))
-}
-
-/// The pair's tag: HMAC-SHA-256 under the pipe's secret -- its two ends know it, no one else does.
-pub fn pair_tag(secret: &[u8]) -> [u8; 32] {
-    hmac(secret, b"mt-coin-pair-v1")
 }
 
 /// The blind of a SEND: HMAC-SHA-256 under the pair's secret over ASCII mt-coin-blind and the SEND's nonce (section 1).
@@ -437,7 +434,7 @@ pub fn step(s: &St, p: &Rec, at: i64, sends: &std::collections::HashMap<String, 
         }
         Some(Kind::Mint) => {
             let (t0, t1) = (p.a as i64, p.b as i64);
-            if s.height == 0 || t0 < s.mint_end || t1 < t0 + 60 || at < t1 {
+            if MINT_STOP <= at || s.height == 0 || t0 < s.mint_end || t1 < t0 + 60 || at < t1 {
                 return (None, false);
             }
             // from the online cut the present seconds alone weigh it: the intervals never overlap, so the life's sum is not asked
@@ -586,6 +583,8 @@ mod tests {
         assert!(step(&on, &rec(3, Kind::Mint, 91, t0 as u64, t1 as u64, ZERO), t1 + 30, &sends, &settled).0.is_none());
         let m = step(&on, &rec(3, Kind::Mint, 90, t0 as u64, t1 as u64, ZERO), t1 + 30, &sends, &settled).0.unwrap();
         assert_eq!((m.proven - on.proven, m.mint_end), (ONLINE_CUT - born - 500 + 90, t1), "the life up to the cut, then the present");
+        // fold-9: the same otherwise valid MINT is refused from the stop, and the state does not move
+        assert_eq!(step(&m, &rec(3, Kind::Mint, 90, t0 as u64, t1 as u64, ZERO), MINT_STOP, &sends, &settled), (None, false));
         // a BURN: refused before the online cut, a SEND that names no one after it
         assert!(fields_hold(6, 40, &[0; 32], &[0; 32], &[0; 32], 0, 0) && !fields_hold(6, 40, &[0; 32], &[1; 32], &[0; 32], 0, 0));
         assert!(step(&s, &rec(3, Kind::Burn, 40, 0, 0, ZERO), ONLINE_CUT - 1, &sends, &settled).0.is_none());

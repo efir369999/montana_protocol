@@ -6,7 +6,8 @@
 
 use crate::book::Book;
 use crate::post::marks;
-use crate::wire::{self, b64, body_key, conv_w, sha, sub_id, unb64};
+use crate::pipekey::PipeKey;
+use crate::wire::{self, b64, sha, sub_id, unb64};
 use crate::{crypto, doors, media};
 use serde::Serialize;
 use serde_json::json;
@@ -286,10 +287,10 @@ impl Presence {
     /// THE LANE'S POST (iOS MontanaWakePush.signal): sealed under the pipe's key of this minute; to the door both sides
     /// compute when they named theirs within a minute, else to every door.
     pub fn post(&self, book: &Book, twin: &str, r: &str, word: &str) -> bool {
-        let Some(secret) = book.secret(r) else { return false };
+        let Some(key) = book.key(r) else { return false };
         let plain = [twin.as_bytes(), &[0], b"chat", &[0], &miniz_oxide::deflate::compress_to_vec(word.as_bytes(), 6)].concat();
-        let Some(env) = crypto::seal(&body_key(&secret, wire::minute()), &plain) else { return false };
-        let cw = conv_w(&secret, wire::day());
+        let Some(env) = crypto::seal(&key.body_key(wire::minute()), &plain) else { return false };
+        let cw = key.conv_w(wire::day());
         let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "env": b64(&env) });
         let named = self.peers.lock().unwrap().get(r).filter(|p| now() - p.doors_at < 60_000).map(|p| p.doors.clone());
         let all = doors::all();
@@ -310,14 +311,11 @@ impl Presence {
     }
 
     /// A word off the lane, opened: (sender twin, epoch, the inflated bytes).
-    pub fn open(secret: &[u8], env_b64: &str, at_ms: Option<i64>) -> Option<(String, String, Vec<u8>)> {
+    pub fn open(key: &PipeKey, env_b64: &str, at_ms: Option<i64>) -> Option<(String, String, Vec<u8>)> {
         let sealed = unb64(env_b64)?;
         let plain = match at_ms {
-            Some(at) => wire::open_boxed(&sealed, secret, at / 1000)?,
-            None => {
-                let w = wire::minute();
-                [w, w - 1, w + 1].iter().find_map(|m| wire::open(&body_key(secret, *m), &sealed))?
-            }
+            Some(at) => wire::open_boxed(&sealed, key, at / 1000)?,
+            None => wire::open_walked(&sealed, key, wire::minute())?.plain,
         };
         let a = plain.iter().position(|&b| b == 0)?;
         let b = a + 1 + plain[a + 1..].iter().position(|&b| b == 0)?;
@@ -499,12 +497,11 @@ impl Presence {
     /// THE SWEEP (iOS /signal-last): the newest lane word of every correspondence, yesterday's and today's -- stamps only.
     pub fn sweep(&self, book: &Book, twin: &str) -> bool {
         let mut q = vec![];
-        let mut secrets: HashMap<String, (String, Vec<u8>)> = HashMap::new();
+        let mut secrets: HashMap<String, (String, PipeKey)> = HashMap::new();
         let d0 = wire::day();
-        for r in book.refs() {
-            let Some(s) = book.secret(&r) else { continue };
+        for (r, s) in book.pipes() {
             for d in [d0 - 1, d0] {
-                let cw = conv_w(&s, d);
+                let cw = s.conv_w(d);
                 q.push(json!({ "conv": cw, "from_id": sub_id(&cw, twin) }));
                 secrets.insert(cw, (r.clone(), s.clone()));
             }
@@ -533,8 +530,8 @@ impl Presence {
     /// One long poll of the lane of a correspondence (iOS /signal-fetch): the words the others said since; «box» says a letter
     /// waits in the box. The words, opened: (epoch, bytes); and whether the box called.
     pub fn listen(book: &Book, twin: &str, r: &str, dev: &str) -> Option<(Vec<Opened>, bool)> {
-        let secret = book.secret(r)?;
-        let cw = conv_w(&secret, wire::day());
+        let key = book.key(r)?;
+        let cw = key.conv_w(wire::day());
         let tag = crate::wire::hex(&sha(&[b"mt-lane-dev\0", dev.as_bytes(), b"\0", cw.as_bytes()])[..8]);
         let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "wait": 12, "dev": tag });
         let door = doors::all().into_iter().next()?;
@@ -552,7 +549,7 @@ impl Presence {
                 boxed = true;
                 continue;
             }
-            if let Some((_, epoch, body)) = Self::open(&secret, e, None) {
+            if let Some((_, epoch, body)) = Self::open(&key, e, None) {
                 out.push((epoch, body));
             }
         }

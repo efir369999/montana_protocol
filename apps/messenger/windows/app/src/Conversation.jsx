@@ -7,13 +7,14 @@ import { AutoReacts, count } from "./Wallet.jsx";
 import { Page, Section } from "./Settings.jsx";
 import { CARD_MARK } from "./Card.jsx";
 import { listen } from "@tauri-apps/api/event";
+import { platesBack, plateWords, restoredAfterFailure, sameComposer, sameWords, withoutPlates, wordsForPlates } from "./tray.js";
 import sendButton from "./assets/send_button.png";
 import voiceKey from "./assets/ios/VoiceRecordButton.png";
 import videoKey from "./assets/ios/VideoRecordButton.png";
 import { CardFace, cardLines, sendCard } from "./Card.jsx";
 import knight from "./assets/ios/Chesswn.png";
 import { MintCoin } from "./Coin.jsx";
-import { BIG, manifestOf, MediaBody, sendFile, urlOf } from "./Media.jsx";
+import { BIG, manifestOf, MediaBody, sendFile, sizeText, urlOf } from "./Media.jsx";
 import PhotoAlbum from "./PhotoAlbum.jsx";
 import { NOTE_STEPS, readNoteQuality } from "./Look.jsx";
 import { StickerPanel, StickerSheet } from "./Stickers.jsx";
@@ -170,6 +171,13 @@ const NOTE_MAX_MS = 60000;
 /** The letters the person unfolded past the filter, by name, for the life of the window (iOS MTFilterFold). */
 const UNFOLDED = new Set();
 
+/** The pictures a tray's plates showed, let go once the plates leave (sent, crossed out, another chat). */
+const letGo = (items) => items.forEach((x) => x.url && URL.revokeObjectURL(x.url));
+/** A tray plate dragged over the tray carries this type, so the chat's own file drop never takes it for a file. */
+const TRAY_PLATE = "application/x-montana-tray";
+/** ONE LINE OUT PER CONVERSATION (iOS MTSendLine): a tray's files start when the tray before them in the same chat is over. */
+const LINES = new Map();
+
 export default function Conversation({ chat, onBack, narrow, myName, myFace, focus, onOpenChat, forward, onForwardTaken }) {
   const playerFace = player.usePlayer();
   const [talk, setTalk] = useState(null);
@@ -195,6 +203,23 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
   const [replying, setReplying] = useState(null);       // the letter answered
   const [editing, setEditing] = useState(null);         // my letter whose words change
   const [dropping, setDropping] = useState(false);
+  // THE TRAY ABOVE THE FIELD (iOS pastedImages, MTStagedOrder; COMPOSE-039, PICK-013): what the picker, a paste or a drop hands
+  // waits here, numbered in its order, until the arrow sends it; `carried` is the plate held over the tray now (iOS trayCarried)
+  const [tray, setTray] = useState([]);
+  const [carried, setCarried] = useState(null);
+  const trayNow = useRef([]);
+  trayNow.current = tray;
+  // a completion belongs to the conversation and the visit the tray was staged in (a switch or a reopen ends it)
+  const trayChat = useRef(chat);
+  trayChat.current = chat;
+  const trayEpoch = useRef(0);
+  // each plate carries the words and the quote it was staged with, so a failure never hands them to another file
+  const trayWords = useRef(new Map());
+  const draftNow = useRef(draft);
+  draftNow.current = draft;
+  const replyNow = useRef(replying);
+  replyNow.current = replying;
+  useEffect(() => () => letGo(trayNow.current), []);
   const [seen, setSeen] = useState(null);
   const [typers, setTypers] = useState([]);   // who types in the group now, by name (iOS MTGroupTyping)
   const [reporting, setReporting] = useState(null);   // the letter reported
@@ -387,6 +412,7 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
   });
   useEffect(() => {
     setTalk(null); setDraft(""); setProblem(null); setUnreadFrom(null); setMenu(null); setReplying(null); setEditing(null); setPicking(null); setAlbum(null);
+    letGo(trayNow.current); setTray([]); setCarried(null); trayEpoch.current += 1;
     pinned.current = true;
     lastTop.current = 0;
     look(true);
@@ -587,7 +613,7 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
     }
   };
 
-  /** Files from the picker, a drop or the clipboard: each one a letter; the words in the field become the first one's caption
+  /** The tray's files (from the picker, a drop or the clipboard): each one a letter; the words in the field become the first one's caption
    *  (iOS: a pasted picture goes with the text as its caption); a reply rides the first. */
   // THE COIN'S MODE (iOS coinMode): only a pair takes coins; the field takes the sum, the key sends it
   const coinsHere = !talk?.group && !talk?.blocked;
@@ -668,8 +694,8 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
     <button key="coin" className="media-key" onClick={sendCoins} aria-label={t(coinAmount > 0 ? "Send coins" : "Coin")}>
       <MintCoin side={36} />
     </button>
-  ) : draft.trim() && !rec && !note ? (
-    <button key="send" className="send" onClick={send} aria-label={t("Send")}><img src={sendButton} alt="" /></button>
+  ) : (draft.trim() || tray.length) && !rec && !note ? (
+    <button key="send" className="send" onClick={() => (tray.length && !editing ? sendTray() : send())} aria-label={t("Send")}><img src={sendButton} alt="" /></button>
   ) : (
     <button key="media" className={"media-key" + (hold.current?.held ? " holding" : "")} aria-label={t(mediaMode === "video" ? "Video message" : "Voice message")}
             onPointerDown={mediaDown} onPointerMove={mediaMove} onPointerUp={mediaUp} onPointerCancel={mediaUp} onClick={mediaTap}>
@@ -701,24 +727,118 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
     const lines = c ? cardLines(c).filter(Boolean) : [];
     if (lines.length) setCardNote(lines); else window.dispatchEvent(new CustomEvent("montana-open-pane", { detail: "card" }));
   };
-  const sendFiles = async (files) => {
+  // `taken` hears that the group's word let them go, before the field empties (the tray leaves only then)
+  const sendFiles = async (files, taken, wordsList) => {
     const list = [...files].filter((f) => f.size > 0);
     if (!list.length) return;
-    const caption = draft.trim(), q = replying;
+    const caption = wordsList?.[0]?.caption ?? draft.trim(), q = wordsList ? (wordsList[0]?.reply ?? null) : replying;
+    const epoch = trayEpoch.current;
     if (talk?.group && !talk.group.owner) {
       for (const f of list) {
         const k = f.type.startsWith("image/") ? "img" : f.type.startsWith("video/") ? "vid" : f.type.startsWith("audio/") ? "aud" : "doc";
         const why = await invoke("group_refusal", { chat, words: "\u200B\u200BMD:" + JSON.stringify({ k, n: f.name, cap: caption }) }).catch(() => null);
-        if (why) { setProblem(refusalWords(why)); return; }
+        if (why) { setProblem(refusalWords(why)); return null; }
       }
     }
-    setDraft(""); setReplying(null); setProblem(null);
+    taken?.();
+    // the field goes only if it still holds the words this send carried: a draft typed meanwhile is not deleted
+    const wordsMatch = wordsList ? sameWords(draftNow.current, replyNow.current, wordsList[0]) : true;
+    if (sameComposer(chat, chatNow.current, epoch, trayEpoch.current) && wordsMatch) { setDraft(""); setReplying(null); setProblem(null); }
     pinned.current = true;
-    for (let i = 0; i < list.length; i++) {
-      await sendFile(chat, list[i], i === 0 ? caption : "", i === 0 && q ? { qt: letterPreview(q.text), qm: q.mid } : null, {}, setHanding)
-        .catch(() => setProblem(t("Not sent")))
-        .finally(() => setHanding(null));
+    // the places that did not leave are said back, so the tray keeps them (nothing lost, nothing sent twice)
+    const run = async () => {
+      const failed = [];
+      for (let i = 0; i < list.length; i++) {
+        const w = wordsList?.[i];
+        const cap = w ? w.caption : (i === 0 ? caption : "");
+        const rep = w ? w.reply : (i === 0 ? q : null);
+        await sendFile(chat, list[i], cap, rep ? { qt: letterPreview(rep.text), qm: rep.mid } : null, {}, setHanding)
+          .catch(() => { failed.push(i); setProblem(t("Not sent")); })
+          .finally(() => setHanding(null));
+      }
+      return failed;
+    };
+    const mine = (LINES.get(chat) || Promise.resolve()).then(run, run);
+    LINES.set(chat, mine);
+    const failed = await mine;
+    if (LINES.get(chat) === mine) LINES.delete(chat);
+    return failed;
+  };
+  /** INTO THE TRAY (iOS stageChosen, attachPasted, stagePicks): each file a plate in the order handed, after the last number; a
+   *  picture and a film show themselves, any other file its name and size. Nothing leaves before the arrow. */
+  const stage = (files) => {
+    const list = [...files].filter((f) => f.size > 0).map((f) => {
+      const kind = f.type.startsWith("image/") && f.type !== "image/svg+xml" ? "img" : f.type.startsWith("video/") ? "vid" : "doc";
+      return { id: crypto.randomUUID(), file: f, kind, url: kind === "doc" ? null : URL.createObjectURL(f) };
+    });
+    if (!list.length) return;
+    setTray((x) => [...x, ...list]);
+    invoke("trace", { line: `tray_stage n=${list.length} files=${list.filter((x) => x.kind === "doc").length}` }).catch(() => {});
+  };
+  const unstage = (id) => {
+    letGo(tray.filter((x) => x.id === id));
+    setTray((x) => x.filter((y) => y.id !== id));
+  };
+  /** THE TRAY LEAVES IN ITS ORDER (iOS sendPasted, MTSendLine): one after another as it stands, the words and the reply's plate
+   *  with the first; a group that refuses keeps the tray as it was; a second press while the first is asked for is no second
+   *  send; a file that did not leave comes back to the tray's head, in its order, «Не отправлено» said. */
+  const trayLeaving = useRef(false);
+  const sendTray = async () => {
+    if (trayLeaving.current || !tray.length) return;
+    trayLeaving.current = true;
+    const items = tray;
+    const owner = chat, epoch = trayEpoch.current;
+    const wordsList = wordsForPlates(items, trayWords.current, draft.trim(), replying);
+    items.forEach((it, i) => { if (!trayWords.current.has(it.id)) trayWords.current.set(it.id, wordsList[i]); });
+    let gone = false;
+    invoke("trace", { line: `tray_send n=${items.length} files=${items.filter((x) => x.kind === "doc").length}` }).catch(() => {});
+    const stillMine = () => trayChat.current === owner && trayEpoch.current === epoch;
+    const sent = await sendFiles(items.map((x) => x.file), () => {
+      gone = true; trayLeaving.current = false;
+      if (stillMine()) { setTray((x) => withoutPlates(x, items.map((it) => it.id))); setCarried(null); }
+    }, wordsList);
+    if (sent === null) {
+      // refused before sending: the visible words are the ones to retry with, not the snapshot
+      items.forEach((it) => trayWords.current.delete(it.id));
+      trayLeaving.current = false;
+      return;
     }
+    const failed = sent || [];
+    if (!gone) { trayLeaving.current = false; return; }
+    letGo(items.filter((_, i) => !failed.includes(i)));
+    // the words belong to the file that carried them: every sent plate drops them, a returned one keeps them
+    items.forEach((it, i) => { if (!failed.includes(i)) trayWords.current.delete(it.id); });
+    const backIdx = restoredAfterFailure({ owner, current: trayChat.current, ownerEpoch: epoch, currentEpoch: trayEpoch.current, failed });
+    const back = platesBack(items, backIdx);
+    if (!back.length && failed.length) {
+      for (const i of failed) trayWords.current.delete(items[i].id);
+      letGo(items.filter((_, i) => failed.includes(i)));
+      invoke("trace", { line: `tray_drop_other_chat n=${failed.length}` }).catch(() => {});
+    }
+    if (back.length) {
+      setTray((x) => [...back, ...x]);
+      invoke("trace", { line: `tray_back n=${back.length} of=${items.length}` }).catch(() => {});
+    }
+  };
+  /** A PLATE CARRIED TO ANOTHER PLACE (iOS MTTrayDrop, MTStagedOrder.moved; 2315): the moment the held plate enters another, it
+   *  takes that one's place; every other keeps its turn and the numbers follow. */
+  const carryOver = (target) => {
+    if (!carried || carried === target) return;
+    setTray((x) => {
+      const from = x.findIndex((y) => y.id === carried), to = x.findIndex((y) => y.id === target);
+      if (from < 0 || to < 0) return x;
+      const a = [...x];
+      a.splice(to, 0, a.splice(from, 1)[0]);
+      return a;
+    });
+  };
+  const letDown = () => {
+    const at = tray.findIndex((x) => x.id === carried);
+    if (at >= 0) invoke("trace", { line: `tray_move place=${at + 1} of=${tray.length}` }).catch(() => {});
+    setCarried(null);
+  };
+  const openStaged = (x) => {
+    if (x.kind === "img") setAlbum({ pages: [{ key: x.id, cover: x.url, load: async () => x.url }], start: 0 });
   };
 
   const open = (e, m) => {
@@ -826,7 +946,7 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
     <section className={"talk" + (dropping ? " dropping" : "") + (flow ? " flow" : "") + (playing ? " playing" : "")} data-ref={talk.ref}
              onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDropping(true); } }}
              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDropping(false); }}
-             onDrop={(e) => { e.preventDefault(); setDropping(false); sendFiles(e.dataTransfer.files); }}>
+             onDrop={(e) => { e.preventDefault(); setDropping(false); stage(e.dataTransfer.files); }}>
       <ChatGround chat={talk.ref} />
       {picking && (
         <header className="talk-bar select-top">
@@ -1124,6 +1244,46 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
           </button>
         </div>
       )}
+      {/* THE TRAY (iOS pastedPreview): plates 116×78 in the order chosen, each with its number and its cross; a plate held and carried
+          over another takes its place (2315); a tray that holds files has its «+» for one more */}
+      {tray.length > 0 && !picking && (
+        <div className="tray" role="list" aria-label={t("Attachments")}>
+          {tray.map((x, i) => (
+            <div key={x.id} role="listitem" className={"tray-plate" + (carried === x.id ? " carried" : "")} draggable
+                 aria-label={`${i + 1}. ${x.kind === "doc" ? x.file.name : t(x.kind === "vid" ? "Video" : "Photo")}`}
+                 onDragStart={(e) => { setCarried(x.id); e.dataTransfer.setData(TRAY_PLATE, x.id); e.dataTransfer.effectAllowed = "move"; }}
+                 onDragEnter={() => carryOver(x.id)}
+                 onDragOver={(e) => { if (e.dataTransfer.types.includes(TRAY_PLATE)) e.preventDefault(); }}
+                 onDrop={(e) => { e.preventDefault(); e.stopPropagation(); if (e.dataTransfer.files?.length) stage(e.dataTransfer.files); else letDown(); }}
+                 onDragEnd={() => setCarried(null)}
+                 onClick={() => openStaged(x)}>
+              {x.kind === "doc" ? (
+                <span className="tray-doc">
+                  <Glyph name="doc" size={20} color="rgba(255, 255, 255, 0.9)" />
+                  <span className="tray-doc-name">{x.file.name}</span>
+                  <span className="tray-doc-size">{sizeText(x.file.size)}</span>
+                </span>
+              ) : x.kind === "vid" ? (
+                <>
+                  <video src={x.url} muted preload="metadata" />
+                  <span className="tray-play"><Glyph name="playFill" size={22} color="rgba(255, 255, 255, 0.9)" /></span>
+                </>
+              ) : (
+                <img src={x.url} alt="" draggable={false} />
+              )}
+              <span className="tray-number">{i + 1}</span>
+              <button className="tray-cross" aria-label={t("Remove")} onClick={(e) => { e.stopPropagation(); unstage(x.id); }}>
+                <span><Glyph name="close" size={11} color="#fff" /></span>
+              </button>
+            </div>
+          ))}
+          {tray.some((x) => x.kind === "doc") && (
+            <button className="tray-more" aria-label={t("Files")} onClick={() => picker.current?.click()}>
+              <Glyph name="plus" size={20} color="#fff" />
+            </button>
+          )}
+        </div>
+      )}
       {/* THE PLAYER FLOATS OVER THE FEED'S BOTTOM, ABOVE THE MESSAGE FIELD (iOS MontanaConversation, the author's word 14.09): the
           letters scroll behind its glass; the feed keeps its room so the newest letter stands above it; a voice of this chat goes
           to its letter here */}
@@ -1187,8 +1347,8 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
       {/* THE FIELD'S TIER (iOS ChatInputBar part .field): folded, the down arrow, the words with the emoji key inside, the media key;
           open, the words the whole width -- the keys stand on the tier under it */}
       <footer className={"compose" + (composeOpen ? " open" : "")}>
-        <input ref={picker} type="file" multiple hidden onChange={(e) => { sendFiles(e.target.files); e.target.value = ""; }} />
-        <input ref={photoPicker} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { sendFiles(e.target.files); e.target.value = ""; }} />
+        <input ref={picker} type="file" multiple hidden onChange={(e) => { stage(e.target.files); e.target.value = ""; }} />
+        <input ref={photoPicker} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { stage(e.target.files); e.target.value = ""; }} />
         {!composeOpen && (
           <button className="glass-mark small compose-key" onClick={() => { if (rec || note) return; setPanel(null); setComposeOpen(true); }} aria-label={t("More")}>
             <Glyph name="chevronDown" size={20} color="var(--bar-glyph)" />
@@ -1210,9 +1370,9 @@ export default function Conversation({ chat, onBack, narrow, myName, myFace, foc
                         invoke("chat_typing", { chat });
                       }
                     }}
-                    onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); sendFiles(e.clipboardData.files); } }}
+                    onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); stage(e.clipboardData.files); } }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (coinMode) sendCoins(); else send(); }
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (coinMode) sendCoins(); else if (tray.length && !editing) sendTray(); else send(); }
                       if (e.key === "Escape" && (replying || editing)) { e.preventDefault(); if (editing) setDraft(""); setReplying(null); setEditing(null); }
                     }} />
           {!composeOpen && emojiKey}

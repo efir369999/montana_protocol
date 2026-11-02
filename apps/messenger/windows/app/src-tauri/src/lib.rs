@@ -35,9 +35,12 @@ mod media;
 mod meeting;
 mod messenger;
 mod music;
+mod nodeclock;
 mod fabric;
 mod forgotten;
 mod passwords;
+mod pipekey;
+mod pipeheal;
 mod person;
 mod picture;
 mod genesis;
@@ -49,6 +52,7 @@ mod qr;
 mod replica;
 mod trackmeta;
 mod rooms;
+mod rules;
 mod seats;
 mod seed;
 mod stickers;
@@ -137,9 +141,15 @@ async fn identity_create(p: State<'_, Person>, m: State<'_, Messenger>) -> Resul
 async fn identity_restore(app: AppHandle, p: State<'_, Person>, m: State<'_, Messenger>, words: String) -> Result<(), Failure> {
     // the words of a person waiting on this computer's shelf seat that person again: no second copy of them is born (iOS lift)
     if let Some(h) = seats::here() {
-        if seats::lift(h, &words).is_some() {
-            trace_line("seat lifted by the words");
-            app.restart();
+        match seats::lift(h, &words) {
+            Ok(_) => {
+                trace_line("seat lifted by the words");
+                app.restart();
+            }
+            Err(seats::LiftError::NotHeld) => {}
+            Err(seats::LiftError::Refused(crate::seed::Refused::SeatHeld)) => return Err(Failure::SeatHeld),
+            Err(seats::LiftError::Refused(crate::seed::Refused::Storage)) => return Err(Failure::Storage),
+            Err(seats::LiftError::Refused(_)) => return Err(Failure::Invalid),
         }
     }
     m.reseat();
@@ -217,7 +227,7 @@ async fn chat_send(app: AppHandle, chat: String, text: String, qt: Option<String
     let mid = {
         let (p, m) = (app.state::<Person>(), app.state::<Messenger>());
         let d = m.desk(&p).ok_or("seat")?;
-        if m.book.secret(&chat).is_none() && !groups::is_group(&chat) && !book::is_saved(&chat) {
+        if !m.book.holds(&chat) && !groups::is_group(&chat) && !book::is_saved(&chat) {
             return Err("chat".into());
         }
         let (qt, qm) = (qt.unwrap_or_default(), qm.unwrap_or_default());
@@ -331,7 +341,7 @@ fn manifest_of_meta(meta: &serde_json::Value) -> serde_json::Value {
 /// once every piece is here (chat_big_end).
 #[tauri::command]
 async fn chat_big_begin(m: State<'_, Messenger>, chat: String) -> Result<String, String> {
-    if m.book.secret(&chat).is_none() && !groups::is_group(&chat) && !book::is_saved(&chat) {
+    if !m.book.holds(&chat) && !groups::is_group(&chat) && !book::is_saved(&chat) {
         return Err("chat".into());
     }
     let store = m.media.clone();
@@ -451,7 +461,7 @@ fn chat_send_media(app: AppHandle, request: tauri::ipc::Request) -> Result<(), S
     std::thread::spawn(move || {
         let (p, m) = (app.state::<Person>(), app.state::<Messenger>());
         let Some(d) = m.desk(&p) else { return };
-        if m.book.secret(&chat).is_none() && !groups::is_group(&chat) && !book::is_saved(&chat) {
+        if !m.book.holds(&chat) && !groups::is_group(&chat) && !book::is_saved(&chat) {
             return; // a group's key is no pipe: its file goes as the group's word (groups.rs group_deliver)
         }
         if let Some(mid) = d.draft_media(&chat, &bytes, manifest, &qt, &qm) {
@@ -1095,6 +1105,7 @@ fn seats_walk(app: AppHandle) {
 fn person_left(app: &AppHandle) {
     person::set_front(false);
     person::left(person::global(coins::balance(&app.state::<Messenger>().vault)));
+    wallet::presence_close(&app.state::<Messenger>().vault);
     auto_mint(false, "background");   // the screen locked or the app left: the auto minting stops with it (iOS MTWalletPull.stop)
 }
 
@@ -1122,7 +1133,7 @@ fn channels_walk(app: AppHandle) {
         channels::start(channels::Hooks {
             pipes: Box::new(move || {
                 let m = a1.state::<Messenger>();
-                m.book.refs().into_iter().filter(|r| !groups::is_group(r)).filter_map(|r| m.book.secret(&r).map(|s| (r, s))).collect()
+                m.book.pipes().into_iter().filter(|(r, _)| !groups::is_group(r)).collect()
             }),
             owner: Box::new(move || {
                 let mut kept = owner_kept.lock().unwrap();
@@ -1131,10 +1142,10 @@ fn channels_walk(app: AppHandle) {
                 }
                 kept.clone()
             }),
-            land: Box::new(move |r, plain| {
+            land: Box::new(move |r, opened| {
                 let (p, m) = (a3.state::<Person>(), a3.state::<Messenger>());
                 let Some(d) = m.desk(&p) else { return };
-                if d.channel_letter(r, plain) {
+                if d.channel_opened(r, opened) {
                     changed(&a3);
                     ring(&a3, &p, &m, std::mem::take(&mut *d.news.lock().unwrap()));
                 }
@@ -1281,10 +1292,9 @@ fn coin_walk(app: AppHandle) {
             if !coin_chain_on() {
                 continue;
             }
-            // while the person is here the chain is asked every beat (iOS beHere, presentBeat): from the online cut a MINT of the
-            // present seconds goes with it
-            let beat = if wallet::here() { wallet::PRESENT_BEAT } else { 60 };
-            if tick % beat == 5 {
+            // while the person is here the chain is asked every beat (iOS beHere, presentBeat): at once when they come, then from the
+            // online cut a MINT of the present seconds goes with it; away, once a minute
+            if wallet::stay_due(&m.vault, tick) || (!wallet::staying() && tick % 60 == 5) {
                 wallet::reconcile(&m.vault, h, false);
             }
             // what an ended run owed for its calls, once the walk stands; then a talking call's seconds once a window and at its end
@@ -1302,7 +1312,7 @@ fn coin_walk(app: AppHandle) {
                 changed(&app);
             }
             if tick % 300 == 20 || wallet::scan_due() {
-                let pipes: Vec<(String, Vec<u8>)> = m.book.refs().into_iter().filter(|r| !groups::is_group(r)).filter_map(|r| m.book.secret(&r).map(|s| (r, s))).collect();
+                let pipes: Vec<(String, crate::pipekey::PipeKey)> = m.book.pipes().into_iter().filter(|(r, _)| !groups::is_group(r)).collect();
                 if wallet::scan(&m.vault, h, &pipes) > 0 {
                     changed(&app);
                 }
@@ -1359,8 +1369,10 @@ async fn wallet_state(m: State<'_, Messenger>, open: Option<bool>) -> Result<ser
     let rate = m.vault.get(RATE).and_then(|b| serde_json::from_slice::<serde_json::Value>(&b).ok());
     Ok(serde_json::json!({
         "balance": balance, "available": wallet::available(&m.vault), "split": wallet::split(), "gathering": gathering,
-        // π's place of the person's coins (iOS MTPiLevels.place(total)): the chain's available once it spoke, else the book
-        "pi": coins::pi_place(if wallet::split().is_some() { wallet::available(&m.vault) } else { balance }),
+        // the Time Balance (iOS 2325 MTCoinSplit.growing): the available and the person's seconds awaiting the core
+        "growing": wallet::growing(&m.vault),
+        // π's place of the person's coins (iOS MTPiLevels.place(total)): the chain's growing number once it spoke, else the book
+        "pi": coins::pi_place(if wallet::split().is_some() { wallet::growing(&m.vault) } else { balance }),
         "counts": counts, "moves": moves, "key": me, "ticker": coins::TICKER,
         "minting": WALLET_OPEN.load(std::sync::atomic::Ordering::SeqCst) && AUTO_MINT.load(std::sync::atomic::Ordering::SeqCst),
         "pantheon": pantheon(|p, now| p.shown(now)),
@@ -1484,7 +1496,7 @@ async fn coin_send(app: AppHandle, chat: String, coins: i64) -> Result<String, (
 fn send_coins(p: &Person, m: &Messenger, chat: &str, coins: i64) -> Result<String, ()> {
     let d = m.desk(p).ok_or(())?;
     let h = p.seed.mnemonic().and_then(|w| wallet::hands(&w)).ok_or(())?;
-    let secret = m.book.secret(chat).ok_or(())?;
+    let secret = m.book.key(chat).ok_or(())?;
     let mut sent = wallet::send3(&m.vault, &h, chat, &secret, coins, None);
     if matches!(&sent, wallet::Sent::NotApplicable(why) if why == "no receiver key") {
         // THE KEY IS ASKED, AND THE SAME SEND GOES WHEN IT COMES (iOS transferResult, the author's word 21.10.2026 12:41 MSK): nothing
@@ -1541,7 +1553,7 @@ async fn coin_send_own(app: AppHandle, seat: String, coins: i64) -> Result<Strin
         wallet::note_peer_from(&m.vault, &conv, &their.from());   // iOS knowOwn: the SEND commits to the other key
         let out = send_coins(&p, &m, &conv, coins)?;
         if let Some(id) = out.strip_prefix("sent:") {
-            let secret = m.book.secret(&conv).ok_or(())?;
+            let secret = m.book.key(&conv).ok_or(())?;
             let (taken, said) = wallet::land_own(&their, coins::balance_in(&their_vault), id, &secret);
             let laid = if taken {
                 let e = coins::Entry { k: "receive".into(), c: coins, refr: format!("{}{id}", coins::TX), peer: Some(conv.clone()), on: None, at: wire::now_ms() as f64 / 1000.0 };
@@ -1692,7 +1704,7 @@ fn drawn(m: &Messenger, me: &str, wall: Option<&str>, p: &board::Seen) -> serde_
 /// wall ("" mine) and the wall's name.
 #[tauri::command]
 async fn wall_feed(p: State<'_, Person>, m: State<'_, Messenger>) -> Result<Vec<serde_json::Value>, ()> {
-    let holds = |w: &str| m.book.secret(w).is_some();
+    let holds = |w: &str| m.book.holds(w);
     let me = my_shown_name(&p, &m);
     Ok(board::feed(&m.vault, &holds).into_iter().map(|(wall, x)| {
         let name = if wall.is_empty() { String::new() } else { m.book.shown_name(&wall).unwrap_or_default() };
@@ -1890,7 +1902,7 @@ async fn wall_do(app: AppHandle, act: String, wall: Option<String>, id: String, 
             "coin" => {
                 let (Some(w), coins) = (wall.as_deref(), words.parse::<i64>().unwrap_or(0)) else { return Ok(false) };
                 let hands = if coin_chain_on() { p.seed.mnemonic().and_then(|x| wallet::hands(&x)) } else { None };
-                match (hands, m.book.secret(w)) {
+                match (hands, m.book.key(w)) {
                     (Some(h), Some(secret)) => {
                         if !board::coin_due(&m.vault, w, &id, coins) {
                             return Ok(false);
@@ -2079,7 +2091,7 @@ async fn secret_send(app: AppHandle, chat: String, id: String) -> Result<(), ()>
     let item = passwords::item(&m.vault, &id).ok_or(())?;
     let text = passwords::letter(&item).ok_or(())?;
     let d = m.desk(&p).ok_or(())?;
-    if m.book.secret(&chat).is_none() && !groups::is_group(&chat) && !book::is_saved(&chat) {
+    if !m.book.holds(&chat) && !groups::is_group(&chat) && !book::is_saved(&chat) {
         return Err(());
     }
     let mid = d.draft(&chat, &text, "", "");
@@ -2819,7 +2831,7 @@ async fn call_end(app: AppHandle, chat: String, seed: String, video: bool, incom
         let heard = heard.unwrap_or(0);
         trace_line(&format!("fabric_call heard_s={heard}"));
         if heard >= fabric::CALL_SECONDS && !groups::is_group(&chat) {
-            if let Some(s) = m.book.secret(&chat) {
+            if let Some(s) = m.book.key(&chat) {
                 fabric::spoke(&chat);
                 fabric::heard(&chat, &s);
             }
@@ -3367,7 +3379,26 @@ async fn seat_return(app: AppHandle) -> Result<(), String> {
 fn trace(line: String) {
     trace_line(&line);
 }
+// A check's own trace lines, read on its own thread (`traced`).
+#[cfg(test)]
+thread_local! {
+    static TRACED: std::cell::RefCell<Option<Vec<String>>> = const { std::cell::RefCell::new(None) };
+}
+/// The trace lines a check's own thread writes while `f` runs.
+#[cfg(test)]
+pub(crate) fn traced(f: impl FnOnce()) -> Vec<String> {
+    TRACED.with(|t| *t.borrow_mut() = Some(vec![]));
+    f();
+    TRACED.with(|t| t.borrow_mut().take().unwrap_or_default())
+}
+
 pub(crate) fn trace_line(line: &str) {
+    #[cfg(test)]
+    TRACED.with(|t| {
+        if let Some(lines) = t.borrow_mut().as_mut() {
+            lines.push(line.to_string());
+        }
+    });
     if std::env::var_os("MONTANA_TRACE").is_none() || std::env::var_os("MONTANA_DATA_DIR").is_none() {
         return;
     }
@@ -3567,7 +3598,7 @@ async fn room_take_inline(app: AppHandle, chat: String, head: String, payload: S
 #[tauri::command]
 async fn room_grow_people(m: State<'_, Messenger>, chat: String) -> Result<Vec<(String, String)>, ()> {
     let mut out: Vec<(String, String)> = m.book.all().into_iter()
-        .filter(|c| c.reference != chat && !groups::is_group(&c.reference) && !c.blocked && !c.hidden && m.book.secret(&c.reference).is_some())
+        .filter(|c| c.reference != chat && !groups::is_group(&c.reference) && !c.blocked && !c.hidden && m.book.holds(&c.reference))
         .map(|c| { let n = if c.alias.trim().is_empty() { c.name.clone() } else { c.alias.clone() }; (c.reference, n) })
         .filter(|(_, n)| !n.trim().is_empty()).collect();
     out.sort_by_key(|(_, n)| n.to_lowercase());
@@ -4037,7 +4068,7 @@ fn lane(app: AppHandle, chat: String) {
             }
             let Some(d) = m.desk(&p) else { trace_line("lane no desk"); return };
             let Some((words, boxed)) = presence::Presence::listen(&m.book, &d.twin, &chat, &dev) else {
-                trace_line(&format!("lane none chat={} secret={} doors={}", &chat[..chat.len().min(10)], m.book.secret(&chat).is_some(), crate::doors::all().len()));
+                trace_line(&format!("lane none chat={} secret={} doors={}", &chat[..chat.len().min(10)], m.book.holds(&chat), crate::doors::all().len()));
                 std::thread::sleep(std::time::Duration::from_secs(3));
                 continue;
             };
@@ -4381,9 +4412,12 @@ fn walk(app: AppHandle) {
             {
                 let (p, m) = (app.state::<Person>(), app.state::<Messenger>());
                 if tick == 0 {
+                    // whether the frozen vectors reproduce on this machine (iOS audit_canon): the pipe's one owner and its passage
+                    trace_line(&format!("audit_canon pipe={}", pipekey::agrees() as u8));
                     m.fill_archive(&p);
                     if let Some(d) = m.desk(&p) {
                         d.twin_soon("hist", 30_000); // the blocks this machine sealed before the other devices heard of them
+                        d.floor_heads(); // from the erase day every folder takes its floor head once (iOS floorStore)
                     }
                 }
                 // the light copy, once a day while the person keeps their copy with their contacts (iOS MTKeeping.tick: mine, told,

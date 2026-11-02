@@ -1,0 +1,497 @@
+{
+ "title": "The clock guard before the first floor and the book's walk to the day -- shared cases for iOS, Windows and Android",
+ "sources": {
+  "decision": "decision 188 of the author of Montana, 2026-10-25 18:45 UTC",
+  "rule": "https://github.com/efir369999/montana_messenger/issues/38#issuecomment-6401157985",
+  "confirmed": "https://github.com/efir369999/montana_messenger/issues/38#issuecomment-6401289918",
+  "details_and_case_13": "https://github.com/efir369999/montana_messenger/issues/38#issuecomment-6402080189",
+  "case_15_and_ios_2313": "https://github.com/efir369999/montana_messenger/issues/38#issuecomment-6403264814",
+  "cases_16_18_and_points": "https://github.com/efir369999/montana_messenger/issues/38#issuecomment-6403980121"
+ },
+ "constants": {
+  "eraseDay": 20760,
+  "N": 4,
+  "floorLag": 2
+ },
+ "conventions": [
+  "d = the device's UTC day; heard = the days named by node Date headers received in this run (any door; c = max(M, heard))",
+  "M, H, Hc = device state sealed beside the pipe book, surviving a restart; never in the archive",
+  "F = the floor day = d - floorLag, applied to every pipe of the book",
+  "a step is one read of the book; 'restart: true' starts a new process run before the read (memory and the per-run trace memory are new, the sealed M/H/Hc stay)",
+  "trace: the lines written by that step, in order; [] means none. floor_held is written once per run and again only when d, c or left change",
+  "H and Hc are cleared whenever the floor applies (rule 2 or rule 3); after the first floor the guard is never asked again (rule 4)",
+  "start 'after_case_2' = the sealed state M 20760, H 20800, Hc 20760, the book not floored, a new run",
+  "a book with no pipe does not ask the rule: M is still raised by what is heard, H and Hc are not started; the rule is asked when the first pipe arrives, and a new pipe never resets H (chairman 19:23 UTC, point 3)",
+  "rule 4 is kept in the sealed guard state: once the first floor applies, the guard records it beside M/H/Hc (cleared H, Hc), even when the book's own write fails, so a restart that reads the book whole floors on d without asking the guard (case 15 = the chairman's case 9b, 21:05 UTC)",
+  "a restore asks the guard: while the guard withholds the first floor, restored keys are floored by the guard's day (eraseDay - 1: nothing floors) and wait with the book; otherwise a restore floors by max(d, M); the restore writes no trace of its own (case 16)",
+  "M is raised by any node answer that carries a Date header, whatever its status (a refusal is an answer); a cancelled request or a transport failure does not raise it",
+  "with no confirmed source the trace writes c=none (one format on every port)",
+  "floor_held is written again only when d, c or left changes; early and floor results write nothing and reset nothing, so held -> early -> held at the same values writes one line",
+  "an unreadable guard record is never overwritten and the guard does not withhold: the floor applies on d as by rule 2, traced floor_free d=D c=none (case 18); a failed write of the guard record is retried at the next decision",
+  "case 13 ordering: a parallel reader may get the walked copy before its write lands; no read after the floor day hands out a whole key, and no step moves a floor day back; a refused book write is retried at the first read at least 60 s after the refusal"
+ ],
+ "cases": [
+  {
+   "id": 1,
+   "start": "fresh",
+   "steps": [
+    {
+     "d": 20760,
+     "heard": [
+      20760
+     ],
+     "expect": {
+      "result": "floor",
+      "F": 20758,
+      "trace": []
+     }
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "start": "fresh",
+   "steps": [
+    {
+     "d": 20800,
+     "heard": [
+      20760
+     ],
+     "expect": {
+      "result": "held",
+      "H": 20800,
+      "Hc": 20760,
+      "M": 20760,
+      "trace": [
+       "floor_held d=20800 c=20760 since=20800 left=4"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "restart": true,
+     "d": 20801,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20801 c=20760 since=20800 left=3"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "d": 20804,
+     "heard": [],
+     "expect": {
+      "result": "floor",
+      "F": 20802,
+      "H": null,
+      "Hc": null,
+      "trace": [
+       "floor_ceiling d=20804 c=20760 since=20800 by=device"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "d": 20761,
+     "heard": [
+      20761
+     ],
+     "expect": {
+      "result": "floor",
+      "F": 20759,
+      "H": null,
+      "Hc": null,
+      "M": 20761,
+      "trace": [
+       "floor_free d=20761 c=20761"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "d": 20750,
+     "heard": [],
+     "expect": {
+      "result": "none",
+      "H": 20800,
+      "Hc": 20760,
+      "trace": []
+     }
+    },
+    {
+     "d": 20802,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20802 c=20760 since=20800 left=2"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "start": "fresh",
+   "steps": [
+    {
+     "d": 20790,
+     "heard": [
+      20760,
+      20790
+     ],
+     "expect": {
+      "result": "floor",
+      "F": 20788,
+      "M": 20790,
+      "trace": []
+     }
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "start": "fresh",
+   "steps": [
+    {
+     "d": 20800,
+     "heard": [],
+     "expect": {
+      "result": "floor",
+      "F": 20798,
+      "trace": []
+     }
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "start": "floored_20758",
+   "steps": [
+    {
+     "d": 20800,
+     "heard": [],
+     "expect": {
+      "result": "walk",
+      "F": 20798,
+      "guard_asked": false,
+      "trace": []
+     }
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "d": 20790,
+     "heard": [
+      20764
+     ],
+     "expect": {
+      "result": "floor",
+      "F": 20788,
+      "H": null,
+      "Hc": null,
+      "trace": [
+       "floor_ceiling d=20790 c=20764 since=20800 by=confirmed"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "d": 20798,
+     "heard": [
+      20762
+     ],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20798 c=20762 since=20800 left=2"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "start": "after_case_2",
+   "steps": [
+    {
+     "restart": true,
+     "d": 20801,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20801 c=20760 since=20800 left=3"
+      ]
+     }
+    },
+    {
+     "restart": false,
+     "d": 20801,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": []
+     }
+    },
+    {
+     "restart": true,
+     "d": 20801,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20801 c=20760 since=20800 left=3"
+      ]
+     }
+    },
+    {
+     "restart": true,
+     "d": 20801,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20801 c=20760 since=20800 left=3"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "start": "fresh_with_pipe",
+   "steps": [
+    {
+     "d": 20759,
+     "heard": [
+      20759
+     ],
+     "expect": {
+      "result": "none",
+      "memory": "whole",
+      "disk": "whole",
+      "trace": []
+     }
+    },
+    {
+     "restart": false,
+     "d": 20760,
+     "heard": [
+      20760
+     ],
+     "expect": {
+      "result": "floor",
+      "F": 20758,
+      "memory": "floored_20758",
+      "disk": "floored_20758_written_before_hand_out",
+      "trace": []
+     }
+    },
+    {
+     "restart": false,
+     "d": 20760,
+     "heard": [
+      20760
+     ],
+     "expect": {
+      "result": "unchanged",
+      "F": 20758,
+      "disk_write": false,
+      "trace": []
+     }
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "start": "fresh_empty_book",
+   "steps": [
+    {
+     "d": 20800,
+     "heard": [
+      20760
+     ],
+     "event": "read_empty_book",
+     "expect": {
+      "result": "none",
+      "H": null,
+      "Hc": null,
+      "M": 20760,
+      "trace": []
+     }
+    },
+    {
+     "restart": false,
+     "d": 20800,
+     "heard": [],
+     "event": "first_pipe_arrives",
+     "expect": {
+      "result": "held",
+      "H": 20800,
+      "Hc": 20760,
+      "trace": [
+       "floor_held d=20800 c=20760 since=20800 left=4"
+      ]
+     }
+    },
+    {
+     "restart": true,
+     "d": 20801,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20801 c=20760 since=20800 left=3"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "start": "fresh",
+   "steps": [
+    {
+     "d": 20760,
+     "heard": [
+      20760
+     ],
+     "book_write_fails": true,
+     "expect": {
+      "result": "floor",
+      "F": 20758,
+      "memory": "floored_20758",
+      "disk": "whole",
+      "trace": []
+     }
+    },
+    {
+     "restart": true,
+     "d": 20800,
+     "heard": [],
+     "expect": {
+      "result": "floor",
+      "F": 20798,
+      "guard_asked": false,
+      "trace": []
+     }
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "start": "after_case_2",
+   "note": "the restore asks the guard (chairman 22:04 UTC, main point)",
+   "steps": [
+    {
+     "restart": true,
+     "d": 20801,
+     "heard": [],
+     "event": "cold_start_restore_of_a_whole_copy",
+     "expect": {
+      "result": "held",
+      "restore": "the restored key stays whole, as the book",
+      "disk": "whole",
+      "done": false,
+      "trace": [
+       "floor_held d=20801 c=20760 since=20800 left=3"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "start": "after_case_2",
+   "note": "point 2: a read before any answer decides on the sealed M, the next read after an answer decides again; the chairman's example used d 20761, where rule 2 already floors (d <= c + 1), so d 20763 is used here",
+   "steps": [
+    {
+     "restart": true,
+     "d": 20763,
+     "heard": [],
+     "expect": {
+      "result": "held",
+      "trace": [
+       "floor_held d=20763 c=20760 since=20800 left=4"
+      ]
+     }
+    },
+    {
+     "restart": false,
+     "d": 20763,
+     "heard": [
+      20763
+     ],
+     "expect": {
+      "result": "floor",
+      "F": 20761,
+      "H": null,
+      "Hc": null,
+      "M": 20763,
+      "trace": [
+       "floor_free d=20763 c=20763"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "start": "guard_record_unreadable",
+   "note": "point 3: an unreadable guard record is not overwritten and the guard does not withhold",
+   "steps": [
+    {
+     "d": 20800,
+     "heard": [],
+     "expect": {
+      "result": "floor",
+      "F": 20798,
+      "record": "not overwritten",
+      "trace": [
+       "floor_free d=20800 c=none"
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "case_13_also": [
+  "the walk of the book in memory happens on the FIRST READ of a new day, before the book is handed to the caller, in the running process (no restart needed); it asks the guard first, so it may still be held",
+  "the walked book is written to disk at once, atomically (write the new sealed form beside the old one, then replace it), and only then handed out; if the write fails, the floored copy stays in memory and is handed out floored, and the next read writes again; nothing whole is ever written back",
+  "idempotent: a second read on the same day changes nothing and writes nothing; no step ever moves a floor day back",
+  "a pipe born during a hold stays whole until the floor applies, then the floor takes it like every other pipe"
+ ]
+}

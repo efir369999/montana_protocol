@@ -49,7 +49,9 @@ pub fn post(url: &str, body: &str, timeout_ms: u32) -> (i32, Option<String>) {
                     let mut st: windows_sys::Win32::Foundation::SYSTEMTIME = std::mem::zeroed();
                     let mut size = std::mem::size_of::<windows_sys::Win32::Foundation::SYSTEMTIME>() as u32;
                     if WinHttpQueryHeaders(request, WINHTTP_QUERY_DATE | WINHTTP_QUERY_FLAG_SYSTEMTIME, null(), &mut st as *mut _ as *mut _, &mut size, null_mut()) != 0 {
-                        crate::person::clock(unix_of(st.wYear as i64, st.wMonth as i64, st.wDay as i64, st.wHour as i64, st.wMinute as i64, st.wSecond as i64));
+                        let s = unix_of(st.wYear as i64, st.wMonth as i64, st.wDay as i64, st.wHour as i64, st.wMinute as i64, st.wSecond as i64);
+                        crate::person::clock(s);
+                        crate::nodeclock::heard(s); // the day a door's Date names, for the floor's guard alone (nodeclock)
                     }
                     let mut data = Vec::new();
                     loop {
@@ -100,6 +102,16 @@ pub fn get(url: &str, timeout_ms: u32, limit: usize, head: bool) -> Option<(i32,
 }
 
 type Headers = Vec<(String, String)>;
+
+/// A GET to a node's door: its answer's Date header, whatever the status, heard by the floor's guard (nodeclock); a request
+/// that got no answer hears nothing.
+pub fn get_door(url: &str, timeout_ms: u32, limit: usize) -> Option<(i32, Vec<u8>)> {
+    let (code, body, heads) = get_with(url, "Montana-Windows/0.1", &[], timeout_ms, limit, false)?;
+    if let Some(s) = heads.iter().find(|(k, _)| k == "date").and_then(|(_, v)| crate::nodeclock::seconds_of_http_date(v)) {
+        crate::nodeclock::heard(s);
+    }
+    Some((code, body))
+}
 
 /// A GET with the request's own headers, answering the code, the bytes and the answer's headers (lower-case names) -- a VPN plan's
 /// panel reads a device by `x-hwid` and names the plan in `profile-title` (iOS MontanaVPNSubscription.request).

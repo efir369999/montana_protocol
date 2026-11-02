@@ -12,6 +12,7 @@
 //! person through Windows' firewall).
 
 use crate::channel::{self, net, Channel, Door, Heard, Ident, OverlayFrame};
+use crate::pipekey::PipeKey;
 use crate::wire;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -26,12 +27,12 @@ const FRAME_MEMORY: usize = 8192;
 /// iOS repairUnnamedOwners: a machine that never named its owner is given ours again, ten times at most.
 const OWNER_ASKS: u32 = 10;
 
-type Land = dyn Fn(&str, &[u8]) + Send + Sync;
+type Land = dyn Fn(&str, &wire::Opened) + Send + Sync;
 
 /// What the holder asks of the person seated, and where a letter off a channel lands.
 pub struct Hooks {
-    /// the person's pipes: (reference, secret)
-    pub pipes: Box<dyn Fn() -> Vec<(String, Vec<u8>)> + Send + Sync>,
+    /// the person's pipes: (reference, the pipe as its owner holds it)
+    pub pipes: Box<dyn Fn() -> Vec<(String, PipeKey)> + Send + Sync>,
     /// the person's owner branch (the seed's «mt-owner-key»)
     pub owner: Box<dyn Fn() -> Option<Vec<u8>> + Send + Sync>,
     /// a letter of a pipe opened off a channel: (reference, the letter's plain)
@@ -218,15 +219,38 @@ fn warm(h: &Holder) {
     }
 }
 
-/// The tags of my pipes across the accepted windows (iOS MTPipeBook.tagIndex): a tag -> (reference, secret).
-fn my_pipes(h: &Holder, w: i64) -> HashMap<Vec<u8>, (String, Vec<u8>)> {
+/// The tags of my pipes across the accepted windows (iOS MTPipeBook.tagIndex): a tag -> (reference, pipe); on 01.11 and 02.11
+/// a pipe still holding its secret answers to the earlier builds' tag too (PipeKey::tags).
+fn my_pipes(h: &Holder, w: i64) -> HashMap<Vec<u8>, (String, PipeKey)> {
     let mut m = HashMap::new();
-    for (r, s) in (h.hooks.pipes)() {
+    for (r, key) in (h.hooks.pipes)() {
         for k in [w - 1, w, w + 1] {
-            m.insert(wire::pipe_tag(&s, k), (r.clone(), s.clone()));
+            for t in key.tags(k) {
+                m.insert(t, (r.clone(), key.clone()));
+            }
         }
     }
     m
+}
+
+/// THE LANE'S FRAME OF A LETTER (iOS sendUnderTag): the tag the pipe lays in the window, and 0x01 ‖ that tag ‖ the body sealed
+/// with the pipe's key of the window. Pure: the lane's own bench drives it.
+pub fn lane_frame(key: &PipeKey, w: i64, body: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+    let tag = key.tag(w);
+    let sealed = wire::seal(&key.body_key(w), body)?;
+    let env = [&[0x01][..], &tag, &sealed].concat();
+    Some((tag, env))
+}
+/// Whether a tag is one the pipe accepts around a window (iOS MTPipe.windows(around:) and MTPipeKey.tags): W-1, W and W+1.
+pub fn lane_accepts(key: &PipeKey, w: i64, tag: &[u8]) -> bool {
+    [w - 1, w, w + 1].iter().any(|k| key.tags(*k).iter().any(|t| t.as_slice() == tag))
+}
+/// A lane envelope opened by the pipe: its tag accepted around the window, its body opened under the key of W, W-1 or W+1.
+pub fn lane_open(key: &PipeKey, w: i64, env: &[u8]) -> Option<wire::Opened> {
+    if env.first() != Some(&0x01) || env.len() <= 17 || !lane_accepts(key, w, &env[1..17]) {
+        return None;
+    }
+    wire::open_walked(&env[17..], key, w)
 }
 
 /// A CELL THAT ARRIVED (iOS handleOverlayFrame 1318-1572): an ack ends its wait; our own frame back and a repeat go no further; a
@@ -265,15 +289,14 @@ fn received(h: &Arc<Holder>, c: &Channel, f: OverlayFrame) {
 /// MY LETTER OFF A CHANNEL (iOS handleOverlayFrame 1432-1572): 0x01 ‖ the pipe's tag ‖ the body sealed with the pipe's key -- the
 /// conversation is named by the letter's own tag, the pipe's seal is the proof of the sender; 0x00 ‖ a name ‖ a wake or a point of
 /// rendezvous says something waits in the box. A first letter at a card's point (0x02) is not opened here yet: the box brings it.
-fn open(h: &Holder, pipe: Option<(String, Vec<u8>)>, env: &[u8], w: i64) {
+fn open(h: &Holder, pipe: Option<(String, PipeKey)>, env: &[u8], w: i64) {
     match env.first() {
         Some(0x01) if env.len() > 17 => {
-            let Some((r, secret)) = pipe.filter(|(_, s)| [w - 1, w, w + 1].iter().any(|k| wire::pipe_tag(s, *k) == env[1..17])) else {
+            let Some((r, key)) = pipe.filter(|(_, k)| lane_accepts(k, w, &env[1..17])) else {
                 mark("open_refused -- not our pipe");
                 return;
             };
-            let sealed = &env[17..];
-            match [w, w - 1, w + 1].iter().find_map(|k| wire::open(&wire::body_key(&secret, *k), sealed)) {
+            match lane_open(&key, w, env) {
                 Some(plain) => (h.hooks.land)(&r, &plain),
                 None => mark("open_refused -- the pipe seal did not match"),
             }
@@ -328,17 +351,16 @@ fn carry(h: &Holder, from: &Channel, f: &OverlayFrame, under_tag: bool, w: i64) 
 
 /// A LETTER LAID BEFORE THE NODES UNDER ITS PIPE'S TAG (iOS sendUnderTag 1292-1307, MontanaPath.hopMin = 1): 0x01 ‖ the pipe's tag of
 /// this window ‖ the body sealed with the pipe's key of this window -- whoever holds the tag opens it, the rest carry it, and the
-/// node reads nothing. Only when the path is assembled: a standing channel whose machine named its owner. The box's road goes on
-/// beside it; false -- no road here.
-pub fn lay(secret: &[u8], mid: &str, body: &[u8]) -> bool {
+/// node reads nothing. From 01.11.2026 UTC the tag walks with the window's day (PipeKey::tag). Only when the path is assembled: a
+/// standing channel whose machine named its owner. The box's road goes on beside it; false -- no road here.
+pub fn lay(key: &PipeKey, mid: &str, body: &[u8]) -> bool {
     let Some(h) = HOLDER.get() else { return false };
     let cs: Vec<Arc<Channel>> = ready(h).into_iter().map(|(_, c)| c).collect();
     if !cs.iter().any(|c| c.peer_owner_ref().is_some()) {
         return false;
     }
     let w = wire::minute();
-    let tag = wire::pipe_tag(secret, w);
-    let Some(sealed) = wire::seal(&wire::body_key(secret, w), body) else { return false };
+    let Some((tag, payload)) = lane_frame(key, w, body) else { return false };
     let Some(id) = crate::crypto::random(16).and_then(|b| <[u8; 16]>::try_from(b).ok()) else { return false };
     {
         let mut fr = h.frames.lock().unwrap();
@@ -349,7 +371,7 @@ pub fn lay(secret: &[u8], mid: &str, body: &[u8]) -> bool {
     }
     let mut dst = [0u8; 32];
     dst[..16].copy_from_slice(&tag);
-    let frame = OverlayFrame { kind: OverlayFrame::RELAY, dst, msg_id: id, payload: [&[0x01][..], &tag, &sealed].concat() }.encode();
+    let frame = OverlayFrame { kind: OverlayFrame::RELAY, dst, msg_id: id, payload }.encode();
     let used = cs.iter().filter(|c| c.send(net::OVERLAY_FRAME, &frame)).count();
     if used > 0 {
         mark(&format!("near_tx mid={} nodes={used}", mid.chars().take(8).collect::<String>()));
@@ -361,6 +383,45 @@ pub fn lay(secret: &[u8], mid: &str, body: &[u8]) -> bool {
 mod tests {
     use super::*;
 
+    /// THE LANE BY THE DAY (iOS 2311 MTPipeKey.tag / tags, MTPipe.windows(around:)): until 31.10 the tag over the secret both
+    /// ways; on 01.11 and 02.11 the new tag laid and both heard while the secret is held; from 03.11 only the new one, by the floor
+    /// as by a key still holding the secret; a frame laid by one side opens on the other on every day. The day is the window's.
+    #[test]
+    fn the_lane_lays_and_accepts_by_the_windows_day() {
+        use crate::pipekey::{ERASE_DAY, MINUTES_PER_DAY as MPD, TAG_WALK_DAY};
+        let s: Vec<u8> = (0..32).collect();
+        let k = PipeKey::new(&s);
+        let body = b"mid:t1\0hello\0";
+        for d in [TAG_WALK_DAY - 1, TAG_WALK_DAY, TAG_WALK_DAY + 1, ERASE_DAY, ERASE_DAY + 2] {
+            let w = d * MPD + 5;
+            let held = k.floored(d);
+            let old = wire::pipe_tag(&s, w);
+            let (tag, env) = lane_frame(&k, w, body).unwrap();
+            assert_eq!(lane_open(&held, w, &env).as_ref().map(|opened| opened.plain.as_slice()), Some(&body[..]), "the new frame opens on day {d}");
+            assert_eq!(lane_open(&held, w + 1, &env).as_ref().map(|opened| opened.plain.as_slice()), Some(&body[..]), "a minute's drift on day {d}");
+            if d < TAG_WALK_DAY {
+                assert_eq!(tag, old, "until 31.10 the tag stands on the secret");
+            } else {
+                assert_ne!(tag, old, "from 01.11 the tag walks ({d})");
+            }
+            let old_env = [&[0x01][..], &old, &wire::seal(&k.body_key(w), body).unwrap()].concat();
+            assert_eq!(lane_accepts(&held, w, &old), d < ERASE_DAY, "the earlier builds' tag heard until 02.11 ({d})");
+            assert_eq!(lane_open(&held, w, &old_env).is_some(), d < ERASE_DAY, "({d})");
+        }
+        // [C] MTPipeKey.swift:363-364: the tags of 01.11 00:05, the new and the earlier one
+        assert_eq!(wire::hex(&k.tag(TAG_WALK_DAY * MPD + 5)), "96d8937ada4908bcba9fd12c78b9c11c");
+        assert!(lane_accepts(&k, TAG_WALK_DAY * MPD + 5, &wire::unhex("cc6997487bfa3ed9c4a7542be4fc2bbb").unwrap()));
+        // at 03.11 00:00 the window before belongs to 02.11: a key still holding the secret would hear its earlier tag for that
+        // minute; the book holds the floor from 03.11 (in memory too), so only the walked tag is heard -- the one wire effect of
+        // flooring the book in memory
+        let w = ERASE_DAY * MPD;
+        let before = wire::pipe_tag(&s, w - 1);
+        assert!(lane_accepts(&k, w, &before));
+        assert!(!lane_accepts(&k.floored(ERASE_DAY), w, &before));
+        // a stranger's tag, a short or foreign envelope: nothing
+        assert!(!lane_accepts(&k, w, &[0u8; 16]) && lane_open(&k, w, &[0x01; 17]).is_none() && lane_open(&k, w, &[0x02; 64]).is_none());
+    }
+
     /// A LETTER UNDER A PIPE'S TAG, THROUGH THE NETWORK (live, MONTANA_LIVE=1; two throwaway identities in temporary folders, a pipe
     /// secret drawn for the test): both hold the network's doors; A lays a letter under the pipe's tag before its machines, and B,
     /// holding the same pipe, opens it off its own channel -- the node read nothing of it.
@@ -371,7 +432,7 @@ mod tests {
             return;
         }
         let dir = std::env::temp_dir().join(format!("mt-chans-{}", wire::hex(&crate::crypto::random(6).unwrap())));
-        let secret = crate::crypto::random(32).unwrap();
+        let secret = PipeKey::new(&crate::crypto::random(32).unwrap());
         let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
         let tx = Mutex::new(tx);
         // B: a holder of its own, hearing the pipe
@@ -381,7 +442,7 @@ mod tests {
             hooks: Hooks {
                 pipes: Box::new(move || vec![("pipe".into(), sb.clone())]),
                 owner: Box::new(|| Some(vec![0x42; 32])),
-                land: Box::new(move |_, plain| { let _ = tx.lock().unwrap().send(plain.to_vec()); }),
+                land: Box::new(move |_, opened| { let _ = tx.lock().unwrap().send(opened.plain.clone()); }),
                 wake: Box::new(|| {}),
             },
             ident: channel::identity(&vb).unwrap(), live: Default::default(), tried: Default::default(), book: Default::default(),

@@ -42,7 +42,7 @@ $B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -He
 "B picks the HEIC with a caption"
 Click-Named "Алиса Тест"
 Type-Into "Сообщение..." "Фото HEIC с iPhone"
-Files-Key; Pick-File $heic
+Files-Key; Pick-File $heic; Send-Tray
 Wrote "B" "media send img jpg from heif" 20
 Says "Фото HEIC с iPhone"
 Sent-Settle 90

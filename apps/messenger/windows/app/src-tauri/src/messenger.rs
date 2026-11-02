@@ -212,10 +212,12 @@ impl Messenger {
         });
     }
 
-    /// A new person sits here: what the last one derived leaves.
+    /// A new person sits here: what the last one derived leaves in memory; its sealed store stays its own.
     pub fn reseat(&self) {
+        self.book.forget_all();
         *self.keys.lock().unwrap() = None;
         *self.archive.lock().unwrap() = None;
+        *self.open.lock().unwrap() = None;
     }
 
     /// THE ARCHIVE OF THIS IDENTITY (<data>/archive), its keys from the words, this machine's own device id (16 bytes, kept).
@@ -297,7 +299,7 @@ impl Messenger {
             .book
             .all()
             .into_iter()
-            .filter(|c| crate::book::is_saved(&c.reference) || ((self.book.secret(&c.reference).is_some() || crate::groups::is_group(&c.reference)) && !c.hidden))
+            .filter(|c| crate::book::is_saved(&c.reference) || ((self.book.holds(&c.reference) || crate::groups::is_group(&c.reference)) && !c.hidden))
             .map(|c| {
                 // a game's step is the board's; the Money Flow's own row, a call's and a group's event stand in the list as
                 // themselves (iOS listPreview: the call's words, MTRowLetter.preview: the event's)
@@ -468,10 +470,10 @@ impl Messenger {
                         self.book.edit(r, |c| c.face_at = 1);
                     }
                 }
-                if let Some(secret) = self.book.secret(r) {
+                if let Some(kept) = self.book.key(r).map(|k| k.kept()) {
                     let face = self.self_face().unwrap_or_default();
-                    if let Some(sealed) = crate::crypto::seal(&crate::post::pipe_face_key(&secret), &face) {
-                        crate::doors::put_blob(&crate::post::pipe_face_bid(&secret), &sealed);
+                    if let Some(sealed) = crate::crypto::seal(&kept.face_key, &face) {
+                        crate::doors::put_blob(&kept.face_bid, &sealed);
                     }
                 }
             }
@@ -530,7 +532,7 @@ impl Messenger {
     /// (ChatStore.coinsTravel: mine, sending or sent, a coin letter) -- then the sheet says so and offers no deletion.
     pub fn erase_terms(&self, r: &str) -> (bool, bool) {
         let Some(c) = self.book.chat(r) else { return (false, false) };
-        let both = !crate::book::is_saved(r) && !crate::groups::is_group(r) && self.book.secret(r).is_some();
+        let both = !crate::book::is_saved(r) && !crate::groups::is_group(r) && self.book.holds(r);
         let travel = c.msgs.iter().any(|m| m.mine && (m.state == 0 || m.state == 1) && crate::coins::letter_of(&m.text).is_some());
         (both, travel)
     }
@@ -680,4 +682,5 @@ mod tests {
         assert_eq!(missed_since(&log, 0.0), 2);
         assert_eq!(missed_since(&log, 3_000.0), 0, "seen at its very moment");
     }
+
 }

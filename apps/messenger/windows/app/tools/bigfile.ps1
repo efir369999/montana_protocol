@@ -43,7 +43,7 @@ $A = Start-Montana -DataDir "$Root\A"; Front-Montana -X 0 -Y 40 -Width 900 -Heig
 $B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -Height 900
 "B picks the big file"
 Click-Named "Алиса Тест"
-Files-Key; Pick-File $big
+Files-Key; Pick-File $big; Send-Tray
 try { Says "Файл готовится" 30 } catch { "  (the share passed too fast to be seen)" }
 Says "Большая запись.wav" 300
 $t1 = Get-Date

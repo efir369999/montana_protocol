@@ -86,74 +86,16 @@ pub fn day() -> i64 {
     now_ms() / 86_400_000
 }
 
-/// THE PIPE SECRET WALKS WITH THE CLIENT'S DAY (iOS MTNodeWire.pipeSecret, 21.10.2026; Canon, «The secret a tag stands on walks with
-/// the window»): pipe_secret(D + 1) = SHA-256("mt-pipe-ratchet" ‖ 0 ‖ pipe_secret(D)), one step a day, standing still through
-/// WALK_ANCHOR_DAY -- up to that day every key is byte for byte the one the earlier builds and Android derive, so they still meet,
-/// and from the day after each day stands one hash further down a one-way walk. A day is clamped to MAX_WALK steps, so a forged
-/// time costs a bounded walk and opens nothing.
-pub const WALK_ANCHOR_DAY: i64 = 20754; // 28.10.2026 UTC
-pub const MINUTES_PER_DAY: i64 = 1440;
-const MAX_WALK: i64 = 36_600;
-type Walks = std::collections::HashMap<Vec<u8>, (i64, Vec<u8>)>;
-/// secret -> (the steps walked, the value there): a walk goes on from where it stood
-static WALKED: std::sync::Mutex<Option<Walks>> = std::sync::Mutex::new(None);
-pub fn pipe_secret(secret: &[u8], day: i64) -> Vec<u8> {
-    let steps = (day - WALK_ANCHOR_DAY).clamp(0, MAX_WALK);
-    if steps == 0 {
-        return secret.to_vec();
-    }
-    let mut g = WALKED.lock().unwrap();
-    let walked = g.get_or_insert_with(Default::default);
-    let (mut at, mut value) = match walked.get(secret) {
-        Some((s, v)) if *s <= steps => (*s, v.clone()),
-        _ => (0, secret.to_vec()),
-    };
-    while at < steps {
-        value = domained("mt-pipe-ratchet", &[&value]).to_vec();
-        at += 1;
-    }
-    if walked.len() >= 256 {
-        walked.clear();
-    }
-    walked.insert(secret.to_vec(), (steps, value.clone()));
-    value
-}
-
-/// The raw seal key of the set: SHA-256("mt-pipe-key" ‖ 0 ‖ step_secret ‖ W_LE) -- held by the canon vectors.
+/// The raw seal key of the set: SHA-256("mt-pipe-key" ‖ 0 ‖ step_secret ‖ W_LE) -- held by the canon vectors. The key of a
+/// pipe's minute is its owner's to derive (PipeKey::body_key).
 pub fn seal_key(step_secret: &[u8], w: i64) -> [u8; 32] {
     domained("mt-pipe-key", &[step_secret, &le8(w)])
 }
 
-/// The letter body key of a minute: the seal key under the pipe secret of that minute's day.
-pub fn body_key(secret: &[u8], w: i64) -> [u8; 32] {
-    seal_key(&pipe_secret(secret, w.div_euclid(MINUTES_PER_DAY)), w)
-}
-
 /// The canon's daily tag over the day's secret: SHA-256("mt-wake-conv" ‖ 0 ‖ day_secret ‖ W_LE) -- held by the canon vectors apart
-/// from the walk that feeds it, as seal_key is for body_key.
+/// from the walk that feeds it (PipeKey::conv_w), as seal_key is for the body key.
 pub fn conv_tag(day_secret: &[u8], day: i64) -> String {
     hex(&domained("mt-wake-conv", &[day_secret, &le8(day)]))
-}
-
-/// The conversation's daily label at the node: both sides derive it from the pipe secret of that day.
-pub fn conv_w(secret: &[u8], day: i64) -> String {
-    conv_tag(&pipe_secret(secret, day), day)
-}
-
-/// THE ROOT OF A CONVERSATION (iOS MTNodeWire.convRoot, 21.10.2026): SHA-256("mt-conv-root" ‖ 0 ‖ the established secret). What a pair
-/// derives afresh for every item -- the blind of a coin SEND and the author field of a letter -- stands on the root from the day after
-/// WALK_ANCHOR_DAY, never on the established secret, so the walk can erase that secret.
-pub fn conv_root(secret: &[u8]) -> [u8; 32] {
-    domained("mt-conv-root", &[secret])
-}
-/// The key an item laid on the day stands on: the root past the anchor, the established secret up to it.
-pub fn item_key(secret: &[u8], day: i64) -> Vec<u8> {
-    if day > WALK_ANCHOR_DAY { conv_root(secret).to_vec() } else { secret.to_vec() }
-}
-/// The keys a received item may stand on, the root first: the sender's day is its own clock, so the receiver tries both while it
-/// still holds the established secret.
-pub fn item_keys(secret: &[u8]) -> [Vec<u8>; 2] {
-    [conv_root(secret).to_vec(), secret.to_vec()]
 }
 
 /// The daily label of a handed-out invitation (the first letter's box).
@@ -169,11 +111,6 @@ pub fn sub_id(conv: &str, reference: &str) -> String {
 /// The first-meeting letter's key, derived from the invitation (iOS rdvLetterSecret).
 pub fn rdv_letter_secret(inv: &[u8]) -> [u8; 32] {
     domained("mt-rdv-letter", &[inv])
-}
-
-/// The local name of a correspondence: SHA-256(secret)[0..16] in hex (iOS MTPipeBook.reference).
-pub fn reference(secret: &[u8]) -> String {
-    hex(&sha(&[secret])[..16])
 }
 
 pub fn pipe_tag(secret: &[u8], w: i64) -> Vec<u8> {
@@ -226,22 +163,48 @@ pub fn open(key: &[u8], sealed: &[u8]) -> Option<Vec<u8>> {
     crypto::open(key, sealed)
 }
 
+pub struct Opened {
+    pub plain: Vec<u8>,
+    pub walk: crate::pipeheal::Walk,
+    pub window: i64,
+}
+
+/// A letter opened around a minute, telling the heal which walk opened and the letter's own minute.
+pub fn open_walked(sealed: &[u8], key: &crate::pipekey::PipeKey, at_minute: i64) -> Option<Opened> {
+    for w in [at_minute, at_minute - 1, at_minute + 1] {
+        for (walk, body_key) in key.body_keys(w) {
+            if let Some(plain) = open(&body_key, sealed) {
+                return Some(Opened { plain, walk, window: w });
+            }
+        }
+    }
+    None
+}
+
 /// A boxed letter wears the SENDER's minute, the node names the minute it took it: the walk goes back a day.
-pub fn open_boxed(sealed: &[u8], secret: &[u8], at_s: i64) -> Option<Vec<u8>> {
+pub fn open_boxed_walked(sealed: &[u8], key: &crate::pipekey::PipeKey, at_s: i64) -> Option<Opened> {
     let w0 = at_s / 60;
     for w in [w0, w0 - 1, w0 + 1] {
-        if let Some(p) = open(&body_key(secret, w), sealed) {
-            return Some(p);
+        for (walk, body_key) in key.body_keys(w) {
+            if let Some(plain) = open(&body_key, sealed) {
+                return Some(Opened { plain, walk, window: w });
+            }
         }
     }
     let mut w = w0 - 2;
     for _ in 0..1439 {
-        if let Some(p) = open(&body_key(secret, w), sealed) {
-            return Some(p);
+        for (walk, body_key) in key.body_keys(w) {
+            if let Some(plain) = open(&body_key, sealed) {
+                return Some(Opened { plain, walk, window: w });
+            }
         }
         w -= 1;
     }
     None
+}
+
+pub fn open_boxed(sealed: &[u8], key: &crate::pipekey::PipeKey, at_s: i64) -> Option<Vec<u8>> {
+    open_boxed_walked(sealed, key, at_s).map(|opened| opened.plain)
 }
 
 /// mid‖0‖text‖0‖name‖0‖glyph‖0… — up to `count` fields from `from`; missing ones are empty (iOS parseLetterFields).
@@ -290,13 +253,10 @@ pub fn author_tag(key: &[u8], secret: &[u8], mid: &str, text: &str) -> String {
     b64(&hmac(key, &m)[..16])
 }
 
-/// The body with the author's field: the fields before it closed, the empty ones written; a body that would outgrow the
-/// envelope rides without it. Past the anchor the field stands on the conversation's root (item_key).
-pub fn with_author(body: &[u8], key: Option<&[u8]>, secret: &[u8], mid: &str, text: &str) -> Vec<u8> {
-    with_author_on(body, key, secret, mid, text, day())
-}
-pub fn with_author_on(body: &[u8], key: Option<&[u8]>, secret: &[u8], mid: &str, text: &str, day: i64) -> Vec<u8> {
-    let Some(key) = key.filter(|k| k.len() == 32) else { return body.to_vec() };
+/// The body with the author's field (iOS MTNodeWire.withAuthor(body, tag:)): the fields before it closed, the empty ones written,
+/// the tag eighth; a body that would outgrow the envelope rides without it. The tag is the pipe's owner's to make
+/// (PipeKey::with_author).
+pub fn with_author_tag(body: &[u8], tag: &str) -> Vec<u8> {
     let mut b = body.to_vec();
     if b.last().is_some_and(|&x| x != 0) {
         b.push(0);
@@ -309,24 +269,51 @@ pub fn with_author_on(body: &[u8], key: Option<&[u8]>, secret: &[u8], mid: &str,
     if closed != AUTHOR_FIELDS {
         return body.to_vec();
     }
-    b.extend_from_slice(author_tag(key, &item_key(secret, day), mid, text).as_bytes());
+    b.extend_from_slice(tag.as_bytes());
     b.push(0);
     if b.len() <= ENVELOPE { b } else { body.to_vec() }
 }
 
-/// Whether a letter's author field is this person's: the tag made again under the root and under the secret, compared in constant
-/// time (iOS authorHolds over itemKeys).
-pub fn author_holds(tag: &str, key: Option<&[u8]>, secret: &[u8], mid: &str, text: &str) -> bool {
-    let Some(key) = key.filter(|k| k.len() == 32) else { return false };
-    let Some(got) = unb64(tag).filter(|g| g.len() == 16) else { return false };
-    item_keys(secret).iter().any(|k| {
-        unb64(&author_tag(key, k, mid, text)).is_some_and(|want| got.iter().zip(&want).fold(0u8, |d, (a, b)| d | (a ^ b)) == 0)
-    })
+/// The ninth field carries a heal after the author; a body without room rides without it.
+#[allow(dead_code)]
+pub fn with_heal(body: &[u8], field: &[u8]) -> Vec<u8> {
+    const HEAL_FIELDS: usize = AUTHOR_FIELDS + 1;
+    let mut b = body.to_vec();
+    if b.last().is_some_and(|&x| x != 0) {
+        b.push(0);
+    }
+    let mut closed = b.iter().filter(|&&x| x == 0).count();
+    while closed < HEAL_FIELDS {
+        b.push(0);
+        closed += 1;
+    }
+    if closed != HEAL_FIELDS {
+        return body.to_vec();
+    }
+    b.extend_from_slice(b64(field).as_bytes());
+    b.push(0);
+    if b.len() <= ENVELOPE { b } else { body.to_vec() }
+}
+
+/// The heal a letter carries in its ninth field; none when the field is absent, empty or not base64.
+pub fn letter_heal(plain: &[u8]) -> Option<Vec<u8>> {
+    const HEAL_FIELDS: usize = AUTHOR_FIELDS + 1;
+    let mut rest = plain;
+    for _ in 0..HEAL_FIELDS {
+        let z = rest.iter().position(|&x| x == 0)?;
+        rest = &rest[z + 1..];
+    }
+    let end = rest.iter().position(|&x| x == 0).unwrap_or(rest.len());
+    if end == 0 {
+        return None;
+    }
+    unb64(std::str::from_utf8(&rest[..end]).ok()?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pipekey::{PipeKey, WALK_ANCHOR_DAY};
 
     fn r(b: u8, n: usize) -> Vec<u8> {
         vec![b; n]
@@ -343,35 +330,7 @@ mod tests {
         assert_eq!(conv_tag(&s32, 29737), "43eaf2811da7947166d4e851e52c4ab89e09c8c92247370d3c734ef08ca1e6ea");
         assert_eq!(conv_tag(&s32, 29738), "f5f2941435d76c0a80dd229722ef42382695e88fdd1fabf89d71f317bef05430");
         assert_eq!(hex(&seal_key(&s32, 0x0102030405060708)), "e55fbc1e0f95c4fe012b476c4dd1a51c9455e24641248f4f1557ed57f8c14f35");
-        assert_eq!(hex(&body_key(&s32, 1000)), "e25542e65a84d1a5b5c72a13172ecb62319c18f21a59978a53e7dac2c22a966a");
-    }
-
-    /// THE WALK OF THE PIPE SECRET AND THE ROOT, iOS 2304's own vectors (MTPipe.selfCheck 199-237, derived in Python apart from the
-    /// code): the anchor day is the established secret, the next two are one and two steps down; the root blinds and signs past the
-    /// anchor, and a reader holds both.
-    #[test]
-    fn the_walk_of_the_pipe_secret_and_the_root_agree_with_ios_2304() {
-        let s32: Vec<u8> = (0..32).collect();
-        let a = WALK_ANCHOR_DAY;
-        assert_eq!(pipe_secret(&s32, a), s32);
-        assert_eq!(pipe_secret(&s32, a - 400), s32, "before the anchor nothing walks");
-        assert_eq!(hex(&pipe_secret(&s32, a + 1)), "5dcfd87692fcd444a4344d756dfa37abe670d2eb252aa9b402646be97cf3c50a");
-        assert_eq!(hex(&pipe_secret(&s32, a + 2)), "0c31775e80ae463de61fecee68bee8bb4ebbcee8e6b2045f8714e93ef18cb1b0");
-        assert_eq!(hex(&pipe_secret(&s32, a + 1)), "5dcfd87692fcd444a4344d756dfa37abe670d2eb252aa9b402646be97cf3c50a", "a walk back is walked afresh");
-        assert_eq!(hex(&body_key(&s32, (a + 2) * MINUTES_PER_DAY)), "925378a4bb83e7137cbb1f8cdaba8b79fc37e30d3159e4158da6e0fee8518bb5");
-        assert_eq!(conv_w(&s32, a), "d29425fcf807a325b74d8bb017420cfe2250cc47e8bdc6351f6006cd4a6bdc9b");
-        assert_eq!(conv_w(&s32, a + 2), "c665fdca8978b9c6e54b9a4f16a06ccac657ba7da259df0a8f3e2550d7c2d518");
-        assert_eq!(hex(&conv_root(&s32)), "d9c3e7f533da2d0ed10b6729601c478ab29d1b0cafed60443113ee6a63824e11");
-        assert_eq!((item_key(&s32, a), item_key(&s32, a + 1)), (s32.clone(), conv_root(&s32).to_vec()));
-        assert_eq!(item_keys(&s32), [conv_root(&s32).to_vec(), s32.clone()]);
-        // the author field stands on the same key: the root past the anchor, the secret on the anchor day; a reader holds both
-        let person = r(0x33, 32);
-        let root_tag = author_tag(&person, &conv_root(&s32), "m", "t");
-        let anchor_tag = author_tag(&person, &s32, "m", "t");
-        assert_ne!(root_tag, anchor_tag);
-        assert_eq!(with_author_on(&[], Some(&person), &s32, "m", "t", a + 1), [vec![0; 7], root_tag.as_bytes().to_vec(), vec![0]].concat());
-        assert_eq!(with_author_on(&[], Some(&person), &s32, "m", "t", a), [vec![0; 7], anchor_tag.as_bytes().to_vec(), vec![0]].concat());
-        assert!(author_holds(&root_tag, Some(&person), &s32, "m", "t") && author_holds(&anchor_tag, Some(&person), &s32, "m", "t"));
+        assert_eq!(hex(&PipeKey::new(&s32).body_key(1000)), "e25542e65a84d1a5b5c72a13172ecb62319c18f21a59978a53e7dac2c22a966a");
     }
 
     #[test]
@@ -401,28 +360,29 @@ mod tests {
     fn the_author_field_agrees_with_ios_canon() {
         let key = r(0x61, 32);
         let secret = r(0x44, 32);
+        let pipe = PipeKey::new(&secret);
         let mid = "t1792249000000-ABCD";
         let text = "Привет, Montana 🌍";
         let mut head = [mid.as_bytes(), &[0], text.as_bytes(), &[0], b"Alice", &[0, 0]].concat();
         assert_eq!(author_tag(&key, &secret, mid, text), "WcOqZdlxhSpBEZYKgbjSSg==");
         assert_eq!(author_tag(&key, &secret, mid, ""), "AZIK29ezKo70HRREQwXbzA==");
         // the canon's vectors stand on the anchor day: the field signed under the established secret
-        let signed = with_author_on(&head, Some(&key), &secret, mid, text, WALK_ANCHOR_DAY);
+        let signed = pipe.with_author(&head, Some(&key), mid, text, WALK_ANCHOR_DAY);
         assert_eq!(signed.len(), 82);
         assert_eq!(hex(&sha(&[&signed])), "5fe43b371f456a08e30ffe5d736c866719e26f5702fcf4da3ca7145ca39b358d");
         head.extend_from_slice(&[0, 0]);
         head.extend_from_slice(b"{\"u\":\"https://montana.quest\",\"t\":\"Montana\"}");
-        assert_eq!(hex(&sha(&[&with_author_on(&head, Some(&key), &secret, mid, text, WALK_ANCHOR_DAY)])), "bd472907cb6fb8d2d13a4291f80f976fdb836658b4ecd1f3d9d53ad1ea112d9c");
-        assert!(author_holds("WcOqZdlxhSpBEZYKgbjSSg==", Some(&key), &secret, mid, text));
-        assert!(!author_holds("WcOqZdlxhSpBEZYKgbjSSg==", Some(&key), &secret, mid, "x"));
+        assert_eq!(hex(&sha(&[&pipe.with_author(&head, Some(&key), mid, text, WALK_ANCHOR_DAY)])), "bd472907cb6fb8d2d13a4291f80f976fdb836658b4ecd1f3d9d53ad1ea112d9c");
+        assert!(pipe.author_holds("WcOqZdlxhSpBEZYKgbjSSg==", Some(&key), mid, text));
+        assert!(!pipe.author_holds("WcOqZdlxhSpBEZYKgbjSSg==", Some(&key), mid, "x"));
     }
 
     #[test]
     fn a_boxed_letter_opens_in_the_senders_minute_or_a_day_back() {
-        let secret = r(0x33, 32);
+        let pipe = PipeKey::new(&r(0x33, 32));
         let w = minute();
-        let sealed = seal(&body_key(&secret, w - 37), b"mid\0hello\0").unwrap();
-        assert_eq!(open_boxed(&sealed, &secret, w * 60).as_deref(), Some(&b"mid\0hello\0"[..]));
+        let sealed = seal(&pipe.body_key(w - 37), b"mid\0hello\0").unwrap();
+        assert_eq!(open_boxed(&sealed, &pipe, w * 60).as_deref(), Some(&b"mid\0hello\0"[..]));
         let f = fields(b"mid\0hello\0Alice\0\0", 0, 7);
         assert_eq!((f[0].as_str(), f[1].as_str(), f[2].as_str(), f[6].as_str()), ("mid", "hello", "Alice", ""));
     }
@@ -434,12 +394,15 @@ mod tests {
 /// (#23), Registry NET-24. Where a function of the port takes the set's input, the set's output is asserted. Where none does,
 /// the divergence is asserted as it stands and not bent: the set walks the secret one step per TimeChain window from the window
 /// of the pipe's first letter (Canon 1335, 1343-1344, 1359) and every quantity of a window -- the tag, the right to collect, the
-/// key -- stands on the walked value (1347-1348); this port, as iOS 2308 (MTNodeWire.swift:65-104), walks one step per UTC day
+/// key -- stands on the walked value (1347-1348); this port, as iOS 2311 (MTPipeKey.swift:42-115), walks one step per UTC day
 /// from one anchor day for every pipe, keys a minute by that minute's day, and lays its minute tag over the established secret
-/// (channels.rs:226, 271, 340). The set's collect_right has no function in this tree (no "mt-collect"), so its rows are not fed.
+/// before TAG_WALK_DAY and over the value walked by the window's UTC day from it (PipeKey::tag). The set's collect_right has no
+/// function in this tree (no "mt-collect"), so its rows are not fed. The walk's values are read through the key's check-only
+/// door (PipeKey::walked_for_check), never in the program.
 #[cfg(test)]
 mod canon_walk {
     use super::*;
+    use crate::pipekey::{PipeKey, MAX_WALK, MINUTES_PER_DAY, TAG_WALK_DAY, WALK_ANCHOR_DAY};
 
     const W: i64 = 1000;
 
@@ -449,6 +412,10 @@ mod canon_walk {
 
     fn x(h: &str) -> Vec<u8> {
         unhex(h).expect("a hex row of the Canon")
+    }
+
+    fn walk(secret: &[u8], day: i64) -> Vec<u8> {
+        PipeKey::new(secret).walked_for_check(day)
     }
 
     /// test_secret = SHA-256("mt-vector-pipe-secret"): the plain digest of the ASCII bytes, as the core reads it
@@ -483,74 +450,86 @@ mod canon_walk {
     }
 
     /// One step of the port's walk is the set's step, SHA-256("mt-pipe-ratchet" ‖ 0x00 ‖ value), and k steps of the port are
-    /// k steps of the set. The port has no function of (secret, W0, W): its one walk, pipe_secret(secret, day), counts from
-    /// WALK_ANCHOR_DAY for every pipe, so the set's pipe_secret(W0 + k) is reached here as pipe_secret(secret, WALK_ANCHOR_DAY + k).
-    /// What is compared is the step and the count of steps, not the index the count is taken on -- that is the next test.
+    /// k steps of the set. The port has no function of (secret, W0, W): its one walk counts from WALK_ANCHOR_DAY for every pipe,
+    /// so the set's pipe_secret(W0 + k) is reached here as the walk on WALK_ANCHOR_DAY + k. What is compared is the step and the
+    /// count of steps, not the index the count is taken on -- that is the next test.
     #[test]
     fn canon_walk_is_the_ports_walk_counted_from_its_anchor_day() {
         let a = WALK_ANCHOR_DAY;
         let shared = r(0x44);
-        assert_eq!(pipe_secret(&shared, a), shared);
-        assert_eq!(hex(&pipe_secret(&shared, a + 1)), "1defe2877d6630f056ebaff2b6b94cd31baeb24747346b542ff5f31fe35db94d");
-        assert_eq!(hex(&pipe_secret(&shared, a + 2)), "a84614faf98fddb2d569aaf7a8bd3d6ff8b20fb5c22e72338af4558993176798");
-        assert_eq!(hex(&pipe_tag(&pipe_secret(&shared, a + 1), W + 1)), "5bcdd791565a49a2764157d72a8450dc");
-        assert_eq!(hex(&pipe_tag(&pipe_secret(&shared, a + 2), W + 2)), "7d15bb090586a75f651ab429b86e62f4");
+        assert_eq!(walk(&shared, a), shared);
+        assert_eq!(hex(&walk(&shared, a + 1)), "1defe2877d6630f056ebaff2b6b94cd31baeb24747346b542ff5f31fe35db94d");
+        assert_eq!(hex(&walk(&shared, a + 2)), "a84614faf98fddb2d569aaf7a8bd3d6ff8b20fb5c22e72338af4558993176798");
+        assert_eq!(hex(&pipe_tag(&walk(&shared, a + 1), W + 1)), "5bcdd791565a49a2764157d72a8450dc");
+        assert_eq!(hex(&pipe_tag(&walk(&shared, a + 2), W + 2)), "7d15bb090586a75f651ab429b86e62f4");
         let t = test_secret();
-        let walked = pipe_secret(&t, a + 1);
+        let walked = walk(&t, a + 1);
         assert_eq!(hex(&walked), "92aa039f4d82a59e12a6e65eacaa998fa06455b63e4aef6405556f9e99e4c666");
         assert_eq!(hex(&pipe_tag(&walked, W + 1)), "39e4abcd4db155761253830a3afa9959");
         assert_eq!(hex(&seal_key(&walked, W + 1)), "eed13b68a4fecd9c91ff7ddca945f8289b62b02835f95260639616d2ba236ba8");
         // the vectors of the messages: pipe_key (W = 1001) stands on the 0x22 secret walked one step
-        let k = seal_key(&pipe_secret(&r(0x22), a + 1), W + 1);
+        let k = seal_key(&walk(&r(0x22), a + 1), W + 1);
         assert_eq!(hex(&k), "63b394b362ae40d238abf09c174ef6bafd9e546c4325190bf1ffbcd375ca5e35");
         // the secret read from its other end parts on test_secret, where 0x44 x 32 cannot tell (Canon 3245-3247)
         let reversed: Vec<u8> = t.iter().rev().copied().collect();
-        assert_ne!(pipe_secret(&reversed, a + 1), walked);
+        assert_ne!(walk(&reversed, a + 1), walked);
         // 1001 steps of the port's loop, from whatever its cache holds, are the set's 1001-step value -- the one the set freezes
         // for a walk taken once per unit of height; here it only measures a long walk, and the short one after it walks back
-        assert_eq!(hex(&pipe_tag(&pipe_secret(&shared, a + 1001), W + 1)), "11062c7ece61d640abf601e486170994");
-        assert_eq!(hex(&pipe_secret(&shared, a + 1)), "1defe2877d6630f056ebaff2b6b94cd31baeb24747346b542ff5f31fe35db94d");
+        assert_eq!(hex(&pipe_tag(&walk(&shared, a + 1001), W + 1)), "11062c7ece61d640abf601e486170994");
+        assert_eq!(hex(&walk(&shared, a + 1)), "1defe2877d6630f056ebaff2b6b94cd31baeb24747346b542ff5f31fe35db94d");
     }
 
     /// THE DIVERGENCE, STATED: fed the set's own input -- the established secret and the window W + 1 = 1001 -- the port gives
     /// the set's «unwalked» negative for the tag (the set freezes no value for the unwalked key: it only names that mistake, so
-    /// the key is checked against the set's walked row and against the port's own unwalked key). (1) The walk is indexed by the UTC day from WALK_ANCHOR_DAY = 20754
-    /// (28.10.2026), not by the TimeChain window from the window of the pipe's first letter (Canon 1335, 1343, 1359), so at 1001
-    /// nothing has walked. (2) The minute tag, pipe_tag over the established secret, never walks: this test holds pipe_tag's
-    /// value only; that the lane lays it over the established secret is read in channels.rs:226, 271, 340, not exercised here.
+    /// the key is checked against the set's walked row and against the port's own unwalked key). (1) The walk is indexed by the
+    /// UTC day from WALK_ANCHOR_DAY = 20754 (28.10.2026), not by the TimeChain window from the window of the pipe's first letter
+    /// (Canon 1335, 1343, 1359), so at 1001 nothing has walked. (2) The minute tag of the lane (PipeKey::tag) stands on the
+    /// established secret before TAG_WALK_DAY = 20758 (01.11.2026) and, from it, on the value walked by the window's UTC day --
+    /// one value for the 1440 windows of a day, never the set's walk by the window: the App exception (council #4) stands.
     /// (3) The body key walks by the minute's day: minute 1001 (day 0) is unwalked, and one walked value serves 1440 windows.
     /// (4) A pipe born after the anchor starts walked, where the set starts at the established secret. (5) The walk stops at
-    /// MAX_WALK; the set names no cap. Each assertion holds of the port today: the day one fails (save (2)'s lane, see above), the
-    /// port has moved, and this test is read again rather than loosened.
+    /// MAX_WALK; the set names no cap. Each assertion holds of the port today: the day one fails, the port has moved, and this
+    /// test is read again rather than loosened.
     #[test]
-    fn canon_divergence_the_walk_is_by_day_from_one_anchor_and_the_tag_does_not_walk() {
+    fn canon_divergence_the_walk_is_by_day_from_one_anchor_and_the_tag_walks_by_the_day() {
         let shared = r(0x44);
+        let pipe = PipeKey::new(&shared);
         let unwalked_1001 = "c146445f67c990e25256dd88dfb39a49"; // Canon: tag(unwalked secret, W = 1001), a negative row
         let canon_1001 = "5bcdd791565a49a2764157d72a8450dc"; // Canon: tag (W = 1001)
         // (1) the set's W + 1 taken as the port's index stands before the anchor: the walk holds the secret unchanged
-        assert_eq!(pipe_secret(&shared, W + 1), shared);
-        assert_eq!(hex(&pipe_tag(&pipe_secret(&shared, W + 1), W + 1)), unwalked_1001);
-        assert_ne!(hex(&pipe_tag(&pipe_secret(&shared, W + 1), W + 1)), canon_1001);
-        // (2) the lane's tag of a window is pipe_tag over the established secret: the set's «unwalked» negative
+        assert_eq!(walk(&shared, W + 1), shared);
+        assert_eq!(hex(&pipe_tag(&walk(&shared, W + 1), W + 1)), unwalked_1001);
+        assert_ne!(hex(&pipe_tag(&walk(&shared, W + 1), W + 1)), canon_1001);
+        // (2) the lane's tag of window 1001 (day 0, before TAG_WALK_DAY) is pipe_tag over the established secret: the set's
+        // «unwalked» negative; from TAG_WALK_DAY the tag stands on the day's walked value, the same value for the day's first and
+        // last window, where the set would step between them
+        assert_eq!(hex(&pipe.tag(W + 1)), unwalked_1001);
+        let y = TAG_WALK_DAY;
+        let (y0, y1) = (y * MINUTES_PER_DAY, y * MINUTES_PER_DAY + MINUTES_PER_DAY - 1);
+        assert_eq!(pipe.tag(y0), pipe_tag(&walk(&shared, y), y0));
+        assert_eq!(pipe.tag(y1), pipe_tag(&walk(&shared, y), y1));
+        assert_ne!(pipe.tag(y0), pipe_tag(&shared, y0), "from TAG_WALK_DAY the tag walks");
+        // the raw primitive under it is unchanged
         assert_eq!(hex(&pipe_tag(&shared, W + 1)), unwalked_1001);
         // (3) the body key of minute 1001 stands on day 0, unwalked: the key over the established secret, not the set's row
         let t = test_secret();
-        assert_eq!(body_key(&t, W + 1), seal_key(&t, W + 1));
-        assert_ne!(hex(&body_key(&t, W + 1)), "eed13b68a4fecd9c91ff7ddca945f8289b62b02835f95260639616d2ba236ba8");
+        let tp = PipeKey::new(&t);
+        assert_eq!(tp.body_key(W + 1), seal_key(&t, W + 1));
+        assert_ne!(hex(&tp.body_key(W + 1)), "eed13b68a4fecd9c91ff7ddca945f8289b62b02835f95260639616d2ba236ba8");
         // ... and the first and the last minute of a day stand on one walked value, where the set steps once per window
         let day = WALK_ANCHOR_DAY + 1;
         let (first, last) = (day * MINUTES_PER_DAY, day * MINUTES_PER_DAY + MINUTES_PER_DAY - 1);
-        assert_eq!(body_key(&t, first), seal_key(&pipe_secret(&t, day), first));
-        assert_eq!(body_key(&t, last), seal_key(&pipe_secret(&t, day), last));
+        assert_eq!(tp.body_key(first), seal_key(&walk(&t, day), first));
+        assert_eq!(tp.body_key(last), seal_key(&walk(&t, day), last));
         // (4) a pipe whose first letter falls on the seventh day after the anchor stands seven steps down on that day: seven
         // explicit steps of the set's own step, SHA-256("mt-pipe-ratchet" ‖ 0 ‖ secret)
         let mut seven = shared.clone();
         for _ in 0..7 {
             seven = domained("mt-pipe-ratchet", &[&seven]).to_vec();
         }
-        assert_eq!(pipe_secret(&shared, WALK_ANCHOR_DAY + 7), seven);
+        assert_eq!(walk(&shared, WALK_ANCHOR_DAY + 7), seven);
         assert_ne!(seven, shared);
         // (5) the walk stops at MAX_WALK steps
-        assert_eq!(pipe_secret(&shared, WALK_ANCHOR_DAY + MAX_WALK + 1), pipe_secret(&shared, WALK_ANCHOR_DAY + MAX_WALK));
+        assert_eq!(walk(&shared, WALK_ANCHOR_DAY + MAX_WALK + 1), walk(&shared, WALK_ANCHOR_DAY + MAX_WALK));
     }
 }

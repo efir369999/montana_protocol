@@ -286,7 +286,7 @@ impl<'a> Card<'a> {
     /// THE OFFERING SIDE, FROM THE BOX (iOS accept(firstLetter:invite:conf:)): the invitation whose seal opened the letter names
     /// the one card; decapsulation never refuses, so the key confirmation is the proof --
     /// SHA-256("mt-first-conf"‖0‖secret‖ct)[0..16] in base64url, compared in constant time. The secret and the root.
-    pub fn accept_first(&self, ct: &[u8], inv64: &str, conf: &str) -> Option<(Vec<u8>, Vec<u8>)> {
+    pub fn accept_first(&self, ct: &[u8], inv64: &str, conf: &str) -> Option<(crate::pipekey::PipeKey, Vec<u8>)> {
         let (root, sk) = {
             let _g = LOCK.lock().unwrap();
             let mut all = self.map(DAILY);
@@ -298,10 +298,11 @@ impl<'a> Card<'a> {
             (root, sk)
         };
         let ss = crypto::mlkem_decaps(&sk, ct)?;
-        let secret = crypto::first_secret(&ss, &root, ct)?;
-        let want = b64url(&domained("mt-first-conf", &[&secret, ct])[..16]);
-        let same = want.len() == conf.len() && want.bytes().zip(conf.bytes()).fold(0u8, |d, (a, b)| d | (a ^ b)) == 0;
-        same.then_some((secret, root))
+        let key = crate::pipekey::PipeKey::new(&crypto::first_secret(&ss, &root, ct)?);
+        // an empty confirmation matches none (iOS sameConfirm): the secret just derived confirms itself
+        let want = key.first_confirm(ct);
+        let same = !want.is_empty() && want.len() == conf.len() && want.bytes().zip(conf.bytes()).fold(0u8, |d, (a, b)| d | (a ^ b)) == 0;
+        same.then_some((key, root))
     }
 }
 
@@ -331,8 +332,9 @@ mod tests {
         let secret = crypto::first_secret(&ss, &root, &ct).unwrap();
         let conf = b64url(&domained("mt-first-conf", &[&secret, &ct])[..16]);
         let (got, got_root) = c.accept_first(&ct, inv64, &conf).unwrap();
-        assert_eq!((got, got_root), (secret, root));
+        assert_eq!((got, got_root), (crate::pipekey::PipeKey::new(&secret), root));
         assert!(c.accept_first(&ct, inv64, "AAAAAAAAAAAAAAAAAAAAAA").is_none(), "a wrong confirmation opens nothing");
+        assert!(c.accept_first(&ct, inv64, "").is_none(), "an empty confirmation opens nothing");
         let _ = std::fs::remove_dir_all(&d);
     }
 

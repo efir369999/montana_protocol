@@ -34,6 +34,7 @@ $B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -He
 Click-Named "Алиса Тест"
 Files-Key
 try { Pick-File $film } catch { "  (the Open dialog was slow to come: the button again)"; Files-Key; Pick-File $film 30 }
+Send-Tray
 $end = (Get-Date).AddSeconds(60); $pill = $null
 while (-not $pill -and (Get-Date) -lt $end) {
     $pill = Get-Texts | Where-Object { $_ -match '^(В очереди|Сжатие( \d+%)?)$' } | Select-Object -First 1

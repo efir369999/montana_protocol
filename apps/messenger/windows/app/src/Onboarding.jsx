@@ -103,6 +103,12 @@ export default function Onboarding({ onDone }) {
       setCallsign(st.callsign);
       setStep("warn");
     } catch (e) {
+      // the seat's folder holds another person's sealed store -- nothing was written and nothing was changed
+      if (e?.kind === "SeatHeld") {
+        setAlert({ title: t("This computer keeps another person's data"),
+                   text: t("Nothing was created and nothing was changed: the words, the conversations and the keys of the person who sat here stay as they are. A new person needs another seat of Montana.") });
+        return;
+      }
       setAlert({ title: t("The identity could not be stored on this device"),
                  text: t("Nothing was created. Unlock the device and try again — an identity that is not stored cannot be opened at the next launch.") });
     } finally {
@@ -141,6 +147,8 @@ export default function Onboarding({ onDone }) {
     } catch (e) {
       if (e?.kind === "WordCount") setProblem(t("Exactly 24 words required (entered \\(words.count))", { "words.count": e.count }));
       else if (e?.kind === "Storage") setProblem(t("The identity could not be stored on this device"));
+      // these words belong to another person, or the store cannot be named -- the seat keeps its owner's data
+      else if (e?.kind === "SeatHeld") setProblem(t("This computer keeps another person's data: nothing was changed. A new person needs another seat of Montana."));
       else setProblem(t("Invalid phrase. Check the words and their order."));
     } finally {
       setRestoring(false);

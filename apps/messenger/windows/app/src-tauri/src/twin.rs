@@ -97,7 +97,8 @@ pub fn device_name(twin: &str, a: &crate::history::Archive) -> String {
 /// The pipe, this machine's name in it (iOS twinDeviceRef: the node rings every device of the pipe but the one that spoke),
 /// and its writer tag in hex (the «f» of a letter it lays).
 pub struct Me {
-    pub secret: [u8; 32],
+    /// the pipe of the words' devices: derived from the seed, never floored
+    pub key: crate::pipekey::PipeKey,
     pub name: String,
     pub tag: String,
 }
@@ -174,7 +175,7 @@ impl Desk<'_> {
         let a = self.archive.as_ref()?;
         let k = a.keys();
         let tag = a.writer_tag()?;
-        Some(Me { secret: secret(&k.hk), name: device_name(&self.twin, a), tag: hex(&tag) })
+        Some(Me { key: crate::pipekey::PipeKey::new(&secret(&k.hk)), name: device_name(&self.twin, a), tag: hex(&tag) })
     }
 
     // ───────────────────────────── laying ─────────────────────────────
@@ -295,7 +296,7 @@ impl Desk<'_> {
             road["w"] = json!("lt");
             road["n"] = json!(batch.len());
             road["f"] = json!(me.tag);
-            history::knock(&me.secret, &me.name, &format!("{KEEP_MARK}{road}"))
+            history::knock(&me.key, &me.name, &format!("{KEEP_MARK}{road}"))
         });
         if !laid {
             crate::trace_line(&format!("twin_lt the words did not reach the nodes n={}", batch.len()));
@@ -348,7 +349,7 @@ impl Desk<'_> {
             road["w"] = json!("hist");
             road["n"] = json!(n);
             road["f"] = json!(me.tag);
-            history::knock(&me.secret, &me.name, &format!("{KEEP_MARK}{road}"))
+            history::knock(&me.key, &me.name, &format!("{KEEP_MARK}{road}"))
         });
         if !laid {
             self.twin_soon("hist", AGAIN_MS);
@@ -694,7 +695,7 @@ impl Desk<'_> {
         if w.m.is_empty() || w.x.is_empty() || w.m.len() > 128 {
             return;
         }
-        if self.book.secret(&w.c).is_none() && self.book.chat(&w.c).is_none() {
+        if !self.book.holds(&w.c) && self.book.chat(&w.c).is_none() {
             self.hold(w);
             return;
         }
@@ -838,7 +839,7 @@ impl Desk<'_> {
             let all: Vec<(Word, i64)> = jlist(self.vault, HELD);
             let now = wire::now_ms();
             let (ready, wait): (Vec<_>, Vec<_>) = all.into_iter().filter(|(_, at)| now - at < HOLD_MS)
-                .partition(|(w, _)| self.book.secret(&w.c).is_some() || self.book.chat(&w.c).is_some());
+                .partition(|(w, _)| self.book.holds(&w.c) || self.book.chat(&w.c).is_some());
             if wait.is_empty() {
                 self.vault.delete(HELD);
             } else {
@@ -926,7 +927,7 @@ mod tests {
         let b = Book::new(v.clone());
         let d = desk(&v, &b, &s, &p, &words, 2, &root);
         let secret = vec![9u8; 32];
-        let r = b.establish(&secret).unwrap();
+        let r = b.establish(&crate::pipekey::PipeKey::new(&secret)).unwrap();
         b.open(&r, "Боб", false);
         let (theirs, mine) = (mint_mid(), mint_mid());
         d.land_mirrored(&Word { c: r.clone(), m: theirs.clone(), x: "от Боба".into(), ..Default::default() });
@@ -996,7 +997,7 @@ mod tests {
         assert!(a1.lay_mirror(), "the words did not reach the nodes");
         assert!(a1.lay_hist(), "the blocks did not reach the nodes");
         assert!(wait(&a2, &|| b2.chat(&rb).is_some_and(|c| c.msgs.iter().any(|m| m.mid == first && !m.mine))), "the second machine never had Bob's letter");
-        assert_eq!(b2.secret(&rb), b1.secret(&rb), "one pipe on both machines");
+        assert!(b2.key(&rb).unwrap().same_pipe(&b1.key(&rb).unwrap()), "one pipe on both machines");
         assert_eq!(b2.chat(&rb).unwrap().name, "Bob");
         assert_eq!(b2.chat(&rb).unwrap().msgs.iter().filter(|m| m.text == "Привет, Алиса").count(), 1, "the blocks' row and the mirror's word are one letter");
 
@@ -1077,9 +1078,9 @@ mod tests {
         let (b1, b2) = (Book::new(v1.clone()), Book::new(v2.clone()));
         let (d1, d2) = (desk(&v1, &b1, &s1, &p, &words, 1, &root), desk(&v2, &b2, &s2, &p, &words, 2, &root));
         let secret = vec![5u8; 32];
-        let r = b1.establish(&secret).unwrap();
+        let r = b1.establish(&crate::pipekey::PipeKey::new(&secret)).unwrap();
         b1.open(&r, "Боб", false);
-        assert_eq!(b2.establish(&secret).as_deref(), Some(r.as_str()));
+        assert_eq!(b2.establish(&crate::pipekey::PipeKey::new(&secret)).as_deref(), Some(r.as_str()));
         b2.open(&r, "Боб", false);
         // the first machine holds three rows -- Bob's, mine, and one the second machine took away
         let (m1, m2, m3) = (mint_mid(), mint_mid(), mint_mid());
@@ -1141,9 +1142,9 @@ mod tests {
         let (b1, b2) = (Book::new(v1.clone()), Book::new(v2.clone()));
         let (d1, d2) = (desk(&v1, &b1, &s1, &p, &words, 1, &root), desk(&v2, &b2, &s2, &p, &words, 2, &root));
         let secret = vec![6u8; 32];
-        let r = b1.establish(&secret).unwrap();
+        let r = b1.establish(&crate::pipekey::PipeKey::new(&secret)).unwrap();
         b1.open(&r, "Боб", false);
-        b2.establish(&secret).unwrap();
+        b2.establish(&crate::pipekey::PipeKey::new(&secret)).unwrap();
         b2.open(&r, "Боб", false);
         // the other device (an Android phone: blocks, no mirror) holds Bob's letter, mine of ten minutes ago, and one deleted here
         let (m1, m2, m3) = (mint_mid(), mint_mid(), mint_mid());
@@ -1195,7 +1196,7 @@ mod tests {
         let (v, s, p) = (Vault::at(&root.join("v")).unwrap(), media::Store::at(&root.join("m")).unwrap(), crate::presence::Presence::default());
         let b = Book::new(v.clone());
         let d = desk(&v, &b, &s, &p, &words, 2, &root);
-        let r = b.establish(&[6u8; 32]).unwrap();
+        let r = b.establish(&crate::pipekey::PipeKey::new(&[6u8; 32])).unwrap();
         b.open(&r, "Боб", false);
         let seed = wire::b64(&[7u8; 32]);
         let word = format!("{}{}", crate::calls::MISSED, json!({ "v": false, "s": seed }));
@@ -1219,7 +1220,7 @@ mod tests {
         let (b1, b2) = (Book::new(v1.clone()), Book::new(v2.clone()));
         let (d1, d2) = (desk(&v1, &b1, &s1, &p, &words, 1, &root), desk(&v2, &b2, &s2, &p, &words, 2, &root));
         let secret = vec![4u8; 32];
-        let r = b1.establish(&secret).unwrap();
+        let r = b1.establish(&crate::pipekey::PipeKey::new(&secret)).unwrap();
         b1.open(&r, "Боб", false);
         let (m1, m2) = (mint_mid(), mint_mid());
         d1.archive_row(&r, false, birth_ms(&m1).unwrap(), &m1, "первое от Боба");
@@ -1242,7 +1243,7 @@ mod tests {
         let c = b2.chat(&r).unwrap();
         assert_eq!((c.name.as_str(), c.msgs.len()), ("Боб", 2));
         assert!(c.msgs.iter().any(|m| m.mid == m1 && !m.mine), "the row took the letter's wire name");
-        assert_eq!(b2.secret(&r), Some(secret));
+        assert!(b2.key(&r).unwrap().same_pipe(&crate::pipekey::PipeKey::new(&secret)), "the pipe stood from the head");
         assert_eq!(d2.file_blocks(&blob), 0, "twice is once");
         assert_eq!(b2.chat(&r).unwrap().msgs.len(), 2);
         let _ = std::fs::remove_dir_all(&root);
@@ -1258,7 +1259,7 @@ mod tests {
         let (v3, s3) = (Vault::at(&root.join("v3")).unwrap(), media::Store::at(&root.join("m3")).unwrap());
         let (b1, b2, b3) = (Book::new(v1.clone()), Book::new(v2.clone()), Book::new(v3.clone()));
         let (d1, d2, d3) = (desk(&v1, &b1, &s1, &p, &words, 1, &root), desk(&v2, &b2, &s2, &p, &words, 2, &root), desk(&v3, &b3, &s3, &p, &other, 3, &root));
-        let r = b1.establish(&[6u8; 32]).unwrap();
+        let r = b1.establish(&crate::pipekey::PipeKey::new(&[6u8; 32])).unwrap();
         b1.open(&r, "Боб", false);
         let m = mint_mid();
         d1.archive_row(&r, false, birth_ms(&m).unwrap(), &m, "первое от Боба");
@@ -1269,12 +1270,12 @@ mod tests {
         let file = |blocks: &[Vec<u8>]| blocks.iter().flat_map(|s| [(s.len() as u32).to_le_bytes().to_vec(), s.clone()].concat()).collect::<Vec<u8>>();
         // another person's machine: these blocks are sealed under words it does not hold
         assert_eq!(d3.file_blocks(&file(&sealed)), 0, "another person's blocks stand nothing");
-        assert!(b3.chat(&r).is_none() && b3.secret(&r).is_none());
+        assert!(b3.chat(&r).is_none() && !b3.holds(&r));
         // the same words, every block changed by one bit -- at its head, in its middle, at its tail
         for at in [0usize, 1, 2] {
             let forged: Vec<Vec<u8>> = sealed.iter().map(|s| { let mut f = s.clone(); let i = [0, f.len() / 2, f.len() - 1][at]; f[i] ^= 1; f }).collect();
             assert_eq!(d2.file_blocks(&file(&forged)), 0, "a forged block stands nothing ({at})");
-            assert!(b2.chat(&r).is_none() && b2.secret(&r).is_none(), "nor its pipe ({at})");
+            assert!(b2.chat(&r).is_none() && !b2.holds(&r), "nor its pipe ({at})");
         }
         // a file whose last length runs past its end is read up to there; a length of zero ends it
         let mut cut = file(&sealed);

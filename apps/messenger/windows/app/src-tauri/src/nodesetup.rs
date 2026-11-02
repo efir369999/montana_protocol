@@ -92,6 +92,8 @@ mod tests {
     #[test]
     fn the_door_is_ios_own_and_the_fingerprint_is_read_as_openssl_prints_it() {
         // the two files iOS 2251 carries (Code/Node, blobs 993d59bc… and 80eefc44…), byte for byte
+        assert!(!DOOR.windows(2).any(|w| w == b"\r\n"), "the door is published with LF, as iOS ships it");
+        assert!(!SCRIPT.windows(2).any(|w| w == b"\r\n"), "the installer is published with LF, as iOS ships it");
         assert_eq!(crate::wire::hex(&crate::wire::sha(&[DOOR])), "5f8ad2bc0b06d5de36bdde324cb40ff7f6db4e3865a4580102b0a62e7530e141");
         assert_eq!(crate::wire::hex(&crate::wire::sha(&[SCRIPT])), "e344aedf6894558f471716a76d3d1a7b4305e932d3d291800533eb9a54ad30b5");
         let out = "active\nsha256 Fingerprint=AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89\n";

@@ -14,6 +14,9 @@ function Droid-Adb { $ErrorActionPreference = "Continue"; & $script:Adb -s $scri
 
 function Droid-Nodes {
     for ($try = 0; $try -lt 3; $try++) {
+        # a dump that fails (an app whose animation never idles: «could not get idle state») must not hand back the file an
+        # earlier dump left -- it is removed first, so a failed dump reads as nothing
+        Droid-Adb shell rm -f /sdcard/ui.xml 2>$null | Out-Null
         Droid-Adb shell uiautomator dump /sdcard/ui.xml 2>$null | Out-Null
         $raw = (Droid-Adb shell cat /sdcard/ui.xml) -join "`n"
         try { $x = [xml]$raw; break } catch { Start-Sleep -Milliseconds 500 }   # an animation leaves no tree: once more

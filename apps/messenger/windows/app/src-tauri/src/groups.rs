@@ -500,9 +500,10 @@ impl Desk<'_> {
 
     /// ONE COPY (iOS carry): a letter of its own name on the pair's pipe; a letter and an invitation ring.
     fn carry(&self, g: &str, letter: &str, to: &str, of: u32, mut o: Value) -> bool {
-        // signed by the person (iOS ownTag): the other devices of the words know the word as their own when a box hands it to them
-        if let (Some(key), Some(secret)) = (self.author_key.as_deref(), self.book.secret(to)) {
-            o["au"] = json!(wire::author_tag(key, &secret, g, &tag_text(&o)));
+        // signed by the person (iOS ownTag): the other devices of the words know the word as their own when a box hands it to them;
+        // over the item key of the day (iOS 2311 MTPipeKey.authorTag): the secret up to 28.10, the conversation's root after
+        if let (Some(key), Some(pipe)) = (self.author_key.as_deref(), self.book.key(to)) {
+            o["au"] = json!(pipe.author_tag(key, g, &tag_text(&o), wire::day()));
         }
         let name = mint_mid();
         let mut c = self.copies();
@@ -716,7 +717,7 @@ impl Desk<'_> {
         }
         let id = fresh_id();
         let mut members = vec![];
-        for p in pipes.iter().filter(|p| self.book.secret(p).is_some()).take(199) {
+        for p in pipes.iter().filter(|p| self.book.holds(p)).take(199) {
             let mut seat = fresh_id()[..8].to_string();
             while members.iter().any(|m: &Member| m.seat == seat) {
                 seat = fresh_id()[..8].to_string();
@@ -738,7 +739,7 @@ impl Desk<'_> {
         let mut new = vec![];
         let g = self.edit_group(id, |g| {
             for p in pipes {
-                if g.members.iter().any(|m| &m.pipe == p) || self.book.secret(p).is_none() {
+                if g.members.iter().any(|m| &m.pipe == p) || !self.book.holds(p) {
                     continue;
                 }
                 let seat = fresh_id()[..8].to_string();
@@ -994,18 +995,18 @@ impl Desk<'_> {
     }
 
     fn ask_join(&self, pipe: &str, gid: &str, mark: &str) -> bool {
-        let Some(secret) = self.book.secret(pipe) else { return false };
+        let Some(pk) = self.book.key(pipe) else { return false };
         let mut o = json!({ "t": "jn", "g": gid, "id": mint_mid(), "tx": mark });
         if !self.my_name.trim().is_empty() {
             o["n"] = json!(self.my_name.trim());
         }
         if let Some(key) = self.author_key.as_deref() {
-            o["au"] = json!(wire::author_tag(key, &secret, gid, &tag_text(&o)));
+            o["au"] = json!(pk.author_tag(key, gid, &tag_text(&o), wire::day()));
         }
         let mid = mint_mid();
         let text = word(o);
         match crate::meeting::first(self.vault, pipe) {
-            Some((ct, inv)) => self.knock_first(&secret, &ct, &inv, &mid, &text),
+            Some((ct, inv)) => self.knock_first(pipe, &pk, &ct, &inv, &mid, &text),
             None => self.deliver(pipe, &mid, &text),
         }
     }
@@ -1344,9 +1345,10 @@ impl Desk<'_> {
     pub fn group_word(&self, pipe: &str, mid: &str, text: &str) {
         // THE PERSON'S OWN WORD, HEARD ON A PIPE ITS DEVICES SHARE (iOS ownWord): done here as the hand did it there, never judged
         // as a stranger's, never answered -- the device that spoke carries it
-        if let (Some(o), Some(secret)) = (text.strip_prefix(MARK).and_then(|j| serde_json::from_str::<Value>(j).ok()), self.book.secret(pipe)) {
+        // the root first, then the secret while the pipe holds it: after the floor a word signed over the secret is no longer known
+        if let (Some(o), Some(pk)) = (text.strip_prefix(MARK).and_then(|j| serde_json::from_str::<Value>(j).ok()), self.book.key(pipe)) {
             if let (Some(au), Some(g)) = (o["au"].as_str(), o["g"].as_str()) {
-                if wire::author_holds(au, self.author_key.as_deref(), &secret, g, &tag_text(&o)) {
+                if pk.author_holds(au, self.author_key.as_deref(), g, &tag_text(&o)) {
                     self.group_own(pipe, text);
                     return;
                 }
@@ -2096,7 +2098,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         let b = person(&root, "Bob");
         let db = desk(&b);
-        let owner = b.book.establish(&[9u8; 32]).unwrap();
+        let owner = b.book.establish(&crate::pipekey::PipeKey::new(&[9u8; 32])).unwrap();
         b.book.open(&owner, "Alice", false);
         let gid = "0123456789abcdef0123456789abcdef";
         let inv = |ad: Value| word(json!({ "t": "inv", "g": gid, "k": "g", "ti": "Тройка", "c": 3, "me": "b0b0b0b0", "ad": ad }));
@@ -2573,10 +2575,34 @@ mod tests {
         let o = json!({ "t": "say", "g": "g1", "id": "t1-A", "s": "ab", "tx": "привет" });
         assert_eq!(tag_text(&o), "say\0t1-A\0\0ab\0\0привет");
         let (key, secret) = ([3u8; 32], [4u8; 32]);
-        let au = wire::author_tag(&key, &secret, "g1", &tag_text(&o));
-        assert!(wire::author_holds(&au, Some(&key), &secret, "g1", &tag_text(&o)), "the person's own word is told by its tag");
+        let pipe = crate::pipekey::PipeKey::new(&secret);
+        let au = pipe.author_tag(&key, "g1", &tag_text(&o), crate::pipekey::WALK_ANCHOR_DAY);
+        assert_eq!(au, wire::author_tag(&key, &secret, "g1", &tag_text(&o)), "on the anchor day the tag stands on the secret");
+        assert!(pipe.author_holds(&au, Some(&key), "g1", &tag_text(&o)), "the person's own word is told by its tag");
         let mut forged = o.clone();
         forged["tx"] = json!("иное");
-        assert!(!wire::author_holds(&au, Some(&key), &secret, "g1", &tag_text(&forged)), "another's words under the tag are not mine");
+        assert!(!pipe.author_holds(&au, Some(&key), "g1", &tag_text(&forged)), "another's words under the tag are not mine");
+    }
+
+    /// THE GROUP'S «au» BY THE DAY (iOS 2311 MontanaGroup.ownTag -> MTPipeKey.authorTag, [D] vectors of the study): on 28.10 over
+    /// the established secret, from 29.10 over the conversation's root -- a reader holding the secret knows both; once its pipe is
+    /// floored (03.11) a word signed over the secret is no longer the person's own, the root's still is.
+    #[test]
+    fn a_groups_au_moves_to_the_root_on_29_10_and_its_reader_narrows_after_the_floor() {
+        use crate::pipekey::{PipeKey, ERASE_DAY, WALK_ANCHOR_DAY};
+        let (person, secret): ([u8; 32], Vec<u8>) = ([0x33; 32], (0..32).collect());
+        let text = "post\0m1\0\0\0\0hello";
+        assert_eq!(tag_text(&json!({ "t": "post", "id": "m1", "tx": "hello" })), text, "the vectors' words are tag_text's");
+        let pipe = PipeKey::new(&secret);
+        let old = pipe.author_tag(&person, "g", text, WALK_ANCHOR_DAY);
+        let new = pipe.author_tag(&person, "g", text, WALK_ANCHOR_DAY + 1);
+        assert_eq!(old, "2wskkCekUn78IJNTD5ayvQ==", "[D] 28.10: over the secret, as 2308 lays it every day");
+        assert_eq!(new, "8GNZ9eDdlFowXxtNI3+nkg==", "[D] 29.10: over the root");
+        assert_eq!(pipe.author_tag(&person, "g", text, ERASE_DAY + 2), new);
+        assert!(pipe.author_holds(&old, Some(&person), "g", text) && pipe.author_holds(&new, Some(&person), "g", text));
+        let floored = pipe.floored(ERASE_DAY);
+        assert!(!floored.author_holds(&old, Some(&person), "g", text), "after the floor the secret's word is not known");
+        assert!(floored.author_holds(&new, Some(&person), "g", text));
+        assert_eq!(floored.author_tag(&person, "g", text, ERASE_DAY), new, "the floor signs as the root does");
     }
 }

@@ -501,11 +501,11 @@ pub fn heard(me: &str, conv: &str, text: &str) {
     }
 }
 /// The pipes of the slots this machine holds, read in the box beside every correspondence (post.rs fetch_once).
-pub fn listening(d: &Desk) -> Vec<(String, Vec<u8>)> {
+pub fn listening(d: &Desk) -> Vec<(String, crate::pipekey::PipeKey)> {
     if !agrees() {
         return vec![];
     }
-    held(d).into_iter().filter_map(|(k, h)| Some((k, unb64(&h.secret).filter(|s| s.len() == 32)?))).collect()
+    held(d).into_iter().filter_map(|(k, h)| Some((k, crate::pipekey::PipeKey::new(&unb64(&h.secret).filter(|s| s.len() == 32)?)))).collect()
 }
 /// A row of the box under the pipe of a slot is this module's own: a call is answered, and the row is in hand either way.
 pub fn takes(me: &str, key: &str, plain: &[u8]) -> bool {
@@ -567,7 +567,7 @@ pub fn work(d: &Desk, words: Option<&str>, card: Option<Record>) -> Moved {
 fn people(d: &Desk) -> Vec<String> {
     let mut v: Vec<(i64, String)> = d.book.all().into_iter()
         .filter(|c| !groups::is_group(&c.reference) && !c.blocked && !c.hidden && c.reference != d.twin && !doors::barred(&c.reference))
-        .filter(|c| d.book.secret(&c.reference).is_some())
+        .filter(|c| d.book.holds(&c.reference))
         .map(|c| (c.msgs.iter().map(|m| m.at).max().unwrap_or(0), c.reference))
         .collect();
     v.sort_by(|a, b| b.0.cmp(&a.0));
@@ -891,8 +891,8 @@ fn answer_call(d: &Desk, key: &str) {
     road["w"] = json!("answer");
     road["h"] = json!(h.head);
     road["e"] = json!(h.seal);
-    let Some(secret) = unb64(&h.secret) else { return };
-    if !history::knock(&secret, &d.twin, &format!("{MARK}{road}")) {
+    let Some(slot) = unb64(&h.secret).map(|s| crate::pipekey::PipeKey::new(&s)) else { return };
+    if !history::knock(&slot, &d.twin, &format!("{MARK}{road}")) {
         trace("answer: no door boxed it");
         return;
     }
@@ -929,8 +929,9 @@ pub fn is_taking() -> bool {
 /// that opens under the secret; `take` -- the rows read are marked taken by this machine's name `dev` (iOS 2306 boxTaken), and
 /// stay for the person's other devices.
 pub fn read_pipe(secret: &[u8], twin: &str, dev: &str, take: bool) -> Vec<String> {
+    let key = crate::pipekey::PipeKey::new(secret); // a slot's pipe stands on the seed and is never floored
     let w0 = wire::day();
-    let subs: Vec<String> = ((w0 - 8)..=(w0 + 1)).map(|d| wire::conv_w(secret, d)).collect();
+    let subs: Vec<String> = ((w0 - 8)..=(w0 + 1)).map(|d| key.conv_w(d)).collect();
     let page = json!({ "subs": subs, "sids": subs.iter().map(|c| wire::sub_id(c, twin)).collect::<Vec<_>>(),
                        "devs": subs.iter().map(|c| wire::sub_id(c, dev)).collect::<Vec<_>>() });
     let mut seen = std::collections::HashSet::new();
@@ -945,7 +946,7 @@ pub fn read_pipe(secret: &[u8], twin: &str, dev: &str, take: bool) -> Vec<String
                 continue;
             }
             let Some(sealed) = l["e"].as_str().and_then(unb64) else { continue };
-            let Some(plain) = wire::open_boxed(&sealed, secret, l["at"].as_i64().unwrap_or(now_s())) else { continue };
+            let Some(plain) = wire::open_boxed(&sealed, &key, l["at"].as_i64().unwrap_or(now_s())) else { continue };
             out.push(wire::fields(&plain, 0, 2)[1].clone());
             if let Some(cw) = l["c"].as_str().filter(|_| !m.is_empty()) {
                 taken.push((m, wire::sub_id(cw, dev)));
@@ -961,7 +962,7 @@ pub fn read_pipe(secret: &[u8], twin: &str, dev: &str, take: bool) -> Vec<String
 /// One knock in a derived pipe, silent or loud (a loud one rings the keeper's screen with the owner's name, for a keeper whose
 /// app the system does not wake).
 fn knock(secret: &[u8], twin: &str, o: &Value, silent: bool) -> bool {
-    history::knock_as(secret, twin, &format!("{MARK}{o}"), silent)
+    history::knock_as(&crate::pipekey::PipeKey::new(secret), twin, &format!("{MARK}{o}"), silent)
 }
 
 struct Answer {
@@ -1156,7 +1157,7 @@ fn take_given(d: &Desk, conv: &str, o: &Map<String, Value>) -> usize {
         return 0;
     };
     let Ok(Value::Array(list)) = serde_json::from_slice::<Value>(&body) else { return 0 };
-    let Some(secret) = d.book.secret(conv) else { return 0 };
+    let Some(pipe) = d.book.key(conv) else { return 0 };
     let Some(c) = d.book.chat(conv) else { return 0 };
     // the copies' last letter is the last one older than the request: a letter that came live after it is no measure
     let since = c.msgs.iter().filter(|m| m.at < at * 1000).map(|m| m.at).max().unwrap_or(0);
@@ -1171,7 +1172,8 @@ fn take_given(d: &Desk, conv: &str, o: &Map<String, Value>) -> usize {
         let mine = e["m"].as_i64().unwrap_or(0) == 0; // the other side's own letter is the other side's here
         if mine {
             let bare = wire_mid.map(|w| w.strip_prefix("mid:").unwrap_or(w)).unwrap_or("");
-            if bare.is_empty() || !wire::author_holds(e["a"].as_str().unwrap_or(""), d.author_key.as_deref(), &secret, bare, x) {
+            // the root first, the secret while the pipe holds it: after the floor a letter signed over the secret is unproven
+            if bare.is_empty() || !pipe.author_holds(e["a"].as_str().unwrap_or(""), d.author_key.as_deref(), bare, x) {
                 unproven += 1;
                 return None;
             }

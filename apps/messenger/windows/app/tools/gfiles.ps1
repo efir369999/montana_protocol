@@ -17,23 +17,28 @@ $g.Clear([System.Drawing.Color]::FromArgb(255, 40, 90, 160))
 $g.DrawString("Group $stamp", (New-Object System.Drawing.Font("Segoe UI", [single]48)), [System.Drawing.Brushes]::White, 60, 200)
 $g.Dispose(); $bmp.Save($pic, [System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
 $t0 = Get-Date
-$A = Start-Montana -DataDir "$Root\A"; Front-Montana -X 0 -Y 40 -Width 900 -Height 900
-Start-Sleep -Seconds 2
-"A makes the group and sends a picture into it"
-Click-Named "Написать"; Click-Named "Новая группа"
-Click-Named "Выбрать: Борис Тест"; Click-Named "Готово"
-Type-Into "Название группы" $title; Click-Named "Готово"
-Says "Вы создали группу «$title»" 15
-Type-Into "Сообщение..." $caption
-Files-Key; Pick-File $pic
-Says $caption 20
-Sent-Settle 90
-Snap "93-A-group-file"
-$B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -Height 900
-Start-Sleep -Seconds 2
-"B gets it in the group"
-Click-Named $title 90
-Says $caption 90
-Snap "94-B-group-file"
-"done in $([int]((Get-Date) - $t0).TotalSeconds) s"
-Use-Montana $A; Stop-Montana; Use-Montana $B; Stop-Montana
+$A = $null; $B = $null
+try {
+    $A = Start-Montana -DataDir "$Root\A"; Front-Montana -X 0 -Y 40 -Width 900 -Height 900
+    Start-Sleep -Seconds 2
+    "A makes the group and sends a picture into it"
+    Click-Named "Написать"; Click-Named "Новая группа"
+    Click-Named "Выбрать: Борис Тест"; Click-Named "Готово"
+    Type-Into "Название группы" $title; Click-Named "Готово"
+    Says "Вы создали группу «$title»" 15
+    Type-Into "Сообщение..." $caption
+    Files-Key; Pick-File $pic; Send-Tray
+    Says $caption 20
+    Sent-Settle 90
+    Snap "93-A-group-file"
+    $B = Start-Montana -DataDir "$Root\B"; Front-Montana -X 920 -Y 40 -Width 900 -Height 900
+    Start-Sleep -Seconds 2
+    "B gets it in the group"
+    Click-Named $title 90
+    Says $caption 90
+    Snap "94-B-group-file"
+    "done in $([int]((Get-Date) - $t0).TotalSeconds) s"
+} finally {
+    try { Stop-Montana } catch {}
+    foreach ($p in @($A, $B)) { if ($p) { Use-Montana $p; try { Stop-Montana } catch {} } }
+}

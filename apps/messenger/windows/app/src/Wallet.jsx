@@ -930,8 +930,12 @@ export default function WalletPane({ person, onOpenChat, bar }) {
     );
   }
   // THE PERSON'S COINS ARE THE CHAIN'S (iOS MTWalletScreen.total, fold-7): once the chain has spoken in this run, the available it
-  // holds; before it, the book (and the balance a device of the same words told in its tip) -- the sums, π's place and the Send
-  const total = st.split ? st.available : st.balance;
+  // holds; before it, the book (and the balance a device of the same words told in its tip) -- the sums, π's place and the Send.
+  // THE SECONDS BEFORE THE WINDOW IS FINALIZED RISE ON THE PAGE (iOS 2325 MTPresenceWait): the Time Balance is the available and
+  // the person's seconds of presence awaiting the core, so it moves every second while the person is here; the line Available beneath
+  // stays what the chain has confirmed, and Send is weighed by that alone.
+  const total = st.split ? (st.growing ?? st.available) : st.balance;
+  const spendable = st.split ? st.available : total;
   if (sheet === "send") return <SendSheet available={st.available} onClose={() => { setSheet(null); read(); }} onOpenChat={onOpenChat} />;
   if (sheet === "top") return <TopUp onClose={() => setSheet(null)} />;
   if (sheet === "history") return <History onClose={() => setSheet(null)} />;
@@ -1006,7 +1010,7 @@ export default function WalletPane({ person, onOpenChat, bar }) {
         <div className="post-note digits">π {pi(st.pi)} · {st.pi}</div>
         {/* TWO BUTTONS OF THE SYSTEM, ONE WIDTH, THE PLATFORM'S BLUE; THEN THE PAGE'S FOUR DOORS (iOS: bordered capsules) */}
         <div className="wallet-keys">
-          <button className="capsule prominent" onClick={() => setSheet("send")} disabled={total <= 0} aria-label={t("Send")}>
+          <button className="capsule prominent" onClick={() => setSheet("send")} disabled={spendable <= 0} aria-label={t("Send")}>
             <img src={timeSend} alt="" className="time-send" /><span>{t("Send")}</span>
           </button>
           <button className="capsule prominent" onClick={() => setSheet("top")} aria-label={t("Top up")}>

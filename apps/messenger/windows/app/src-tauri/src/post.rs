@@ -9,7 +9,8 @@ use crate::book::{birth_ms, mint_mid, Book, Chat, Msg, Pending};
 use crate::card::Card;
 use crate::profile::strip_crown;
 use crate::vault::Vault;
-use crate::wire::{self, b64, b64url, body_key, conv_w, domained, hex, rdv_conv_w, rdv_letter_secret, sha, sub_id, unb64, ENVELOPE};
+use crate::pipekey::PipeKey;
+use crate::wire::{self, b64, b64url, hex, rdv_conv_w, rdv_letter_secret, sha, sub_id, unb64, ENVELOPE};
 use crate::{crypto, doors, http, media, meeting};
 use serde_json::{json, Map, Value};
 
@@ -36,6 +37,10 @@ pub mod marks {
     /// A word of the wire, not a row of the feed (a sticker and a picture are rows: see `is_row`).
     pub fn is_service(t: &str) -> bool {
         t.starts_with('\u{200B}') || t.starts_with('\u{2063}')
+    }
+    /// A word the writer says of themselves: their name, their face, their about.
+    pub fn is_self_word(t: &str) -> bool {
+        [NAME, AVATAR, ABOUT].iter().any(|m| t.starts_with(m))
     }
     /// A person's letter: words, a sticker, a picture or a voice.
     pub fn is_row(t: &str) -> bool {
@@ -101,21 +106,20 @@ pub fn face_tag(face: &[u8]) -> String {
     hex(&sha(&[face]))[..16].to_string()
 }
 
-/// The face laid beside a pipe for the other side to read at its birth (iOS layPipeFace / readPipeFace).
-pub fn pipe_face_bid(secret: &[u8]) -> String {
-    hex(&domained("mt-pipe-f", &[secret]))
-}
-pub fn pipe_face_key(secret: &[u8]) -> [u8; 32] {
-    domained("mt-pipe-fk", &[secret])
-}
-
 const LONG_REFS: &str = "longRefs"; // mid -> the LB: word of my long letter (a resend reuses the blob)
 const LONG_WAIT: &str = "longWait"; // mid -> the hours of a long letter of theirs whose blob did not come yet
 const FIRST_BODY: usize = 1536;
 const MEDIA_LETTERS: &str = "mediaLetters"; // mid -> the MD: letter that rides for my file (its pieces are up)
 const MEDIA_GONE: &str = "mediaGone"; // mid -> true: a file of theirs no store holds any more
 const MEDIA_WAIT: &str = "mediaWait"; // mid -> {next, tries}: a file of theirs asked again later
-const ARCHIVE_HEADS: &str = "archiveHeads"; // ref -> the head last written into its archive folder
+/// the marks before 2311: ref -> «a», «s» or «n:<name>», the form and the name in one; read once into the two below and let go
+const ARCHIVE_HEADS: &str = "archiveHeads";
+/// ref -> the form of the head last written into its folder: «a» its own key, «s» the secret, «f» the floor (iOS headsKey)
+const HEAD_FORMS: &str = "archiveHeadForms";
+/// ref -> the name last written into its folder (iOS nameHeadsKey)
+const HEAD_NAMES: &str = "archiveHeadNames";
+/// The days a box read asks besides the floor: D-8 .. D+1 while the floor does not bound them (iOS asks D-2 .. D+1).
+const BOX_BACK: i64 = 8;
 
 fn pad(mut b: Vec<u8>, to: usize) -> Option<Vec<u8>> {
     if b.len() > to {
@@ -148,6 +152,13 @@ fn first_chars(s: &str, n: usize) -> String {
 /// The mid inside a word that names a letter: "mid:" taken off, as both platforms write it either way.
 fn bare(sid: &str) -> &str {
     sid.strip_prefix("mid:").unwrap_or(sid)
+}
+
+/// The days a book pipe's box is read on: D-8 .. D+1, and once the pipe holds its floor F max(D-8, F) .. D+1 -- the floor derives
+/// no earlier day (iOS MTNodeWire.boxDays: D-2 .. D+1). A floor withheld (Book::floor_day) asks as before.
+pub(crate) fn box_days(key: &PipeKey, d: i64) -> std::ops::RangeInclusive<i64> {
+    let f = key.floor_day().unwrap_or(i64::MIN);
+    (d - BOX_BACK).max(f)..=(d + 1)
 }
 
 /// WHAT THIS MACHINE TOOK, MARKED TAKEN BY ITS OWN NAME (iOS 2306 MontanaWakePush.boxTaken): `{"taken": [[mid, device's name]]}` to
@@ -190,7 +201,7 @@ impl<'a> Desk<'a> {
 
     /// THE BODY OF ONE LETTER (iOS MTNodeWire.letterBody): mid‖0 words‖0 my name‖0 glyph‖0, the quote (its words, at most
     /// 200, and its mid) when it fits, the author's field over the words that ride; a body over one envelope rides as LB:.
-    fn body(&self, secret: &[u8], mid: &str, text: &str, qt: &str, qm: &str, lp: &str) -> Option<Vec<u8>> {
+    fn body(&self, key: &PipeKey, mid: &str, text: &str, qt: &str, qm: &str, lp: &str) -> Option<Vec<u8>> {
         let name = self.my_name.trim();
         let mut words = text.to_string();
         let mut b = fields_of(&[mid, &words, name, ""]);
@@ -214,18 +225,18 @@ impl<'a> Desk<'a> {
                 b.extend_from_slice(&tail);
             }
         }
-        pad(wire::with_author(&b, self.author_key.as_deref(), secret, mid, &words), ENVELOPE)
+        pad(key.with_author(&b, self.author_key.as_deref(), mid, &words, wire::day()), ENVELOPE)
     }
 
     /// ONE KNOCK (iOS MTNodeWire.knockLetter): the body sealed afresh at every door; the first door that boxes it ends the walk.
-    fn knock(&self, secret: &[u8], mid: &str, text: &str, qt: &str, qm: &str, lp: &str) -> bool {
-        let Some(plain) = self.body(secret, mid, text, qt, qm, lp) else { return false };
+    fn knock(&self, key: &PipeKey, mid: &str, text: &str, qt: &str, qm: &str, lp: &str) -> bool {
+        let Some(plain) = self.body(key, mid, text, qt, qm, lp) else { return false };
         // THE NEAR ROAD BESIDE THE BOX'S (iOS sendUnderTag): the same letter laid before the nodes under the pipe's tag when a path
         // stands; the receiving side drops the second copy by its mid
-        crate::channels::lay(secret, mid, &plain);
-        let cw = conv_w(secret, wire::day());
+        crate::channels::lay(key, mid, &plain);
+        let cw = key.conv_w(wire::day());
         for door in doors::write_order() {
-            let Some(env) = wire::seal(&body_key(secret, wire::minute()), &plain) else { return false };
+            let Some(env) = wire::seal(&key.body_key(wire::minute()), &plain) else { return false };
             let mut req = json!({ "conv": cw, "from_id": sub_id(&cw, &self.twin), "mid": mid, "env": b64(&env) });
             if marks::is_silent(text) && !crate::groups::rings(text) || crate::chess::is_step(text) && !crate::chess::rings(text) {
                 req["silent"] = json!(true); // a game's step is the board's alone: a silent push (iOS MTChessLetter.rings)
@@ -238,27 +249,32 @@ impl<'a> Desk<'a> {
     }
 
     /// THE FIRST-MEETING LETTER (iOS wakeRdv): [ct 1088][mid‖0 text‖0 name‖0 glyph‖0 conf‖0], padded to 1536 (words that do not
-    /// fit ride as LB:), sealed under the invitation's letter key of this minute, boxed under the invitation's daily label.
-    pub(crate) fn knock_first(&self, secret: &[u8], ct: &[u8], inv: &[u8], mid: &str, text: &str) -> bool {
-        let conf = b64url(&domained("mt-first-conf", &[secret, ct])[..16]);
-        let name = self.my_name.trim();
-        let mut words = text.to_string();
-        if ct.len() + fields_of(&[mid, &words, name, "", &conf]).len() > FIRST_BODY {
-            let Some(w) = self.long_ref(mid, text) else { return false };
-            words = w;
-        }
-        let body = [ct, &fields_of(&[mid, &words, name, "", &conf])].concat();
-        let Some(plain) = pad(body, FIRST_BODY) else { return false };
-        let letter_key = rdv_letter_secret(inv);
+    /// fit ride as LB:), sealed under the invitation's letter key of this minute, boxed under the invitation's daily label. The
+    /// confirmation is the pipe's, or the one kept from its birth once the floor stands (meeting::confirm, D1).
+    pub(crate) fn knock_first(&self, r: &str, key: &PipeKey, ct: &[u8], inv: &[u8], mid: &str, text: &str) -> bool {
+        let Some(plain) = self.first_plain(r, key, ct, mid, text) else { return false };
+        let letter_key = PipeKey::new(&rdv_letter_secret(inv));
         let cw = rdv_conv_w(inv, wire::day());
         for door in doors::write_order() {
-            let Some(env) = wire::seal(&body_key(&letter_key, wire::minute()), &plain) else { return false };
+            let Some(env) = wire::seal(&letter_key.body_key(wire::minute()), &plain) else { return false };
             let req = json!({ "conv": cw, "from_id": sub_id(&cw, &self.twin), "mid": mid, "env": b64(&env) });
             if doors::post_at(&door, "/wake", &req, http::POST_DEADLINE_MS).0 == 200 {
                 return true;
             }
         }
         false
+    }
+
+    /// The first letter's plain: [ct 1088][mid‖0 text‖0 name‖0 glyph‖0 conf‖0] padded to 1536, the words riding as LB: when
+    /// they do not fit.
+    fn first_plain(&self, r: &str, key: &PipeKey, ct: &[u8], mid: &str, text: &str) -> Option<Vec<u8>> {
+        let conf = meeting::confirm(self.vault, r, key, ct);
+        let name = self.my_name.trim();
+        let mut words = text.to_string();
+        if ct.len() + fields_of(&[mid, &words, name, "", &conf]).len() > FIRST_BODY {
+            words = self.long_ref(mid, text)?;
+        }
+        pad([ct, &fields_of(&[mid, &words, name, "", &conf])].concat(), FIRST_BODY)
     }
 
     /// A word to a correspondence: by the invitation's box while the introduction is unanswered (a person's letters only --
@@ -278,15 +294,15 @@ impl<'a> Desk<'a> {
             }
             return ok;
         }
-        let Some(secret) = self.book.secret(r) else { return false };
+        let Some(key) = self.book.key(r) else { return false };
         // a blocked person hears no word of mine but the farewell: the face taken back and «gone» (iOS silenced)
         if self.book.chat(r).is_some_and(|c| c.blocked) && text != marks::AVATAR && !text.starts_with(&format!("{}0B", crate::presence::APP)) {
             return true;
         }
         match meeting::first(self.vault, r) {
             Some(_) if !marks::is_row(text) => false,
-            Some((ct, inv)) => self.knock_first(&secret, &ct, &inv, mid, text),
-            None => self.knock(&secret, mid, text, qt, qm, lp),
+            Some((ct, inv)) => self.knock_first(r, &key, &ct, &inv, mid, text),
+            None => self.knock(&key, mid, text, qt, qm, lp),
         }
     }
 
@@ -320,37 +336,120 @@ impl<'a> Desk<'a> {
         self.draft_as(r, &mint_mid(), text, qt, qm)
     }
 
-    /// A letter into the archive (iOS MontanaArchive.archive): the head of its folder first -- the secret and the name, once
-    /// and again when the name changes -- then the letter, a file in the archive's own form.
+    /// THE MARKS OF THE HEADS WRITTEN (iOS headsKey and nameHeadsKey): the form of each folder's last head and the name last
+    /// written, kept apart. The marks of the builds before 2311 held both in one («a», «s», «n:<name>»): read once, «n:» counting
+    /// as a secret's head written before the name (it was written first), then let go.
+    fn head_marks(&self) -> (Map<String, Value>, Map<String, Value>) {
+        if self.vault.has(HEAD_FORMS) || self.vault.has(HEAD_NAMES) || !self.vault.has(ARCHIVE_HEADS) {
+            return (jmap(self.vault, HEAD_FORMS), jmap(self.vault, HEAD_NAMES));
+        }
+        let (mut forms, mut names) = (Map::new(), Map::new());
+        for (r, v) in jmap(self.vault, ARCHIVE_HEADS) {
+            let v = v.as_str().unwrap_or("").to_string();
+            match v.strip_prefix("n:") {
+                Some(n) => {
+                    forms.insert(r.clone(), json!("s"));
+                    names.insert(r, json!(n));
+                }
+                None if v == "a" || v == "s" => {
+                    forms.insert(r, json!(v));
+                }
+                None => {}
+            }
+        }
+        if self.save_marks(&forms, &names) {
+            self.vault.delete(ARCHIVE_HEADS);
+        }
+        (forms, names)
+    }
+    fn save_marks(&self, forms: &Map<String, Value>, names: &Map<String, Value>) -> bool {
+        self.vault.set(HEAD_FORMS, Value::Object(forms.clone()).to_string().as_bytes())
+            && self.vault.set(HEAD_NAMES, Value::Object(names.clone()).to_string().as_bytes())
+    }
+
+    /// THE FORM A FOLDER TAKES (iOS writeHeadIn): the pipe's own form as the book holds it, «s» or «f» (iOS 2311,
+    /// MTPipeKey.swift:275). With the walk of #38 case 13 the form written follows the walked book -- the pipe as floored on the
+    /// day of writing -- and never goes back to an earlier form. True when one was appended.
+    fn pipe_head(&self, a: &crate::history::Archive, r: &str, forms: &mut Map<String, Value>, now: u64) -> bool {
+        let Some(key) = self.book.key(r).filter(|k| k.reference().as_deref() == Some(r)) else { return false };
+        let strict = Book::walks();
+        let k = if strict { key.floored(self.book.floor_day()) } else { key };
+        let want = if k.holds_origin() { "s" } else { "f" };
+        let form = forms.get(r).and_then(|v| v.as_str()).unwrap_or("");
+        if form == want || (strict && form == "f") || !a.append(r, crate::history::HEAD_DIR, now, &k.archive_head()) {
+            return false;
+        }
+        forms.insert(r.to_string(), json!(want));
+        Self::traced_form(a, r, want);
+        true
+    }
+    /// The trace iOS writes after each form a folder takes (MontanaArchive.writeHeadIn and closeHead): the folder's first eight
+    /// and the form -- s, f or a (x: closed, which this port does not write).
+    fn traced_form(a: &crate::history::Archive, r: &str, form: &str) {
+        let folder = crate::history::label(&a.keys().hk, r);
+        crate::trace_line(&format!("archive_head folder={} form={form}", &folder[..folder.len().min(8)]));
+    }
+
+    /// THE FLOOR'S HEADS (iOS MTPipeBook.floorStore -> MontanaArchive.writeHead, and its sweep at every launch, both keyed by the
+    /// form mark): every pipe filed under its own name whose form of the day is the floor, and whose folder holds no floor head
+    /// yet, takes one -- once; the other devices get it within half a minute. Asked at the start and again by the walk, so a run
+    /// across the erase day writes them too. The count written.
+    pub fn floor_heads(&self) -> usize {
+        let Some(a) = &self.archive else { return 0 };
+        if self.book.floor_day() < crate::pipekey::ERASE_DAY {
+            return 0;
+        }
+        let (mut forms, names) = self.head_marks();
+        let now = (wire::now_ms() / 1000) as u64;
+        let n = self.book.refs().iter().filter(|r| self.pipe_head(a, r, &mut forms, now)).count();
+        if n > 0 {
+            self.save_marks(&forms, &names);
+            self.twin_soon("hist", 30_000);
+        }
+        n
+    }
+
+    /// The active receive side of iOS 2323–2325's pipe heal; a rebased pipe takes a fresh archive head even after an earlier floor.
+    fn heal_read(&self, r: &str, opened: &wire::Opened) {
+        if !self.book.heal_read(r, &opened.plain, opened.walk, opened.window) {
+            return;
+        }
+        let Some(a) = &self.archive else { return };
+        let (mut forms, names) = self.head_marks();
+        forms.remove(r);
+        if self.pipe_head(a, r, &mut forms, (wire::now_ms() / 1000) as u64) {
+            self.save_marks(&forms, &names);
+            self.twin_soon("hist", 30_000);
+        }
+    }
+
+    /// A letter into the archive (iOS MontanaArchive.archive): the head of its folder first -- the pipe in the form of the day,
+    /// and the name when it changes -- then the letter, a file in the archive's own form.
     pub fn archive_row(&self, r: &str, mine: bool, at_ms: i64, mid: &str, text: &str) {
         let Some(a) = &self.archive else { return };
         let Some(c) = self.book.chat(r) else { return };
-        let mut heads = jmap(self.vault, ARCHIVE_HEADS);
-        let held = heads.get(r).and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let (mut forms, mut names) = self.head_marks();
         let now = (wire::now_ms() / 1000) as u64;
         let saved = crate::book::is_saved(r);
+        let mut marked = false;
         if saved {
             // SAVED MESSAGES' FOLDER SAYS ITS OWN KEY ONCE (iOS writeHeadIn, the form «a»): no secret, no name
-            if held.is_empty() {
-                a.append(r, 2, now, format!("a:{r}").as_bytes());
-                heads.insert(r.to_string(), Value::String("a".into()));
-                self.vault.set(ARCHIVE_HEADS, Value::Object(heads.clone()).to_string().as_bytes());
+            if !forms.contains_key(r) && a.append(r, 2, now, format!("a:{r}").as_bytes()) {
+                forms.insert(r.to_string(), json!("a"));
+                Self::traced_form(a, r, "a");
+                marked = true;
             }
-        } else if held.is_empty() {
-            if let Some(secret) = self.book.secret(r) {
-                a.append(r, 2, now, format!("s:{}", b64(&secret)).as_bytes());
+        } else {
+            marked |= self.pipe_head(a, r, &mut forms, now);
+            let name = c.name.trim().to_string();
+            if !name.is_empty() && names.get(r).and_then(|v| v.as_str()) != Some(name.as_str()) {
+                a.append(r, 2, now, format!("n:{name}").as_bytes());
+                names.insert(r.to_string(), json!(name));
+                marked = true;
             }
         }
-        let name = c.name.trim().to_string();
-        if saved {
-            // no name rides its folder
-        } else if !name.is_empty() && held != format!("n:{name}") {
-            a.append(r, 2, now, format!("n:{name}").as_bytes());
-            heads.insert(r.to_string(), Value::String(format!("n:{name}")));
-            self.vault.set(ARCHIVE_HEADS, Value::Object(heads).to_string().as_bytes());
-        } else if held.is_empty() {
-            heads.insert(r.to_string(), Value::String("s".into()));
-            self.vault.set(ARCHIVE_HEADS, Value::Object(heads).to_string().as_bytes());
+        if marked {
+            self.save_marks(&forms, &names);
         }
         let content = if text.starts_with(media::MARK) { crate::history::archive_media(mid, text) } else { text.to_string() };
         a.append(r, if mine { 0 } else { 1 }, (at_ms / 1000).max(0) as u64, content.as_bytes());
@@ -620,7 +719,7 @@ impl<'a> Desk<'a> {
 
     /// A word of the wall to a correspondent; a page carried is recorded as theirs once the network took it (iOS delivered).
     pub fn wall_say(&self, r: &str, w: &crate::board::Word) -> bool {
-        if crate::groups::is_group(r) || self.book.secret(r).is_none() {
+        if crate::groups::is_group(r) || !self.book.holds(r) {
             return false;
         }
         let ok = self.deliver(r, &mint_mid(), &crate::board::letter(w));
@@ -681,12 +780,14 @@ impl<'a> Desk<'a> {
         true
     }
 
-    /// Their face beside a pipe just born (iOS readPipeFace): asked at once and twice more across eight seconds.
-    pub fn read_pipe_face(&self, r: &str, secret: &[u8]) {
+    /// Their face beside a pipe just born (iOS readPipeFace): asked at once and twice more across eight seconds, by the face's
+    /// name and key the pipe keeps for good.
+    pub fn read_pipe_face(&self, r: &str, key: &PipeKey) {
+        let kept = key.kept();
         for pause in [0u64, 2, 6] {
             std::thread::sleep(std::time::Duration::from_secs(pause));
-            let Some(sealed) = doors::get_blob(&pipe_face_bid(secret)) else { continue };
-            if let Some(face) = crypto::open(&pipe_face_key(secret), &sealed).filter(|f| !f.is_empty() && f.len() <= 262_144) {
+            let Some(sealed) = doors::get_blob(&kept.face_bid) else { continue };
+            if let Some(face) = crypto::open(&kept.face_key, &sealed).filter(|f| !f.is_empty() && f.len() <= 262_144) {
                 if self.book.chat(r).is_some_and(|c| c.face_at == 0) && self.wear_face(r, &face) {
                     self.book.edit(r, |c| c.face_at = 1);
                 }
@@ -823,7 +924,7 @@ impl<'a> Desk<'a> {
         // pair's SEND under the letter's name; the word names it and carries no coins of its own -- the reader's computer takes them
         // from the chain alone. A SEND still waiting for its node's word has left the book and says no name: the reader's scan
         // credits it.
-        if let (Some(h), Some(secret)) = (hands, self.book.secret(r)) {
+        if let (Some(h), Some(secret)) = (hands, self.book.key(r)) {
             return match crate::wallet::send3(self.vault, h, r, &secret, coins, Some(&sid)) {
                 crate::wallet::Sent::Taken(id) => {
                     let w = json!({ "sid": sid, "txt": m.text, "e": "🪙", "op": "coin3", "c": coins, "tx": id });
@@ -1000,39 +1101,41 @@ impl<'a> Desk<'a> {
 
     /// THE ONE PICKUP (iOS fetchBox; Android fetchOnce): the invitations' boxes and every pipe's, across the term, and the pipe
     /// of this person's devices under this machine's own name (iOS BoxEar: the store yields no letter to the sid that laid it,
-    /// so its own letters stay for the others); the count landed.
+    /// so its own letters stay for the others); the count landed. A book pipe asks no day before its floor of the day (from the
+    /// erase day D-2 .. D+1, as iOS's boxDays): a label below the floor would stand on the floor's own value and name no box.
     pub fn fetch_once(&self) -> usize {
+        self.floor_heads();
         let w0 = wire::day();
-        let mut subs: Vec<(String, Vec<u8>, From, String)> = vec![]; // label, secret, whose box, sid
+        let mut subs: Vec<(String, PipeKey, From, String)> = vec![]; // label, pipe, whose box, sid
         for inv in (Card { vault: self.vault }).outstanding_invites() {
-            let s = rdv_letter_secret(&inv).to_vec();
-            for w in (w0 - 8)..=(w0 + 1) {
+            let s = PipeKey::new(&rdv_letter_secret(&inv));
+            for w in (w0 - BOX_BACK)..=(w0 + 1) {
                 let cw = rdv_conv_w(&inv, w);
                 let sid = sub_id(&cw, &self.twin);
                 subs.push((cw, s.clone(), From::Invite(b64url(&inv)), sid));
             }
         }
-        for r in self.book.refs() {
-            let Some(s) = self.book.secret(&r) else { continue };
-            for w in (w0 - 8)..=(w0 + 1) {
-                let cw = conv_w(&s, w);
-                let sid = sub_id(&cw, &self.twin);
-                subs.push((cw, s.clone(), From::Pipe(r.clone()), sid));
+        for (r, key) in self.book.pipes() {
+            for w in box_days(&key, w0) {
+                for cw in key.conv_ws(w) {
+                    let sid = sub_id(&cw, &self.twin);
+                    subs.push((cw, key.clone(), From::Pipe(r.clone()), sid));
+                }
             }
         }
         let me = self.twin_me();
         if let Some(me) = &me {
-            for w in (w0 - 8)..=(w0 + 1) {
-                let cw = conv_w(&me.secret, w);
+            for w in (w0 - BOX_BACK)..=(w0 + 1) {
+                let cw = me.key.conv_w(w);
                 let sid = sub_id(&cw, &me.name);
-                subs.push((cw, me.secret.to_vec(), From::Twin, sid));
+                subs.push((cw, me.key.clone(), From::Twin, sid));
             }
         }
-        for (key, s) in crate::keeping::listening(self) {
-            for w in (w0 - 8)..=(w0 + 1) {
-                let cw = conv_w(&s, w);
+        for (k, s) in crate::keeping::listening(self) {
+            for w in (w0 - BOX_BACK)..=(w0 + 1) {
+                let cw = s.conv_w(w);
                 let sid = sub_id(&cw, &self.twin);
-                subs.push((cw, s.clone(), From::Keep(key.clone()), sid));
+                subs.push((cw, s.clone(), From::Keep(k.clone()), sid));
             }
         }
         let mut landed = 0;
@@ -1066,13 +1169,16 @@ impl<'a> Desk<'a> {
                 let cw = l["c"].as_str().unwrap_or("");
                 let Some((_, secret, inv_or_chat, _)) = chunk.iter().find(|x| x.0 == cw) else { continue };
                 let Some(sealed) = l["e"].as_str().and_then(unb64) else { continue };
-                let Some(plain) = wire::open_boxed(&sealed, secret, l["at"].as_i64().unwrap_or(wire::now_ms() / 1000)) else { continue };
+                let Some(opened) = wire::open_boxed_walked(&sealed, secret, l["at"].as_i64().unwrap_or(wire::now_ms() / 1000)) else { continue };
+                if let From::Pipe(r) = inv_or_chat {
+                    self.heal_read(r, &opened);
+                }
                 let one = LANDING.lock().unwrap_or_else(|e| e.into_inner());
                 let ok = match inv_or_chat {
-                    From::Invite(inv) => self.first(&plain, inv),
-                    From::Pipe(r) => self.letter(r, &plain, secret),
-                    From::Twin => me.as_ref().is_some_and(|me| self.twin_takes(me, &plain)),
-                    From::Keep(key) => crate::keeping::takes(&self.twin, key, &plain),
+                    From::Invite(inv) => self.first(&opened.plain, inv),
+                    From::Pipe(r) => self.letter(r, &opened.plain, secret),
+                    From::Twin => me.as_ref().is_some_and(|me| self.twin_takes(me, &opened.plain)),
+                    From::Keep(key) => crate::keeping::takes(&self.twin, key, &opened.plain),
                 };
                 drop(one);
                 if ok {
@@ -1167,8 +1273,8 @@ impl<'a> Desk<'a> {
                 Err(_) => return false, // the blob may come later: the letter stays in the box
             }
         }
-        let Some((secret, root)) = (Card { vault: self.vault }).accept_first(ct, inv64, &f[4]) else { return true }; // not ours: buried
-        let Some(r) = self.book.establish(&secret) else { return false };
+        let Some((key, root)) = (Card { vault: self.vault }).accept_first(ct, inv64, &f[4]) else { return true }; // not ours: buried
+        let Some(r) = self.book.establish(&key) else { return false };
         if doors::barred(&r) {
             return true; // barred by the network (iOS refuses): no conversation opens, the letter is buried
         }
@@ -1176,7 +1282,7 @@ impl<'a> Desk<'a> {
         let fresh = self.book.chat(&r).is_none();
         self.book.open(&r, &name, (Card { vault: self.vault }).is_permanent_root(&root));
         if fresh {
-            self.read_pipe_face(&r, &secret);
+            self.read_pipe_face(&r, &key);
         }
         self.mirror_heard(&r, &f[0], &text, "", "", "");
         self.place(&r, &f[0], &text, &f[2], "", "", "", false);
@@ -1187,27 +1293,43 @@ impl<'a> Desk<'a> {
     /// A letter the lane carried (iOS epoch «letter»: the sender's raw box envelope while my chat was open): opened as the
     /// box opens it, landed as a box letter; a copy the box brings later is heard before and answered only.
     pub fn lane_letter(&self, r: &str, sealed: &[u8]) -> bool {
-        let Some(secret) = self.book.secret(r) else { return false };
-        let Some(plain) = wire::open_boxed(sealed, &secret, wire::now_ms() / 1000) else { return false };
+        let Some(key) = self.book.key(r) else { return false };
+        let Some(opened) = wire::open_boxed_walked(sealed, &key, wire::now_ms() / 1000) else { return false };
+        self.heal_read(r, &opened);
         let _one = LANDING.lock().unwrap_or_else(|e| e.into_inner());
-        self.letter(r, &plain, &secret)
+        self.letter(r, &opened.plain, &key)
+    }
+
+    /// A channel letter with the walk and minute that opened it, heard by the pipe heal before it lands.
+    pub fn channel_opened(&self, r: &str, opened: &wire::Opened) -> bool {
+        self.heal_read(r, opened);
+        self.channel_letter(r, &opened.plain)
     }
 
     /// A LETTER OFF A CHANNEL (iOS Post.fromChannel): the pipe's own letter, opened by the pipe's key, lands as a box letter does;
     /// the box's copy that comes later is heard before and answered only.
+    /// A WORD OF WHO THEY ARE RIDES THE LIVE ROAD ONLY SIGNED (28.10.2026: chats that took the person's own name): the pipe's
+    /// key is held by both people and by every device of each, and iOS and Android lay the live road unsigned (MontanaPhoneNode
+    /// sendLetter, Pipes.kt's «the live road above rides unsigned») -- so an unsigned name, face or about here may be my own other
+    /// device telling them mine. It is left to the box, which brings their copy and never my own devices' back (one sub id).
     pub fn channel_letter(&self, r: &str, plain: &[u8]) -> bool {
-        let Some(secret) = self.book.secret(r) else { return false };
+        let Some(key) = self.book.key(r) else { return false };
+        let f = wire::fields(plain, 0, 8);
+        if f[7].is_empty() && marks::is_self_word(&f[1]) {
+            crate::trace_line(&format!("channel_self_word unsigned chat={} -- left to the box", r.chars().take(10).collect::<String>()));
+            return false;
+        }
         let _one = LANDING.lock().unwrap_or_else(|e| e.into_inner());
-        self.letter(r, plain, &secret)
+        self.letter(r, plain, &key)
     }
 
     /// A letter under a pipe's label: a person's word becomes a row, a word of the wire changes the feed.
-    fn letter(&self, r: &str, plain: &[u8], secret: &[u8]) -> bool {
+    fn letter(&self, r: &str, plain: &[u8], key: &PipeKey) -> bool {
         let f = wire::fields(plain, 0, 8);
         if f[0].is_empty() || f[1].is_empty() {
             return false;
         }
-        let own = !f[7].is_empty() && wire::author_holds(&f[7], self.author_key.as_deref(), secret, &f[0], &f[1]);
+        let own = !f[7].is_empty() && key.author_holds(&f[7], self.author_key.as_deref(), &f[0], &f[1]);
         if own {
             // THE PERSON'S OWN LETTER FROM ANOTHER OF THEIR DEVICES (iOS receive → landOwn): mine, whichever device wrote it
             let mut text = f[1].clone();
@@ -1278,12 +1400,12 @@ impl<'a> Desk<'a> {
         // THE FABRIC OF TIME (iOS MTFabric): its word is a testimony the correspondent signed, never a row, never receipted; a live
         // act of theirs may be answered by one -- by the machine that took it from the box, never by the mirror's copy
         if let Some(t) = text.strip_prefix(crate::fabric::MARK) {
-            if let (false, Some(s)) = (quiet, self.book.secret(r)) {
+            if let (false, Some(s)) = (quiet, self.book.key(r)) {
                 crate::fabric::received(t, r, &s);
             }
             return;
         }
-        if let (false, true, Some(s)) = (quiet, crate::fabric::is_live_act(text), self.book.secret(r)) {
+        if let (false, true, Some(s)) = (quiet, crate::fabric::is_live_act(text), self.book.key(r)) {
             crate::fabric::heard(r, &s);
         }
         if text.starts_with(crate::keeping::MARK) {
@@ -1671,6 +1793,37 @@ mod tests {
         (v, words, twin)
     }
 
+    /// THE NAMES OF 28.10.2026 (chats that took the person's own name): Alice2, Alice's phone of the same words, tells Bob
+    /// her name on the live road unsigned, as iOS and Android lay it, and Alice's computer holds the same pipe -- the word is not
+    /// Bob's, the chat keeps «Bob»; signed by Alice it is her own word from another device of hers, and still names nobody. The
+    /// live road keeps carrying their letters, and a signed word of who they are.
+    #[test]
+    fn an_unsigned_name_off_the_live_road_never_renames_the_chat() {
+        let root = std::env::temp_dir().join(format!("montana-post-names-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let (va, wa, ta) = person(&root, "alice");
+        let ba = Book::new(va.clone());
+        let key = PipeKey::new(&[7; 32]);
+        let r = ba.establish(&key).unwrap();
+        ba.edit(&r, |c| c.name = "Bob".into());
+        let (sa, pa) = (media::Store::at(&root.join("alice-media")).unwrap(), crate::presence::Presence::default());
+        let alice = Desk { vault: &va, book: &ba, twin: ta, author_key: seed::author_key_of(&wa), my_name: "Alice".into(), news: Default::default(),
+                           media: &sa, faces: &sa, self_face: vec![], about: Default::default(), read_receipts: true, presence: &pa, archive: None };
+        let said = |mid: &str, text: &str, author: Option<&[u8]>| key.with_author(&fields_of(&[mid, text, "Alice", ""]), author, mid, text, wire::day());
+        let nm = format!("{}Alice", marks::NAME);
+        assert!(!alice.channel_letter(&r, &said("t1-A2", &nm, None)), "unsigned off the live road: left to the box");
+        assert_eq!(ba.chat(&r).unwrap().name, "Bob");
+        let signed = said("t2-A2", &nm, seed::author_key_of(&wa).as_deref());
+        assert!(!wire::fields(&signed, 0, 8)[7].is_empty());
+        assert!(alice.channel_letter(&r, &signed), "signed by Alice: her own word, landed as hers");
+        assert_eq!(ba.chat(&r).unwrap().name, "Bob");
+        for w in [marks::AVATAR, marks::ABOUT] {
+            assert!(!alice.channel_letter(&r, &said("t3-A2", &format!("{w}x"), None)), "a face or an about unsigned: the box's");
+        }
+        assert!(!marks::is_self_word("Привет") && !marks::is_self_word(marks::READ) && !marks::is_self_word(marks::DELIVERED));
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
     /// Two people on the live network, each with a vault of their own: Alice hands out her card, Bob meets it and writes,
     /// Alice reads the first letter and answers under the pipe, Bob reads the answer; the receipts walk back; then a long
     /// letter, a reply, an edit, a reaction and a deletion for both. Run with --ignored and MONTANA_LIVE=1: it speaks to
@@ -1850,5 +2003,283 @@ mod tests {
         assert_eq!(crate::history::card_words(&copies[0]), vec![("userName", "Alice".to_string())], "and the person's name");
         assert!(b3.chat(&ra).unwrap().msgs.iter().any(|m| m.text == "Привет из прошлого"));
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// The days a book pipe's box is read on (iOS MTNodeWire.boxDays after the floor): D-8 .. D+1 before the erase day, D-2 .. D+1
+    /// from it -- the floor derives no earlier day -- and the floor's labels are the secret's.
+    #[test]
+    fn a_book_pipe_asks_no_box_day_below_its_floor() {
+        use crate::pipekey::ERASE_DAY;
+        let k = PipeKey::new(&[5u8; 32]);
+        assert_eq!(box_days(&k, ERASE_DAY - 1), (ERASE_DAY - 9)..=ERASE_DAY);
+        assert_eq!(box_days(&k, ERASE_DAY), (ERASE_DAY - 8)..=(ERASE_DAY + 1), "a floor withheld asks as before");
+        assert_eq!(box_days(&k.floored(ERASE_DAY), ERASE_DAY), (ERASE_DAY - 2)..=(ERASE_DAY + 1));
+        let f = k.floored(ERASE_DAY + 2);
+        assert_eq!(box_days(&f, ERASE_DAY + 2), ERASE_DAY..=(ERASE_DAY + 3));
+        // a letter boxed on 02.11 is read on 03.11 (20759 >= F = 20758), under the very label the secret gave it
+        for d in box_days(&k.floored(ERASE_DAY), ERASE_DAY) {
+            assert_eq!(k.floored(ERASE_DAY).conv_w(d), k.conv_w(d));
+        }
+    }
+
+    /// THE MARKS OF A FOLDER (iOS headsKey and nameHeadsKey): the mark of the form and the mark of the name kept apart, the marks
+    /// of the builds before read once -- nothing written twice, nothing lost; a form written follows the book: «s» before the
+    /// erase day, «f» once the book is walked, once per folder -- iOS at the next start, with the walk of #38 case 13 at once.
+    #[test]
+    fn a_folders_marks_stay_apart_and_a_written_form_follows_the_book() {
+        use crate::pipekey::ERASE_DAY;
+        use crate::rules::{self, Rules};
+        use std::sync::atomic::{AtomicI64, Ordering};
+        for r in [Rules::IOS, Rules::ALL] {
+            rules::with(r, || {
+                let root = std::env::temp_dir().join(format!("montana-post-marks-{}-{}", Book::walks(), std::process::id()));
+                let _ = std::fs::remove_dir_all(&root);
+                let words = seed::generate().unwrap();
+                let v = Vault::at(&root.join("v")).unwrap();
+                let day = std::sync::Arc::new(AtomicI64::new(ERASE_DAY - 1));
+                let cell = day.clone();
+                let book = Book::new_on(v.clone(), std::sync::Arc::new(move || cell.load(Ordering::SeqCst)));
+                let (s, p) = (media::Store::at(&root.join("m")).unwrap(), crate::presence::Presence::default());
+                let archive = || crate::history::Archive::new(&root.join("arc"), crate::history::keys(&words).unwrap(), [1; 16]);
+                let desk = |b| Desk { vault: &v, book: b, twin: seed::twin_of(&words).unwrap(), author_key: seed::author_key_of(&words),
+                                      my_name: "Alice".into(), news: Default::default(), media: &s, faces: &s, self_face: vec![],
+                                      about: Default::default(), read_receipts: true, presence: &p, archive: Some(archive()) };
+                let d = desk(&book);
+                let heads = |r: &str| -> Vec<String> {
+                    let a = archive();
+                    let conv = sha(&[r.as_bytes()]);
+                    a.blocks().iter().flat_map(|b| a.open_block(b)).filter(|i| i.dir == crate::history::HEAD_DIR && i.conv == conv)
+                        .map(|i| String::from_utf8_lossy(&i.content).into_owned()).collect()
+                };
+                // a pipe whose marks a build before 2311 wrote («n:Боб»: the secret's head, then the name) and a group's
+                let old = PipeKey::new(&[5u8; 32]);
+                let ro = book.establish(&old).unwrap();
+                book.open(&ro, "Боб", false);
+                v.set(ARCHIVE_HEADS, json!({ ro.clone(): "n:Боб", "grp:x": "s" }).to_string().as_bytes());
+                d.archive_row(&ro, false, 1000, "t1-A", "привет");
+                assert!(heads(&ro).is_empty(), "the old marks stand: no head written again");
+                assert!(!v.has(ARCHIVE_HEADS), "read once and let go");
+                assert_eq!((jmap(&v, HEAD_FORMS)[&ro].as_str(), jmap(&v, HEAD_NAMES)[&ro].as_str()), (Some("s"), Some("Боб")));
+                // a pipe born on 02.11: the secret's head and the name
+                let n = PipeKey::new(&[6u8; 32]);
+                let rn = book.establish(&n).unwrap();
+                book.open(&rn, "Ева", false);
+                d.archive_row(&rn, true, 1001, "t1-B", "здравствуй");
+                assert_eq!(heads(&rn), [format!("s:{}", b64(&[6u8; 32])), "n:Ева".to_string()]);
+                assert_eq!(d.floor_heads(), 0, "before the erase day no floor head");
+                // 03.11: the run's own book floors (the switch) or waits for the next start (iOS)
+                day.store(ERASE_DAY, Ordering::SeqCst);
+                assert_eq!(d.floor_heads(), if Book::walks() { 2 } else { 0 });
+                let book2 = Book::new_on(v.clone(), std::sync::Arc::new(|| ERASE_DAY));
+                let d2 = desk(&book2);
+                assert_eq!(d2.floor_heads(), if Book::walks() { 0 } else { 2 }, "the next start");
+                assert_eq!(d2.floor_heads(), 0, "once per folder");
+                d2.archive_row(&rn, true, 1002, "t1-C", "ещё");
+                for (rr, pipe) in [(&ro, &old), (&rn, &n)] {
+                    let hs = heads(rr);
+                    let floors: Vec<PipeKey> = hs.iter().filter_map(|h| PipeKey::from_archive_head(h, ERASE_DAY)).filter(|k| k.floor_day().is_some()).collect();
+                    assert_eq!(hs.iter().filter(|h| h.len() > 2 + 44).count(), 1, "one floor head in {rr}");
+                    assert!(floors.iter().any(|k| k.same_pipe(pipe)));
+                }
+                assert_eq!(jmap(&v, HEAD_FORMS)[&rn].as_str(), Some("f"));
+                // a pipe born on 03.11: its folder headed as the book holds it
+                let nb = PipeKey::new(&[7u8; 32]);
+                let rb = book2.establish(&nb).unwrap();
+                book2.open(&rb, "Ян", false);
+                assert_eq!(book2.key(&rb).unwrap().holds_origin(), !Book::walks());
+                d2.archive_row(&rb, false, 1003, "t1-D", "привет с 03.11");
+                let hb = heads(&rb);
+                assert_eq!(hb.iter().any(|h| h.contains(&b64(&[7u8; 32]))), !Book::walks(), "the form of the book as it stands");
+                if Book::walks() {
+                    assert_eq!(PipeKey::from_archive_head(&hb[0], ERASE_DAY).and_then(|k| k.floor_day()), Some(ERASE_DAY - 2));
+                }
+                assert_eq!(d2.floor_heads(), 0);
+                // the name changes: a name head alone
+                book2.edit(&rn, |c| c.name = "Ева Л.".into());
+                let before = heads(&rn).len();
+                d2.archive_row(&rn, false, 1004, "t1-E", "имя");
+                assert_eq!(heads(&rn)[before..], ["n:Ева Л.".to_string()]);
+                let _ = std::fs::remove_dir_all(&root);
+            });
+        }
+    }
+
+    /// THE FIRST LETTER AFTER THE FLOOR: Bob met Alice's card on 02.11 and is not answered yet; his computer starts again on 03.11 --
+    /// his pipe is the floor now. iOS 2311 (the switch off): the first letter he writes confirms nothing and Alice's card refuses
+    /// it. With MONTANA_D1_KEEP_CONFIRM (#36, decision 188) it carries the confirmation of its birth: the card opens it and her
+    /// pipe is his.
+    #[test]
+    fn a_first_letter_written_after_the_floor_opens_at_the_card_only_with_the_kept_confirmation() {
+        use crate::pipekey::ERASE_DAY;
+        for keep in [false, true] {
+            crate::rules::with(crate::rules::Rules { d1_keep_confirm: keep, ..crate::rules::Rules::IOS }, || {
+                let root = std::env::temp_dir().join(format!("montana-post-first-{keep}-{}", std::process::id()));
+                let _ = std::fs::remove_dir_all(&root);
+                let (va, _, _) = person(&root, "alice");
+                let (vb, wb, tb) = person(&root, "bob");
+                let card = Card { vault: &va };
+                let link = card.offer_permanent("Alice").unwrap();
+                let inv = meeting::invite(&link).unwrap();
+                let (croot, _) = card.own_keys().into_iter().next().unwrap();
+                let (ct, ss) = crypto::mlkem_encaps(&croot).unwrap();
+                let key = PipeKey::new(&crypto::first_secret(&ss, &croot, &ct).unwrap());
+                let r = Book::new_on(vb.clone(), std::sync::Arc::new(|| ERASE_DAY - 1)).establish(&key).unwrap();
+                meeting::remember_first(&vb, &r, &key, &ct, &inv);
+                // 03.11, a new start
+                let bb = Book::new_on(vb.clone(), std::sync::Arc::new(|| ERASE_DAY));
+                let floored = bb.key(&r).unwrap();
+                assert!(!floored.holds_origin());
+                let (sb, pb) = (media::Store::at(&root.join("bob-media")).unwrap(), crate::presence::Presence::default());
+                let bob = Desk { vault: &vb, book: &bb, twin: tb, author_key: seed::author_key_of(&wb), my_name: "Bob".into(), news: Default::default(),
+                                 media: &sb, faces: &sb, self_face: vec![], about: Default::default(), read_receipts: true, presence: &pb, archive: None };
+                let plain = bob.first_plain(&r, &floored, &ct, "t1-FIRST", "Привет, Алиса").unwrap();
+                // Alice's side, as Desk::first reads a first letter
+                let f = wire::fields(&plain, 1088, 7);
+                assert_eq!((f[0].as_str(), f[1].as_str(), f[2].as_str()), ("t1-FIRST", "Привет, Алиса", "Bob"));
+                assert_eq!(f[4].is_empty(), !keep, "iOS: an empty confirmation after the floor");
+                let opened = card.accept_first(&plain[..1088], &b64url(&inv), &f[4]);
+                assert_eq!(opened.is_some(), keep, "the card opens it exactly when the confirmation is kept");
+                if let Some((alice, _)) = opened {
+                    assert!(alice.same_pipe(&floored), "one pipe on both sides");
+                }
+                // #36's condition: the kept confirmation rides only with the ciphertext it was bound to -- a resend with another
+                // ciphertext carries none, and the card refuses it
+                let (ct2, _) = crypto::mlkem_encaps(&croot).unwrap();
+                let plain2 = bob.first_plain(&r, &floored, &ct2, "t1-AGAIN", "Привет ещё раз").unwrap();
+                let f2 = wire::fields(&plain2, 1088, 7);
+                assert!(f2[4].is_empty(), "no confirmation for another ciphertext");
+                assert!(card.accept_first(&plain2[..1088], &b64url(&inv), &f2[4]).is_none(), "refused");
+                let _ = std::fs::remove_dir_all(&root);
+            });
+        }
+    }
+
+    /// #37's test: a card letter that arrives again after 03.11 for a pipe the card's side holds -- the same ciphertext, opened by
+    /// the card's own key to the same secret -- gives the chat it gave: the same name with D3 (MONTANA_D3_SAME_PIPE), refused by
+    /// iOS's equality once the book holds the floor; no second chat either way.
+    #[test]
+    fn a_card_letter_arriving_again_after_the_floor_is_the_same_chat_with_d3() {
+        use crate::pipekey::ERASE_DAY;
+        use crate::rules::{self, Rules};
+        for d3 in [false, true] {
+            rules::with(Rules { d3_same_pipe: d3, ..Rules::IOS }, || {
+                let root = std::env::temp_dir().join(format!("montana-post-again-{d3}-{}", std::process::id()));
+                let _ = std::fs::remove_dir_all(&root);
+                let (va, _, _) = person(&root, "alice");
+                let card = Card { vault: &va };
+                let link = card.offer_permanent("Alice").unwrap();
+                let inv64 = b64url(&meeting::invite(&link).unwrap());
+                let (croot, _) = card.own_keys().into_iter().next().unwrap();
+                let (ct, ss) = crypto::mlkem_encaps(&croot).unwrap();
+                let conf = PipeKey::new(&crypto::first_secret(&ss, &croot, &ct).unwrap()).first_confirm(&ct);
+                let (k1, _) = card.accept_first(&ct, &inv64, &conf).unwrap();
+                let r = Book::new_on(va.clone(), std::sync::Arc::new(|| ERASE_DAY - 1)).establish(&k1).unwrap();
+                // 04.11, a new start: the same letter again
+                let book = Book::new_on(va.clone(), std::sync::Arc::new(|| ERASE_DAY + 1));
+                assert_eq!(book.key(&r).unwrap().floor_day(), Some(ERASE_DAY - 1));
+                let (k2, _) = card.accept_first(&ct, &inv64, &conf).unwrap();
+                assert!(k2.holds_origin() && k2 == k1);
+                assert_eq!(book.establish(&k2).as_deref() == Some(r.as_str()), d3, "the same chat with D3; iOS refuses another form");
+                assert_eq!(book.refs(), std::slice::from_ref(&r), "no second chat");
+                assert!(book.key(&r).unwrap().floor_day().is_some(), "the floor stays, the secret is not written back");
+                let _ = std::fs::remove_dir_all(&root);
+            });
+        }
+    }
+
+    /// A WRITTEN FORM FOLLOWS THE WALKED BOOK (#38 case 13, decision 188): in one run, a folder written to after the book walked to
+    /// the floor day takes the walked form at once, and so does the folder of a pipe born after the walk -- no restart needed.
+    #[test]
+    fn a_written_form_follows_the_walked_book() {
+        use crate::rules::{self, Rules};
+        use std::sync::atomic::{AtomicI64, Ordering};
+        rules::with(Rules::DECIDED, || {
+            let root = std::env::temp_dir().join(format!("montana-post-walked-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&root);
+            let words = seed::generate().unwrap();
+            let v = Vault::at(&root.join("v")).unwrap();
+            let (day, heard) = (std::sync::Arc::new(AtomicI64::new(20759)), std::sync::Arc::new(AtomicI64::new(20759)));
+            let (dc, hc) = (day.clone(), heard.clone());
+            let book = Book::new_with(v.clone(), std::sync::Arc::new(move || dc.load(Ordering::SeqCst)),
+                                      std::sync::Arc::new(move || Some(hc.load(Ordering::SeqCst))));
+            let (s, p) = (media::Store::at(&root.join("m")).unwrap(), crate::presence::Presence::default());
+            let archive = || crate::history::Archive::new(&root.join("arc"), crate::history::keys(&words).unwrap(), [1; 16]);
+            let d = Desk { vault: &v, book: &book, twin: seed::twin_of(&words).unwrap(), author_key: seed::author_key_of(&words), my_name: "Alice".into(),
+                           news: Default::default(), media: &s, faces: &s, self_face: vec![], about: Default::default(), read_receipts: true, presence: &p,
+                           archive: Some(archive()) };
+            let written = |r: &str| -> Vec<String> {
+                let a = archive();
+                let conv = sha(&[r.as_bytes()]);
+                a.blocks().iter().flat_map(|b| a.open_block(b)).filter(|i| i.dir == crate::history::HEAD_DIR && i.conv == conv)
+                    .map(|i| String::from_utf8_lossy(&i.content).into_owned()).collect()
+            };
+            let form_day = |w: &str| PipeKey::from_archive_head(w, i64::MIN).map(|k| k.floor_day());
+            let a = PipeKey::new(&[11u8; 32]);
+            let ra = book.establish(&a).unwrap();
+            book.open(&ra, "Ада", false);
+            d.archive_row(&ra, true, 1000, "t1-A", "до");
+            assert_eq!(written(&ra).iter().filter_map(|w| form_day(w)).collect::<Vec<_>>(), [None], "on 02.11 the pipe's own form");
+            // 03.11, the same run
+            day.store(20760, Ordering::SeqCst);
+            heard.store(20760, Ordering::SeqCst);
+            d.archive_row(&ra, true, 1001, "t1-B", "после");
+            assert_eq!(written(&ra).iter().filter_map(|w| form_day(w)).collect::<Vec<_>>(), [None, Some(20758)], "the walked form follows at once");
+            let n = PipeKey::new(&[12u8; 32]);
+            let rn = book.establish(&n).unwrap();
+            book.open(&rn, "Нил", false);
+            d.archive_row(&rn, false, 1002, "t1-C", "новый");
+            let wn = written(&rn);
+            assert_eq!(wn.iter().filter_map(|w| form_day(w)).collect::<Vec<_>>(), [Some(20758)], "a pipe born after the walk: the walked form");
+            assert!(!wn.iter().any(|w| w.contains(&b64(&[12u8; 32]))));
+            assert_eq!(d.floor_heads(), 0, "nothing more to write");
+            let _ = std::fs::remove_dir_all(&root);
+        });
+    }
+
+    /// THE TRACE iOS WRITES FOR A FOLDER'S FORM (MontanaArchive.writeHeadIn, 2313): «archive_head folder=<8> form=<form>» after each
+    /// one -- «s» for a pipe born before the erase day, and at the first start on the erase day «f» for a pipe held from before it;
+    /// «a» for Saved Messages' own folder.
+    #[test]
+    fn the_first_start_on_the_erase_day_traces_archive_head_form_f() {
+        use crate::pipekey::ERASE_DAY;
+        use crate::rules::{self, Rules};
+        rules::with(Rules::DECIDED, || {
+            let root = std::env::temp_dir().join(format!("montana-post-trace-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&root);
+            let words = seed::generate().unwrap();
+            let v = Vault::at(&root.join("v")).unwrap();
+            let (s, p) = (media::Store::at(&root.join("m")).unwrap(), crate::presence::Presence::default());
+            let archive = || crate::history::Archive::new(&root.join("arc"), crate::history::keys(&words).unwrap(), [1; 16]);
+            let at = |d: i64| Book::new_with(v.clone(), std::sync::Arc::new(move || d), std::sync::Arc::new(move || Some(d)));
+            let desk = |b| Desk { vault: &v, book: b, twin: seed::twin_of(&words).unwrap(), author_key: seed::author_key_of(&words),
+                                  my_name: "Alice".into(), news: Default::default(), media: &s, faces: &s, self_face: vec![],
+                                  about: Default::default(), read_receipts: true, presence: &p, archive: Some(archive()) };
+            let pipe = PipeKey::new(&[13u8; 32]);
+            let folder8 = crate::history::label(&crate::history::keys(&words).unwrap().hk, &pipe.reference().unwrap())[..8].to_string();
+            // 02.11: the pipe's folder takes its form «s», traced as iOS traces it
+            let before = at(ERASE_DAY - 1);
+            let d1 = desk(&before);
+            let r = before.establish(&pipe).unwrap();
+            before.open(&r, "Ада", false);
+            let lines = crate::traced(|| d1.archive_row(&r, true, 1000, "t1-A", "до"));
+            assert_eq!(lines.iter().filter(|l| l.starts_with("archive_head ")).cloned().collect::<Vec<_>>(), [format!("archive_head folder={folder8} form=s")]);
+            // the first start on 03.11: the held pipe's folder takes «f», written and traced
+            let first = at(ERASE_DAY);
+            let d2 = desk(&first);
+            let lines = crate::traced(|| assert_eq!(d2.floor_heads(), 1));
+            assert_eq!(lines.iter().filter(|l| l.starts_with("archive_head ")).cloned().collect::<Vec<_>>(), [format!("archive_head folder={folder8} form=f")]);
+            let a = archive();
+            let conv = sha(&[r.as_bytes()]);
+            let forms: Vec<Option<i64>> = a.blocks().iter().flat_map(|b| a.open_block(b)).filter(|i| i.dir == crate::history::HEAD_DIR && i.conv == conv)
+                .filter_map(|i| PipeKey::from_archive_head(&String::from_utf8_lossy(&i.content), i64::MIN)).map(|k| k.floor_day()).collect();
+            assert_eq!(forms, [None, Some(ERASE_DAY - 2)]);
+            assert!(crate::traced(|| assert_eq!(d2.floor_heads(), 0)).iter().all(|l| !l.starts_with("archive_head ")), "once");
+            // Saved Messages' own folder: «a»
+            let saved = crate::history::label(&crate::history::keys(&words).unwrap().hk, crate::book::SAVED)[..8].to_string();
+            first.edit(crate::book::SAVED, |_| {});
+            let lines = crate::traced(|| d2.archive_row(crate::book::SAVED, true, 1002, "t1-S", "заметка"));
+            assert!(lines.contains(&format!("archive_head folder={saved} form=a")), "{lines:?}");
+            let _ = std::fs::remove_dir_all(&root);
+        });
     }
 }

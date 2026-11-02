@@ -289,6 +289,22 @@ function Files-Key {
     Start-Sleep -Milliseconds 300
 }
 
+# THE TRAY LEAVES BY THE ARROW (iOS pastedPreview, sendPasted; 27.10.2026): a picked file waits above the field, numbered, until
+# «Отправить» -- the plates first stand (each wears «N. name»), then the arrow is pressed
+function Send-Tray([int]$Plates = 1, [int]$Timeout = 15) {
+    $end = (Get-Date).AddSeconds($Timeout)
+    while (-not (Exact-Named "Вложения" | Select-Object -First 1) -and (Get-Date) -lt $end) { Start-Sleep -Milliseconds 300 }
+    $tray = Exact-Named "Вложения" | Select-Object -First 1
+    if (-not $tray) { throw "no tray above the field" }
+    $c = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)
+    $n = @($tray.FindAll([System.Windows.Automation.TreeScope]::Descendants, $c)).Count
+    if ($n -ne $Plates) { throw "the tray holds $n plates, not $Plates" }
+    Click-Exact "Отправить"
+    $end = (Get-Date).AddSeconds($Timeout)
+    while ((Exact-Named "Вложения" | Select-Object -First 1) -and (Get-Date) -lt $end) { Start-Sleep -Milliseconds 300 }
+    if (Exact-Named "Вложения" | Select-Object -First 1) { throw "the tray did not leave" }
+}
+
 function Stop-Montana { if ($script:proc -and -not $script:proc.HasExited) { $script:proc.Kill() } }
 
 Add-Type @"
@@ -563,6 +579,8 @@ public class MontanaDlg {
 # into «File name» (control 1148: ComboBoxEx32 > ComboBox > Edit) and «Open» (control 1) clicked -- the dialog's own
 # controls, by their window messages, as Windows 11 shows them to UI Automation only as panes
 function Pick-File([string]$Path, [int]$Timeout = 15) {
+    # the Open dialog reads a name from its own folder: a path relative to the check («Недопустимое имя файла») is made whole
+    $Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
     $cls = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, "#32770")
     $end = (Get-Date).AddSeconds($Timeout); $dlg = $null
     do { $dlg = (Root).FindFirst([System.Windows.Automation.TreeScope]::Children, $cls); if (-not $dlg) { Start-Sleep -Milliseconds 300 } } while (-not $dlg -and (Get-Date) -lt $end)

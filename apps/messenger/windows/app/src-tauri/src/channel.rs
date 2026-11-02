@@ -707,6 +707,14 @@ mod ws {
                     && WinHttpSendRequest(request, null(), 0, null(), 0, 0, 0) != 0
                     && WinHttpReceiveResponse(request, null_mut()) != 0
                     && {
+                        // the node's answer names its second (its Date header), whatever its status: heard by the floor's guard
+                        let mut st: windows_sys::Win32::Foundation::SYSTEMTIME = std::mem::zeroed();
+                        let mut size = std::mem::size_of::<windows_sys::Win32::Foundation::SYSTEMTIME>() as u32;
+                        if WinHttpQueryHeaders(request, WINHTTP_QUERY_DATE | WINHTTP_QUERY_FLAG_SYSTEMTIME, null(), &mut st as *mut _ as *mut _,
+                                               &mut size, null_mut()) != 0 {
+                            crate::nodeclock::heard(crate::http::unix_of(st.wYear as i64, st.wMonth as i64, st.wDay as i64, st.wHour as i64,
+                                                                         st.wMinute as i64, st.wSecond as i64));
+                        }
                         let mut code: u32 = 0;
                         let mut size = std::mem::size_of::<u32>() as u32;
                         WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, null(),

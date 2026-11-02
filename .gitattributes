@@ -1,0 +1,3 @@
+# The node door and its installer are published to bare machines as iOS ships them: LF.
+apps/messenger/windows/app/src-tauri/node/montana-home-node.py text eol=lf
+apps/messenger/windows/app/src-tauri/node/install.sh text eol=lf

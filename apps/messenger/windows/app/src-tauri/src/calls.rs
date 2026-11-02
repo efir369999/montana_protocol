@@ -7,7 +7,7 @@
 use crate::book::{birth_ms, mint_mid, Book, Msg};
 use crate::post::{marks, Desk};
 use crate::vault::Vault;
-use crate::wire::{self, b64, body_key, conv_w, sub_id, unb64};
+use crate::wire::{self, b64, sub_id, unb64};
 use crate::{crypto, doors};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -89,10 +89,10 @@ pub fn post_words_all(book: &Book, twin: &str, r: &str, epoch: &str, words: &str
 }
 
 fn post_to(book: &Book, twin: &str, r: &str, epoch: &str, words: &str, door: Option<String>) -> bool {
-    let Some(secret) = book.secret(r) else { return false };
+    let Some(key) = book.key(r) else { return false };
     let plain = [twin.as_bytes(), &[0], epoch.as_bytes(), &[0], &miniz_oxide::deflate::compress_to_vec(words.as_bytes(), 6)].concat();
-    let Some(env) = crypto::seal(&body_key(&secret, wire::minute()), &plain) else { return false };
-    let cw = conv_w(&secret, wire::day());
+    let Some(env) = crypto::seal(&key.body_key(wire::minute()), &plain) else { return false };
+    let cw = key.conv_w(wire::day());
     let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "env": b64(&env) });
     if let Some(d) = door {
         // A CALL CONNECTS WHEN ONE NODE IS DOWN (iOS 2307 MTCallRoute.echoDoors): beside the door the peer reads, every other door
@@ -250,8 +250,8 @@ pub fn due(epoch: &str) -> Vec<(String, String)> {
 
 /// One long poll of the call's lane: the words of this epoch (as JSON arrays), and whether a letter waits in the box.
 pub fn listen(book: &Book, twin: &str, r: &str, epoch: &str, wait: u32) -> Option<(Vec<String>, bool)> {
-    let secret = book.secret(r)?;
-    let cw = conv_w(&secret, wire::day());
+    let key = book.key(r)?;
+    let cw = key.conv_w(wire::day());
     let dev = wire::hex(&wire::sha(&[b"mt-lane-dev\0", format!("windows-call-{}", std::process::id()).as_bytes(), b"\0", cw.as_bytes()])[..8]);
     let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "wait": wait, "dev": dev });
     let mut out = vec![];
@@ -269,7 +269,7 @@ pub fn listen(book: &Book, twin: &str, r: &str, epoch: &str, wait: u32) -> Optio
                 boxed = true;
                 continue;
             }
-            if let Some((_, ep, bytes)) = crate::presence::Presence::open(&secret, e, None) {
+            if let Some((_, ep, bytes)) = crate::presence::Presence::open(&key, e, None) {
                 if ep == epoch {
                     out.push(String::from_utf8_lossy(&bytes).into_owned());
                 }
@@ -287,18 +287,18 @@ pub fn listen(book: &Book, twin: &str, r: &str, epoch: &str, wait: u32) -> Optio
 /// key; the first door that woke a phone ends the walk. 1 rung, 0 nobody (no phone of theirs takes VoIP wakes), -1 no door.
 #[allow(clippy::too_many_arguments)]
 pub fn wake_voip(book: &Book, twin: &str, r: &str, seed: &str, video: bool, name: &str, offer: &str, born: i64) -> i32 {
-    let Some(secret) = book.secret(r) else { return -1 };
+    let Some(key) = book.key(r) else { return -1 };
     let card = |o: &str| json!({ "o": o, "v": video, "s": seed, "n": name, "g": "", "av": false, "rj": false, "born": born }).to_string();
     let seal = |c: String| -> Option<String> {
         let plain = [b"ring".as_slice(), &[0], twin.as_bytes(), &[0], &miniz_oxide::deflate::compress_to_vec(c.as_bytes(), 6)].concat();
-        crypto::seal(&body_key(&secret, wire::minute()), &plain).map(|e| b64(&e))
+        crypto::seal(&key.body_key(wire::minute()), &plain).map(|e| b64(&e))
     };
     let Some(mut env) = seal(card(offer)) else { return -1 };
     if env.len() > 4600 {
         let Some(e) = seal(card("")) else { return -1 };
         env = e;
     }
-    let cw = conv_w(&secret, wire::day());
+    let cw = key.conv_w(wire::day());
     let body = json!({ "conv": cw, "from_id": sub_id(&cw, twin), "env": env, "dw": 1, "expires": born / 1000 + LIFE_S });
     let mut nobody = true;
     for d in doors::write_order() {

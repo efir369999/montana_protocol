@@ -11,6 +11,7 @@
 //! window (`--shelf <id>`) -- their letters land, are receipted and ring under their name, their queue rides, their coins and
 //! their wall go on. A folder is held by one process at a time (its lock file); a person on the shelf leaves when they are seated,
 //! when their seat leaves the book, or when no window's process has stood for half a minute.
+use crate::pipekey::PipeKey;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -260,12 +261,17 @@ pub fn pair_with_shelf(h: &Here, id: &str, mine: &crate::book::Book, my_name: &s
     });
     r
 }
-/// The meeting itself, with the other person's vault and name: the pipe the two share, or one born to their card and handed to them.
+/// The meeting itself, with the other person's vault and name: the pipe the two share -- found by its name and proven by what it
+/// derives (PipeKey::same_pipe), their vault read and never written -- or one born to their card and handed to them in the form
+/// of the day.
 fn pair_with(v: &crate::vault::Vault, name: &str, mine: &crate::book::Book, my_name: &str) -> Option<String> {
-    let theirs = crate::book::Book::new(v.clone());
-    let mut held: Vec<Vec<u8>> = theirs.refs().iter().filter_map(|r| theirs.secret(r)).collect();
-    held.extend(met(v).into_iter().map(|(_, s, _)| s));
-    if let Some(r) = mine.refs().into_iter().find(|r| mine.secret(r).is_some_and(|s| held.contains(&s))) {
+    let day = mine.arrival_day();
+    let mut held: Vec<PipeKey> = crate::book::Book::peek(v, day);
+    held.extend(met(v, day).into_iter().map(|(_, k, _)| k));
+    // iOS compares the pipes held (their form included); D3 (MONTANA_D3_SAME_PIPE) by what they derive
+    let same = |h: &PipeKey, k: &PipeKey| if crate::rules::get().d3_same_pipe { h.reference() == k.reference() && h.same_pipe(k) } else { h == k };
+    let shared = mine.pipes().into_iter().find(|(_, k)| held.iter().any(|h| same(h, k)));
+    if let Some((r, _)) = shared {
         return Some(r);
     }
     for (root, sk) in (crate::card::Card { vault: v }).own_keys() {
@@ -276,10 +282,10 @@ fn pair_with(v: &crate::vault::Vault, name: &str, mine: &crate::book::Book, my_n
         if back.as_deref() != Some(&secret[..]) {
             continue;
         }
-        let Some(r) = mine.establish(&secret) else { continue };
-        let tag = crate::wire::hex(&crate::wire::sha(&[&secret]))[..16].to_string();
-        let handed = serde_json::json!({ "s": crate::wire::b64(&secret), "n": my_name.trim() }).to_string();
-        if !v.set(&format!("{MET}{tag}"), handed.as_bytes()) {
+        let key = PipeKey::new(&secret);
+        let Some(r) = mine.establish(&key) else { continue };
+        let handed = serde_json::json!({ "s": key.sealed_b64(day), "n": my_name.trim() }).to_string();
+        if !v.set(&format!("{MET}{}", &r[..16]), handed.as_bytes()) {
             mine.drop_chat(&r);
             continue;
         }
@@ -289,14 +295,15 @@ fn pair_with(v: &crate::vault::Vault, name: &str, mine: &crate::book::Book, my_n
     None
 }
 
-/// The pipes handed to this vault's person: (the entry's name, the secret, the name of the one who met them).
-fn met(v: &crate::vault::Vault) -> Vec<(String, Vec<u8>, String)> {
+/// The pipes handed to this vault's person, read in the form of the day: (the entry's name, the pipe, the name of the one who
+/// met them).
+fn met(v: &crate::vault::Vault, day: i64) -> Vec<(String, PipeKey, String)> {
     let Ok(dir) = std::fs::read_dir(v.dir()) else { return vec![] };
     dir.flatten().filter_map(|e| e.file_name().to_str().and_then(|n| n.strip_suffix(".sealed")).filter(|n| n.starts_with(MET)).map(str::to_string))
         .filter_map(|n| {
             let o: serde_json::Value = serde_json::from_slice(&v.get(&n)?).ok()?;
-            let s = o["s"].as_str().and_then(crate::wire::unb64).filter(|s| !s.is_empty())?;
-            Some((n, s, o["n"].as_str().unwrap_or("").to_string()))
+            let k = o["s"].as_str().and_then(|s| PipeKey::from_sealed_b64(s, day)).filter(|k| k.is_whole())?;
+            Some((n, k, o["n"].as_str().unwrap_or("").to_string()))
         }).collect()
 }
 /// THE PIPES A PERSON WAS MET BY HERE ARE BORN IN THEIR OWN BOOK (iOS landShelf, the author's word 11.10.2026 19:0x MSK): every pipe
@@ -304,8 +311,8 @@ fn met(v: &crate::vault::Vault) -> Vec<(String, Vec<u8>, String)> {
 /// its entry leaves. The pipes taken.
 pub fn take_met(v: &crate::vault::Vault, mine: &crate::book::Book) -> usize {
     let mut born = 0;
-    for (n, secret, name) in met(v) {
-        let Some(r) = mine.establish(&secret) else { continue };
+    for (n, key, name) in met(v, mine.arrival_day()) {
+        let Some(r) = mine.establish(&key) else { continue };
         mine.open(&r, &name, false);
         v.delete(&n);
         born += 1;
@@ -384,20 +391,59 @@ pub fn return_to_last(h: &Here) -> Result<(), Refused> {
 
 /// THE WORDS OF A PERSON WAITING ON THE SHELF LIFT THAT SEAT (iOS MTSeats.lift): typed on an empty seat, they seat that person
 /// again, and no second copy of them is born. The empty seat leaves the book. Some(id) when such a person waits.
-pub fn lift(h: &Here, words: &str) -> Option<String> {
+/// a seat is also lifted by the twin its store names, so a person whose words went missing out of that seat still
+/// comes back to their own store instead of being refused in a stranger's seat.
+/// Why a lift did not stand: no seat of this person (the ordinary restore path), or the words could not be written
+/// into the seat that the store names (storage refused, the store is another person's).
+#[derive(Debug, PartialEq, Eq)]
+pub enum LiftError {
+    NotHeld,
+    Refused(crate::seed::Refused),
+}
+
+/// The words of the lifted seat are written there, or the seat is not switched: a failure is the caller's to say.
+fn store_words(dir: &Path, typed: &str) -> Result<(), crate::seed::Refused> {
+    let vault = crate::vault::Vault::at(&dir.join("vault")).map_err(|_| crate::seed::Refused::Storage)?;
+    let seed = crate::seed::Seed::new(vault);
+    // even a seat that holds a (possibly damaged) mnemonic is repaired: its owner is the twin that matched
+    seed.enter(typed)?;
+    Ok(())
+}
+
+pub fn lift(h: &Here, words: &str) -> Result<String, LiftError> {
     let mut b = book(&h.base);
-    let me = h.seat.clone()?;
+    let me = h.seat.clone().ok_or(LiftError::NotHeld)?;
     if words_in(&h.folder).is_some() {
-        return None;
+        return Err(LiftError::NotHeld);
     }
     let typed = crate::seed::normal(words);
+    let twin = crate::seed::twin_of(&typed);
     let found = b.seats.iter().filter(|s| s.id != me)
-        .find(|s| words_in(&folder(&h.base, &b, &s.id)).is_some_and(|w| crate::seed::normal(&w) == typed))?.id.clone();
+        .find(|s| {
+            let dir = folder(&h.base, &b, &s.id);
+            if words_in(&dir).is_some_and(|w| crate::seed::normal(&w) == typed) {
+                return true;
+            }
+            let vault = dir.join("vault");
+            vault.is_dir()
+                && twin.as_deref().is_some_and(|mine| {
+                    crate::vault::Vault::at(&vault).ok()
+                        .and_then(|v| crate::book::store_owner(&v).flatten())
+                        .as_deref() == Some(mine)
+                })
+        }).map(|s| s.id.clone()).ok_or(LiftError::NotHeld)?;
+    // the lifted seat lost its words: the phrase that named it is written there before the app restarts into it
+    let found_dir = folder(&h.base, &b, &found);
+    store_words(&found_dir, &typed).map_err(LiftError::Refused)?;
     b.seats.retain(|s| s.id != me);
     b.active = Some(found.clone());
     b.adding = false;
     b.carry = None;
-    write(&h.base, &b).then_some(found)
+    if write(&h.base, &b) {
+        Ok(found)
+    } else {
+        Err(LiftError::Refused(crate::seed::Refused::Storage))
+    }
 }
 
 /// A person born on the empty seat: the making is done, the first screen asks no more (iOS doneAdding / born).
@@ -543,12 +589,126 @@ mod tests {
         (crate::card::Card { vault: &vb }).offer_permanent("Б").unwrap();   // the unit tests lay nothing on a node
         let r = pair_with(&vb, "Б", &a, "А").expect("their card opens");
         assert_eq!(a.chat(&r).map(|c| c.name).as_deref(), Some("Б"));
-        assert!(b.secret(&r).is_none(), "handed, not yet taken by their own process");
+        assert!(!b.holds(&r), "handed, not yet taken by their own process");
         assert_eq!(pair_with(&vb, "Б", &a, "А").as_deref(), Some(r.as_str()), "a pipe handed and not yet taken is the one they share");
         assert_eq!(take_met(&vb, &b), 1);
-        assert_eq!((b.secret(&r), b.chat(&r).map(|c| c.name)), (a.secret(&r), Some("А".to_string())), "one secret, one name on both sides");
+        assert!(b.key(&r).unwrap().same_pipe(&a.key(&r).unwrap()), "one pipe on both sides");
+        assert_eq!(b.chat(&r).map(|c| c.name), Some("А".to_string()), "one name on both sides");
         assert_eq!(take_met(&vb, &b), 0, "taken once");
         assert_eq!(pair_with(&vb, "Б", &a, "А").as_deref(), Some(r.as_str()), "the pipe the two share is found first");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A PIPE HANDED ON THE ERASE DAY (iOS MTSeats.meetOnShelf: the stored form of the day): the seat's entry holds the floor; both
+    /// books hold the same pipe. iOS compares the pipes held, their form included, and the two books differ in form there, so
+    /// the second meeting makes another pipe; with the walk of #38 case 13 and D3 the shared pipe is found first.
+    #[test]
+    fn a_pipe_handed_on_the_erase_day_is_handed_as_its_floor() {
+        use crate::pipekey::{ERASE_DAY, FLOOR_FORM_SIZE};
+        use crate::rules::{self, Rules};
+        for rl in [Rules::IOS, Rules::ALL] {
+            rules::with(rl, || {
+                let dir = std::env::temp_dir().join(format!("mt-pair-floor-{}", crate::wire::hex(&crate::crypto::random(6).unwrap())));
+                let (va, vb) = (crate::vault::Vault::at(&dir.join("a")).unwrap(), crate::vault::Vault::at(&dir.join("b")).unwrap());
+                let on = |v: &crate::vault::Vault| crate::book::Book::new_on(v.clone(), std::sync::Arc::new(|| ERASE_DAY));
+                let (a, b) = (on(&va), on(&vb));
+                (crate::card::Card { vault: &vb }).offer_permanent("Б").unwrap();
+                let r = pair_with(&vb, "Б", &a, "А").expect("their card opens");
+                let entry: serde_json::Value = serde_json::from_slice(&vb.get(&format!("{MET}{}", &r[..16])).unwrap()).unwrap();
+                assert_eq!(entry["s"].as_str().and_then(crate::wire::unb64).map(|f| f.len()), Some(FLOOR_FORM_SIZE), "the floor is handed");
+                assert_eq!(a.key(&r).unwrap().holds_origin(), !crate::book::Book::walks(), "the seated book's form as its book stands");
+                assert_eq!(take_met(&vb, &b), 1);
+                let theirs = b.key(&r).unwrap();
+                assert!(theirs.same_pipe(&a.key(&r).unwrap()) && theirs.floor_day() == Some(ERASE_DAY - 2));
+                let again = pair_with(&vb, "Б", &a, "А");
+                assert_eq!(again.as_deref() == Some(r.as_str()), rl.d3_same_pipe, "found first with D3; iOS makes another");
+                let _ = std::fs::remove_dir_all(&dir);
+            });
+        }
+    }
+
+    #[test]
+    fn restoring_a_waiting_person_lifts_their_seat_instead_of_reusing_the_empty_one() {
+        let base = std::env::temp_dir().join(format!("mt-seat-lift-{}", crate::wire::hex(&crate::crypto::random(6).unwrap())));
+        std::fs::create_dir_all(&base).unwrap();
+        let h0 = here_at(&base, &Book::default(), None);
+        let empty = make_room(&h0, None).unwrap();
+        let b1 = book(&base);
+        let h1 = here_at(&base, &b1, Some(&empty));
+        let waiting = make_room(&h1, None).unwrap();
+        let b2 = book(&base);
+        let waiting_dir = folder(&base, &b2, &waiting);
+        let words = crate::seed::generate().unwrap();
+        crate::seed::Seed::new(crate::vault::Vault::at(&waiting_dir.join("vault")).unwrap()).enter(&words).unwrap();
+
+        let found = lift(&h1, &words).unwrap();
+
+        assert_eq!(found, waiting);
+        let after = book(&base);
+        assert_eq!(after.active.as_deref(), Some(waiting.as_str()));
+        assert!(!after.adding && !after.seats.iter().any(|seat| seat.id == empty));
+        assert_eq!(folder(&base, &after, &found), waiting_dir);
+        assert!(waiting_dir != folder(&base, &b1, &empty));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// the words of that seat are gone from it, its store and the name of its owner stand; the typed words
+    /// still lift that seat by the twin the store names, instead of leaving the person to a stranger's seat.
+    #[test]
+    fn seat_boundary_words_lift_the_seat_whose_store_they_own_though_its_words_went_missing() {
+        let base = std::env::temp_dir().join(format!("mt-seat-lift-twin-{}", crate::wire::hex(&crate::crypto::random(6).unwrap())));
+        std::fs::create_dir_all(&base).unwrap();
+        let h0 = here_at(&base, &Book::default(), None);
+        let empty = make_room(&h0, None).unwrap();
+        let b1 = book(&base);
+        let h1 = here_at(&base, &b1, Some(&empty));
+        let waiting = make_room(&h1, None).unwrap();
+        let b2 = book(&base);
+        let waiting_dir = folder(&base, &b2, &waiting);
+        let words = crate::seed::generate().unwrap();
+        let vault = crate::vault::Vault::at(&waiting_dir.join("vault")).unwrap();
+        let seed = crate::seed::Seed::new(vault.clone());
+        seed.enter(&words).unwrap();
+        assert!(seed.twin().is_some());
+        vault.delete(crate::seed::MN); // the words are lost out of that seat; the store and its owner's name stand
+
+        let found = lift(&h1, &words).ok();
+
+        assert_eq!(found.as_deref(), Some(waiting.as_str()), "the store's own name lifts its seat");
+        assert_eq!(book(&base).active.as_deref(), Some(waiting.as_str()));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn seat_boundary_lift_refuses_a_seat_whose_mnemonic_and_twin_disagree() {
+        let base = std::env::temp_dir().join(format!("mt-seat-lift-conflict-{}", crate::wire::hex(&crate::crypto::random(6).unwrap())));
+        std::fs::create_dir_all(&base).unwrap();
+        let h0 = here_at(&base, &Book::default(), None);
+        let empty = make_room(&h0, None).unwrap();
+        let b1 = book(&base);
+        let h1 = here_at(&base, &b1, Some(&empty));
+        let waiting = make_room(&h1, None).unwrap();
+        let b2 = book(&base);
+        let waiting_dir = folder(&base, &b2, &waiting);
+        let vault = crate::vault::Vault::at(&waiting_dir.join("vault")).unwrap();
+        let seed = crate::seed::Seed::new(vault.clone());
+        seed.enter(&crate::seed::generate().unwrap()).unwrap();
+        let other = crate::seed::generate().unwrap();
+        vault.set("mt.twin.ref", crate::seed::twin_of(&other).unwrap().as_bytes());
+
+        assert!(matches!(lift(&h1, &other), Err(LiftError::NotHeld)), "a conflicting store must not be lifted by its stored twin alone");
+        assert!(book(&base).adding, "a refused lift changes no seat");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn seat_boundary_lift_refuses_when_the_words_cannot_be_written() {
+        let base = std::env::temp_dir().join(format!("mt-seat-lift-store-{}", crate::wire::hex(&crate::crypto::random(6).unwrap())));
+        std::fs::create_dir_all(&base).unwrap();
+        // the seat's vault path is a file: no words can be written there, and the lift must say so instead of switching
+        std::fs::write(base.join("vault"), b"not a vault").unwrap();
+        let words = crate::seed::generate().unwrap();
+        assert_eq!(store_words(&base, &words), Err(crate::seed::Refused::Storage));
+        let _ = std::fs::remove_dir_all(&base);
     }
 }
