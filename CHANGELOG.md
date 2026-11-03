@@ -2,9 +2,21 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2352) - 2026-11-03
+
+Source commit `b12a68ed6373`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2352.md).
+
+- The app is now called Montana Protocol on the home screen, in the share sheet, in iCloud storage and in its terms -- the same name as on the App Store.
+- A new icon: the Montana coin.
+
+**Security and anonymity**
+
+- Only the name a person sees and the icon change; the app's identifier, its data and its keys stay as they were.
+- No new server, network road or key leaving the device.
+
 ## 1.0 (2351) - 2026-11-02
 
-Source commit `1d30f37f242f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2351.md).
+Source commit `63de00ad1b6b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2351.md).
 
 - A long message that arrives while the app is open appears with its words at once; it no longer hangs as «New message» with a spinning wheel until you open the chat again.
 
