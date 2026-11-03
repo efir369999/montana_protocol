@@ -4,7 +4,7 @@ Every build of Montana for iPhone, iPad and Mac, newest first. The version is th
 
 ## 1.0 (2353) - 2026-11-03
 
-Source commit `68bbc2d16a74`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2353.md).
+Source commit `f135e27e0d14`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2353.md).
 
 - The name under the icon on the home screen is MT Protocol; the app stays Montana Protocol on the App Store.
 - One icon: the Montana coin fitted to the icon shape. The alternate icons are gone; a phone that had one returns to the coin.
