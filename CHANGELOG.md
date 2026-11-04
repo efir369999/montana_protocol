@@ -2,16 +2,18 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
-## 1.0 (2356) - 2026-11-04
+## 1.0 (2358) - 2026-11-04
 
-Source commit `f2f132e5de20`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2356.md).
+Source commit `7eae3e8b2f9f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2358.md).
 
-- The card with your contacts that you send in a chat is now called a contact card.
+- Delete for everyone always works: a channel post taken away leaves every page, whatever the level.
+- No download button under a post: the row under it ends with the views.
+- A call is recorded whatever the other side's switch or level.
+- Your own node no longer waits for level 8, and the «Access by level» texts are gone.
 
 **Security and anonymity**
 
-- Only names inside the code and one English word on screen change.
-- No new server, network road or key leaving the device.
+- A post deleted for everyone is no longer kept on a subscriber's phone by level (MTLevelAccess.keepDeleted removed).
 
 ## 1.0 (2355) - 2026-11-03
 
