@@ -2,9 +2,22 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2359) - 2026-11-04
+
+Source commit `ada594f9dc02`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2359.md).
+
+- The Montana room with updates stands for everyone: the build in your hands is its first row, even before the network answers.
+- The Update button appears only when a newer build is out.
+- The copy kept by the people you write to is laid only on the charger, outside Low Power Mode, with the phone cool and not on a metered network: no more heat on the battery.
+- Asking the nodes which files they hold goes in slices of 900 names, so a large library is no longer refused.
+
+**Security and anonymity**
+
+- No new server or key leaving the device. The update document is read by the app's own bundle (updates/BUNDLE-CHANNEL.json) from montana.xxx and the nodes, as before; the app accepts only a document naming its own bundle. The keeping copy now waits for charger, cool phone and an unmetered path (MontanaPower.bulkHeld).
+
 ## 1.0 (2358) - 2026-11-04
 
-Source commit `19a0b1741491`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2358.md).
+Source commit `48ccc9de8f07`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2358.md).
 
 - Delete for everyone always works: a channel post taken away leaves every page, whatever the level.
 - No download button under a post: the row under it ends with the views.
