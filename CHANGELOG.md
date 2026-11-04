@@ -4,7 +4,7 @@ Every build of Montana for iPhone, iPad and Mac, newest first. The version is th
 
 ## 1.0 (2358) - 2026-11-04
 
-Source commit `7eae3e8b2f9f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2358.md).
+Source commit `19a0b1741491`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2358.md).
 
 - Delete for everyone always works: a channel post taken away leaves every page, whatever the level.
 - No download button under a post: the row under it ends with the views.
