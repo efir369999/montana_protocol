@@ -2,9 +2,22 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2360) - 2026-11-04
+
+Source commit `4d7b8f0ab6a8`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2360.md).
+
+- Names with @ are gone: no public @name, no search or link by @name, and the people you add are no longer written into your phone's Contacts. A contact is shared through the system's own picker, so Montana asks for no access to Contacts.
+- Adding a person speaks only of your card: people reach you by its QR code or link, and the first screen of each app says what it is.
+- Video in a voice call: the asker sees «Video request sent»; once the other person accepts, video comes on at both ends and stays until each turns off their own camera; turning your camera off never stops the other person's video, and a yes that arrives after a long wait still turns the video on.
+
+**Security and anonymity**
+
+- No new server, network road or key leaving the device. The keeper of names is asked nothing and no @name is published; the app holds no Contacts access (NSContactsUsageDescription is gone from Info.plist, and tools/mt-apple-rules-check.py refuses it back), and the book of others' @names and the cards it wrote are erased on the phone (MTNameBook.forgetClaimedNames).
+- The video consent stays a word between the two phones (call-video-ask, call-video-ok, call-camera-off): no new server, road or key; a yes is taken only within 120 s of one's own ask, and turning one's camera off rests only one's own capture.
+
 ## 1.0 (2359) - 2026-11-04
 
-Source commit `214dc09645c4`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2359.md).
+Source commit `ada594f9dc02`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2359.md).
 
 - Call recording is gone: no switch in Settings, no record mark on the call screen, and what an earlier build left of it on this phone is removed. A recording already sent to a chat stays in that chat.
 - Your node is gone from Settings. Files a node already holds still come back when you open them.
