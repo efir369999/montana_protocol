@@ -207,6 +207,18 @@ fn write_complete(at: &Path, bytes: &[u8], only_once: bool) -> Result<(), StoreE
     flush_directory(directory, at)
 }
 
+// The directory's own flush. Unix opens the directory and syncs it; Windows asks the volume to
+// flush the directory through mt-windows-fs. Durability, not a permission: the file's bytes are
+// already synced by the caller.
+#[cfg(unix)]
+fn sync_directory(directory: &Path) -> std::io::Result<()> {
+    fs::File::open(directory)?.sync_all()
+}
+
+#[cfg(windows)]
+fn sync_directory(directory: &Path) -> std::io::Result<()> {
+    mt_windows_fs::directory::flush(directory)
+}
 // The flush that makes a name landed or removed in a directory survive a loss of power. The name
 // already changed for every reader, so a failure here is an uncertain commit and never a rollback.
 fn flush_directory(directory: &Path, at: &Path) -> Result<(), StoreError> {
@@ -215,10 +227,7 @@ fn flush_directory(directory: &Path, at: &Path) -> Result<(), StoreError> {
         said: e.to_string(),
     };
     fault::operation().map_err(uncertain)?;
-    fs::File::open(directory)
-        .map_err(uncertain)?
-        .sync_all()
-        .map_err(uncertain)?;
+    sync_directory(directory).map_err(uncertain)?;
     Ok(())
 }
 
@@ -274,10 +283,7 @@ fn publish_once(at: &Path, bytes: &[u8]) -> Result<bool, StoreError> {
         at: at.display().to_string(),
         said: e.to_string(),
     };
-    fs::File::open(directory)
-        .map_err(uncertain)?
-        .sync_all()
-        .map_err(uncertain)?;
+    sync_directory(directory).map_err(uncertain)?;
     Ok(landed)
 }
 
@@ -363,6 +369,7 @@ pub struct Store {
     // check that the window is not closed — and no door can own the birth of the second writer but
     // this one. The lock goes with the handle, so a store dropped releases it and a process that
     // died holds nothing.
+    #[allow(dead_code)] // held for its lifetime on both platforms; Unix also unlocks it in Drop.
     held: fs::File,
 }
 
@@ -373,8 +380,44 @@ pub struct Store {
 // the ring a623-p72). Unlocking ends the lock for every copy of the description.
 impl Drop for Store {
     fn drop(&mut self) {
+        #[cfg(unix)]
         let _ = self.held.unlock();
     }
+}
+
+// **The lock of the root, by the platform's own means.** Unix locks the directory's open
+// description; Windows cannot open a directory as an ordinary file, so it holds a file of the root
+// with no sharing at all. One store, one process either way; a second holder is refused.
+#[cfg(unix)]
+fn take_root_lock(root: &Path) -> Result<fs::File, StoreError> {
+    let held = fs::File::open(root).map_err(|e| said(root, e))?;
+    match held.try_lock() {
+        Ok(()) => Ok(held),
+        Err(fs::TryLockError::WouldBlock) => Err(StoreError::HeldByAnother {
+            at: root.display().to_string(),
+        }),
+        Err(fs::TryLockError::Error(e)) => Err(said(root, e)),
+    }
+}
+
+#[cfg(windows)]
+fn take_root_lock(root: &Path) -> Result<fs::File, StoreError> {
+    use std::os::windows::fs::OpenOptionsExt;
+    let at = root.join(".lock");
+    fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .share_mode(0)
+        .open(&at)
+        .map_err(|e| match e.raw_os_error() {
+            // 32 = ERROR_SHARING_VIOLATION, 33 = ERROR_LOCK_VIOLATION: another process holds
+            // the file. Access denied or any other filesystem error is reported as itself.
+            Some(32) | Some(33) => StoreError::HeldByAnother {
+                at: root.display().to_string(),
+            },
+            _ => said(&at, e),
+        })
 }
 
 impl Store {
@@ -384,16 +427,7 @@ impl Store {
         let root = root.as_ref().to_path_buf();
         let proposals = root.join("proposals");
         fs::create_dir_all(&proposals).map_err(|e| said(&proposals, e))?;
-        let held = fs::File::open(&root).map_err(|e| said(&root, e))?;
-        match held.try_lock() {
-            Ok(()) => {}
-            Err(fs::TryLockError::WouldBlock) => {
-                return Err(StoreError::HeldByAnother {
-                    at: root.display().to_string(),
-                })
-            }
-            Err(fs::TryLockError::Error(e)) => return Err(said(&root, e)),
-        }
+        let held = take_root_lock(&root)?;
         // **What a dead process left of an opening goes before anything is read.** The temporary of
         // an exclusive opening is named by the process and a serial, not by a clock, so a process
         // that fell between writing it and linking it leaves a name the next process draws again --
@@ -477,7 +511,8 @@ impl Store {
             let entry = entry.map_err(|e| said(&self.root, e))?;
             let name = entry.file_name();
             let name = name.to_string_lossy();
-            let harmless = name.starts_with("genesis.writing-")
+            let harmless = (cfg!(windows) && name == ".lock")
+                || name.starts_with("genesis.writing-")
                 || (name == "proposals"
                     && fs::read_dir(entry.path())
                         .map_err(|e| said(&entry.path(), e))?

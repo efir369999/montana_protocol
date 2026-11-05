@@ -17,6 +17,7 @@ members = [
     "crates/montana-wallet",
     "crates/mt-conformance",
     "crates/mt-boundary",
+    "crates/mt-windows-fs",
 ]
 
 [workspace.package]
@@ -25,6 +26,7 @@ rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
+mt-windows-fs = { path = "crates/mt-windows-fs" }
 # The engine that absorbs a secret wipes itself: what the tree allocates for a secret is held in a
 # wiping wrapper, and what the library holds of that secret is wiped by the feature it carries.
 sha2 = { version = "=0.11.0", features = ["zeroize"] }

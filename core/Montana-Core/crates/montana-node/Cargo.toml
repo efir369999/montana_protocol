@@ -29,6 +29,9 @@ mt-wire = { workspace = true }
 mt-suite = { workspace = true }
 zeroize = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+mt-windows-fs = { workspace = true }
+
 [features]
 # A test of a close without a proposal holds back the proposal a machine proves of its own
 # (`pulse::withhold`). No build of the protocol enables it.

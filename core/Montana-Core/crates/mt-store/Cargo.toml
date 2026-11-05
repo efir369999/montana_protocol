@@ -17,3 +17,6 @@ zeroize = { workspace = true }
 
 [dev-dependencies]
 mt-conformance = { path = "../mt-conformance" }
+
+[target.'cfg(windows)'.dependencies]
+mt-windows-fs = { workspace = true }

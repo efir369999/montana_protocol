@@ -8,10 +8,14 @@
 // the file and holds the details in memory, and `stand` creates it once every refusal of the start
 // is behind. A start refused between the two leaves the data directory as it found it.
 
-use std::fs::{File, OpenOptions};
+use std::fs::File;
+#[cfg(unix)]
+use std::fs::OpenOptions;
 use std::io::Write;
+#[cfg(unix)]
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
+
 use std::sync::{Mutex, OnceLock};
 
 enum Details {
@@ -43,18 +47,34 @@ pub fn stand() -> std::io::Result<()> {
         return Ok(());
     };
     if let Details::Held { at, lines } = &*details {
-        let mut file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .mode(0o600)
-            .open(at)?;
-        file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+        let mut file = open_owner_only(at)?;
         for line in lines {
             writeln!(file, "{line}")?;
         }
         *details = Details::Standing(file);
     }
     Ok(())
+}
+
+// The same two steps, with the file closed to its owner by the platform's own rule: a mode on
+// Unix, an owner-only DACL on Windows. Both refuse rather than write when the rule cannot stand.
+/// Opens the file for appending with the owner-only rule already in force. On Unix the mode is
+/// applied to the opened file; on Windows the protected DACL is applied and read back on the
+/// handle. An existing file is narrowed; a file that cannot be narrowed is refused.
+#[cfg(unix)]
+fn open_owner_only(at: &Path) -> std::io::Result<File> {
+    let file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .mode(0o600)
+        .open(at)?;
+    file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    Ok(file)
+}
+
+#[cfg(windows)]
+fn open_owner_only(at: &Path) -> std::io::Result<File> {
+    mt_windows_fs::private_log::open_owner_only(at)
 }
 
 /// Prints the public line and keeps the detail, with its UTC second, for the owner-only file.
@@ -83,7 +103,29 @@ pub fn note(detail: impl FnOnce() -> String) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn a_detail_stands_only_after_the_windows_acl_is_in_force() {
+        let data = std::env::temp_dir().join(format!("mt-private-win-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(data.as_path());
+        std::fs::create_dir_all(data.as_path()).expect("a temporary directory");
+        keep_at(data.as_path());
+        note(|| "held".to_string());
+        assert!(stand().is_ok(), "the file stands");
+        note(|| "a detail".to_string());
+        let written = std::fs::read_to_string(data.join(FILE)).expect("the file reads");
+        let lines: Vec<&str> = written.lines().collect();
+        assert_eq!(lines.len(), 2, "{written}");
+        assert!(lines[0].ends_with(" held"), "{written}");
+        assert!(lines[1].ends_with(" a detail"), "{written}");
+        let _ = std::fs::remove_dir_all(data.as_path());
+    }
+}
+
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
