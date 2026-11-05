@@ -177,6 +177,7 @@ git cherry-pick --no-commit 291869b
 $env:OPENSSL_SRC_PERL = "C:\Strawberry\perl\bin\perl.exe"   # wherever perl.exe is
 # The guard and the bindings build are one checked step; a rejected wordlist stops before cargo.
 powershell -NoProfile -ExecutionPolicy Bypass -File apps\messenger\windows\app\tools\build-bindings.ps1
+if ($LASTEXITCODE -ne 0) { throw "Montana build: bindings/wordlist step failed; stop before protocol and package" }
 
 # 2. the protocol core's boundary, montana_core.dll, built in a target folder of its own and laid in target\release
 powershell -NoProfile -ExecutionPolicy Bypass -File apps\messenger\windows\app\tools\protocol-core.ps1
@@ -191,6 +192,10 @@ Pop-Location
 The result is `apps\messenger\windows\target\release\montana-desktop.exe` beside `mt_bindings.dll` and `montana_core.dll`, and
 an NSIS installer in `target\release\bundle\nsis\` that installs for the current user without administrator rights. It is not
 code-signed, so Windows SmartScreen warns before it runs.
+
+A direct `cargo build -p mt-bindings` bypasses the wordlist guard; it is not a supported build road. Before Beta, inspect the
+**packaged** `mt_bindings.dll` to prove its embedded wordlist is 13,116 bytes, LF-only, SHA-256 `2f5eed53…`, and record that
+hash with the package provenance. A canonical source file alone does not certify an existing DLL.
 
 ## Run the tests
 
