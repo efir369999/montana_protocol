@@ -506,6 +506,8 @@ final class VoicePlayer: NSObject, ObservableObject {
         MontanaAudioSession.wake(voice: isVoice, external: external) { [weak self] ready in
             guard let self, self.playRequest == ticket else { return }
             guard ready, !MontanaCall.isBusy, self.player?.play() == true else {
+                // A RESUME THAT WOULD NOT PLAY IS SAID TOO (link 17363): the start's refusal was marked, the resume's fell silent.
+                MontanaTrace.mark("play_refused", "resume voice=\(self.isVoice ? 1 : 0) ready=\(ready ? 1 : 0) call=\(MontanaCall.isBusy ? 1 : 0)")
                 MontanaAudioSession.release("play"); return
             }
             self.paused = false
@@ -848,21 +850,61 @@ final class VoicePlayer: NSObject, ObservableObject {
         pushNowPlaying()
     }
 
+    // THE SYSTEM TAKES THE SOUND AND GIVES IT BACK (link 17399; the author's word 05.11 23:20 UTC: «in the car over Bluetooth it did
+    // not play properly and dropped»). Another app's call, Siri, a navigator's word or a car letting its Bluetooth go stop the file
+    // player by the system's hand -- and the player went on believing it played: the bar said playing, the car's one button paused
+    // a silent track, and nothing played on when the system gave the sound back. The system's pause is a pause now, said in the
+    // diary, and the end of an interruption that says «resume» plays on from the place -- only a track the system took, never one
+    // the person paused.
+    private var takenBySystem = false
+    private func watchTheSession() {
+        let nc = NotificationCenter.default
+        _ = nc.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] n in self?.interrupted(n) }
+        _ = nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] n in self?.routeChanged(n) }
+    }
+    private func interrupted(_ n: Notification) {
+        guard let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let kind = AVAudioSession.InterruptionType(rawValue: raw), playingFile != nil, !isVoice else { return }
+        if kind == .began {
+            MontanaTrace.mark("music_interrupt", "began paused=\(paused ? 1 : 0)")
+            takenBySystem = !paused
+            if takenBySystem { pause() }
+            return
+        }
+        let opts = AVAudioSession.InterruptionOptions(rawValue: (n.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt) ?? 0)
+        let again = takenBySystem && opts.contains(.shouldResume) && paused && !MontanaCall.isBusy
+        MontanaTrace.mark("music_interrupt", "ended resume=\(opts.contains(.shouldResume) ? 1 : 0) taken=\(takenBySystem ? 1 : 0) plays=\(again ? 1 : 0)")
+        takenBySystem = false
+        if again { resume() }
+    }
+    private func routeChanged(_ n: Notification) {
+        guard let raw = n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let why = AVAudioSession.RouteChangeReason(rawValue: raw),
+              why == .oldDeviceUnavailable || why == .newDeviceAvailable, playingFile != nil, !isVoice else { return }
+        let out = AVAudioSession.sharedInstance().currentRoute.outputs.first?.portType.rawValue ?? "-"
+        MontanaTrace.mark("music_route", "\(why == .newDeviceAvailable ? "new" : "gone") out=\(out) paused=\(paused ? 1 : 0)")
+        // The headset or the car that played the track is gone: the track stands where it was, it does not go on aloud into the room.
+        if why == .oldDeviceUnavailable, !paused { takenBySystem = false; pause() }
+    }
+
     private var remoteArmed = false
     private func armRemote() {
         guard !remoteArmed else { return }
         remoteArmed = true
         UIApplication.shared.beginReceivingRemoteControlEvents()
+        watchTheSession()
         let c = MPRemoteCommandCenter.shared()
-        c.playCommand.addTarget { [weak self] _ in self?.resume(); return .success }
-        c.pauseCommand.addTarget { [weak self] _ in self?.pause(); return .success }
+        // THE LOCK SCREEN, THE HEADSET AND THE CAR ARE SAID (link 17399): their buttons moved the player without a word in the diary.
+        c.playCommand.addTarget { [weak self] _ in MontanaTrace.mark("music_remote", "play"); self?.resume(); return .success }
+        c.pauseCommand.addTarget { [weak self] _ in MontanaTrace.mark("music_remote", "pause"); self?.pause(); return .success }
         c.togglePlayPauseCommand.addTarget { [weak self] _ in
             guard let self else { return .commandFailed }
+            MontanaTrace.mark("music_remote", "toggle paused=\(self.paused ? 1 : 0)")
             if self.paused { self.resume() } else { self.pause() }
             return .success
         }
-        c.nextTrackCommand.addTarget { [weak self] _ in self?.next(); return .success }
-        c.previousTrackCommand.addTarget { [weak self] _ in self?.prev(); return .success }
+        c.nextTrackCommand.addTarget { [weak self] _ in MontanaTrace.mark("music_remote", "next"); self?.next(); return .success }
+        c.previousTrackCommand.addTarget { [weak self] _ in MontanaTrace.mark("music_remote", "prev"); self?.prev(); return .success }
         c.changePlaybackPositionCommand.addTarget { [weak self] e in
             guard let self, let ev = e as? MPChangePlaybackPositionCommandEvent,
                   let p = self.player, p.duration > 0 else { return .commandFailed }
