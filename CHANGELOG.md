@@ -2,6 +2,16 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2364) - 2026-11-06
+
+Source commit `0a3ed5688699`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2364.md).
+
+- Music keeps its word with the car and the headphones: when a call, Siri, a navigator or a car's Bluetooth takes the sound, the track pauses where it stands and the bar says so; when the sound is given back with «resume», the track plays on from its place. A headset or a car that goes away pauses the track instead of playing it aloud into the room.
+
+**Security and anonymity**
+
+- No new server, network road or key leaving the device. The diary on the device (MontanaTrace) gains music_remote (the lock screen's, headset's or car's button), music_interrupt (began/ended, resume asked, played on) and music_route (an output device came or went, its port type) -- naming no track, file or folder; play_refused resume from the previous build stays.
+
 ## 1.0 (2363) - 2026-11-06
 
 Source commit `9a67c720f5c4`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2363.md).
