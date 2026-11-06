@@ -633,7 +633,11 @@ final class VoicePlayer: NSObject, ObservableObject {
 
     /// The sound ran to its end — the file player's word and the stream player's alike.
     private func finished() {
+        // A TRACK'S END IS SAID (T1 06.11.2026 00:43 UTC, the trace of Messenger 118, link 17306): a track sounded 2.7 s and fell
+        // silent, and the diary could not tell its end from a stop. The end marks the player's clock, the bar's last tick (it stands
+        // still in the background) and the track's length.
         if currentTrack != nil {
+            MontanaTrace.mark("music_end", "i=\(queueIndex + 1) at=\(Int(player?.currentTime ?? -1))s tick=\(Int(elapsed))s of=\(Int(duration))s")
             if repeatOn { play(index: queueIndex); return }
             if let nx = nextIndex() { play(index: nx); return }
             if repeatAll, !queue.isEmpty { play(index: 0); return }   // the playlist from its first track again
@@ -939,7 +943,15 @@ final class MTFileSound: NSObject, MTSound, AVAudioPlayerDelegate {
     @discardableResult func play() -> Bool { p.play() }
     func pause() { p.pause() }
     func stop() { p.stop() }
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) { onEnd?() }
+    // A SOUND THAT BROKE IS NOT AN END (T1 06.11.2026 00:43 UTC, link 17306: a track sounded 2.7 s and fell silent): the platform
+    // ends a file it can no longer decode with the same word as a whole one, its flag false -- the diary tells the two apart.
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if !flag { MontanaTrace.mark("sound_end", "broken at=\(Int(player.currentTime))s of=\(Int(player.duration))s") }
+        onEnd?()
+    }
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        MontanaTrace.mark("sound_decode", "error=\((error as NSError?)?.code ?? 0) at=\(Int(player.currentTime))s of=\(Int(player.duration))s")
+    }
     var metering: Bool { get { p.isMeteringEnabled } set { p.isMeteringEnabled = newValue } }
     /// The platform's own meter of the file player: kept by its render thread, read here -- the channels' mean power.
     func level() -> Float {
