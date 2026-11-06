@@ -128,9 +128,19 @@ fun MainActivity.push(build: (close: () -> Unit) -> View) {
     close = overlay(build { close() })
 }
 
+/**
+ * A PAGE WITH A FIELD AT ITS FOOT STANDS ABOVE THE KEYS (as the contact card's editor does, PeerInfo): a page over the current one is
+ * padded once by the system bars at its push (overlay), so the keyboard rose over its field and its send; the keys push it up instead.
+ */
+fun View.standAboveKeys() = setOnApplyWindowInsetsListener { v, insets ->
+    val b = insets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.ime())
+    v.setPadding(b.left, b.top, b.right, b.bottom); insets
+}
+
 // ─────────────────────────── the settings' first page (iOS SettingsTabView) ───────────────────────────
 
-/** THE SETTINGS ARE THE PLATFORM'S OWN LIST: two sections of rows, the cross top left. */
+/** THE SETTINGS ARE THE PLATFORM'S OWN LIST: sections of rows, the cross top left. NO MENU OF ACCESS BY LEVEL (iOS 2358, the author's
+ * word 16165 p.6), NO CALL RECORDING AND NO ROW OF ONE'S OWN NODE (iOS 214dc096, the author's word 16428): no section stands for them. */
 fun settingsRoot(act: MainActivity, onForget: () -> Unit, onClose: () -> Unit): View {
     val c: Context = act
     return settingsPage(act, c.getString(R.string.settings), onClose, cross = true) {
@@ -138,9 +148,7 @@ fun settingsRoot(act: MainActivity, onForget: () -> Unit, onClose: () -> Unit): 
             c.settingsRow(R.drawable.ic_set_bell, SysColor.red, c.getString(R.string.notif_sounds)) { act.push { notificationsPage(act, it) } },
             c.settingsRow(R.drawable.ic_folder, SysColor.blue, c.getString(R.string.cf_chat_folders)) { act.push { folderSettingsPage(act, it) } },   // the folders' tabs (iOS 17.10.2026)
             c.settingsRow(R.drawable.ic_arrow_circle_down, SysColor.indigo, c.getString(R.string.data_storage)) { act.push { dataStoragePage(act, it) } },
-            c.settingsRow(R.drawable.ic_set_server, SysColor.gray, c.getString(R.string.your_node)) { act.push { NodePage(act, it).view } },
             c.settingsRow(R.drawable.ic_set_lock, SysColor.gray, c.getString(R.string.privacy)) { act.push { privacyPage(act, onForget, it) } },
-            c.settingsRow(R.drawable.ic_stairs, SysColor.orange, c.getString(R.string.lv_access)) { act.push { levelAccessPage(act, it) } },   // iOS MontanaSettings.swift:134
             c.settingsRow(R.drawable.ic_set_brush, SysColor.blue, c.getString(R.string.appearance)) { act.push { AppearancePage(act, it).view } },
             c.settingsRow(R.drawable.ic_language, SysColor.cyan, c.getString(R.string.language)) { act.push { languagePage(act, it) } })
         section(null, null,
@@ -251,7 +259,7 @@ fun languagePage(act: MainActivity, onBack: () -> Unit): View {
 fun supportPage(act: MainActivity, onBack: () -> Unit): View {
     val c: Context = act
     val mail = "contact@montana.quest"   // iOS MontanaSafety.contactMail
-    val site = "https://montana.quest"   // iOS MontanaSafety.site
+    val site = "https://montana.xxx"   // iOS MontanaSafety.site (MTEditionMontana.site, decision 711)
     fun write(subject: Int) {
         val i = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$mail")).putExtra(Intent.EXTRA_SUBJECT, c.getString(subject))
         try { act.startActivity(i) } catch (_: ActivityNotFoundException) {
@@ -403,7 +411,7 @@ fun seedPage(act: MainActivity, onBack: () -> Unit): View {
         body.gap(12)
         body.addView(c.text("⚠ " + c.getString(R.string.sg_for_you), 17f, Color.WHITE, bold = true, center = true), lp())
         body.gap(6)
-        body.addView(c.text(c.getString(R.string.sg_wallet), 22f, Color.WHITE, bold = true, center = true), lp())
+        body.addView(c.text(c.getString(if (GooglePlay.COINS) R.string.sg_wallet else R.string.sg_account), 22f, Color.WHITE, bold = true, center = true), lp())
         body.gap(16)
         lateinit var go: AccentButton
         val ticks = BooleanArray(2)
@@ -601,7 +609,7 @@ fun dataStoragePage(act: MainActivity, onBack: () -> Unit): View {
             keptValue.text = "${w.files} · " + android.text.format.Formatter.formatShortFileSize(c, w.bytes)   // USER-DATA: the node's count and size
         }
         val clearRow = c.settingsRow(R.drawable.ic_delete, SysColor.red, c.getString(R.string.cache_clear), chevron = false) {
-            if (!HomeShelf.bringing || HomeKeep.clearing) return@settingsRow
+            if (HomeKeep.clearing) return@settingsRow
             AlertDialog.Builder(act).setTitle(R.string.cache_clear_q).setMessage(R.string.cache_clear_msg)
                 .setPositiveButton(R.string.cache_clear_go) { _, _ ->
                     HomeKeep.clear(act) { r ->
@@ -614,7 +622,7 @@ fun dataStoragePage(act: MainActivity, onBack: () -> Unit): View {
                     }
                 }
                 .setNegativeButton(R.string.cancel, null).show()
-        }.apply { if (!HomeShelf.bringing) alpha = 0.4f }
+        }
         // AS THE REFERENCE KEEPS ITS CACHE (iOS f5803d8c): a term for what nobody opened, a ceiling for the whole -- what leaves is
         // what the node holds, asked anew. The platform's own menu offers the choices, as iOS's Picker does.
         fun choice(icon: Int, color: Int, word: Int, key: String, options: List<Pair<Int, String>>): View {
@@ -623,13 +631,12 @@ fun dataStoragePage(act: MainActivity, onBack: () -> Unit): View {
             shown()
             lateinit var row: View
             row = c.settingsRow(icon, color, c.getString(word), value = value, chevron = false) {
-                if (!HomeShelf.bringing) return@settingsRow
                 PopupMenu(act, value).apply {
                     options.forEachIndexed { i, (n, w) -> menu.add(0, n, i, w) }
                     setOnMenuItemClickListener { Prefs.setStr(key, it.itemId.toString()); shown(); HomeKeep.trim(act); true }
                     show()
                 }
-            }.apply { if (!HomeShelf.bringing) alpha = 0.4f }
+            }
             return row
         }
         val gb = { g: Int -> android.text.format.Formatter.formatShortFileSize(c, g * 1_073_741_824L) }   // USER-DATA: a size in the platform's own units
@@ -637,8 +644,9 @@ fun dataStoragePage(act: MainActivity, onBack: () -> Unit): View {
             listOf(3 to c.getString(R.string.keep_3_days), 7 to c.getString(R.string.keep_1_week), 30 to c.getString(R.string.keep_1_month), 0 to c.getString(R.string.keep_forever)))
         val limitRow = choice(R.drawable.ic_hub, SysColor.gray, R.string.cache_limit, HomeKeep.LIMIT,
             listOf(5 to gb(5), 16 to gb(16), 32 to gb(32), 0 to c.getString(R.string.cache_no_limit)))
-        section(c.getString(R.string.cache_header), c.getString(if (HomeShelf.bringing) R.string.cache_footer_node else R.string.cache_footer_no_node),
-            keepRow, limitRow, keptRow, clearRow)
+        // no node holds this phone's files, nothing to clear: the section stands only while a node brings them back (iOS 214dc096);
+        // its footer used to send the person to a Settings row that no longer exists
+        if (HomeShelf.bringing) section(c.getString(R.string.cache_header), c.getString(R.string.cache_footer_node), keepRow, limitRow, keptRow, clearRow)
         // WHAT THIS PHONE HOLDS, MEASURED ON ITS DISK (iOS «On this phone», e02595a5 and e9187672; the author's word 18.10.2026 10:2x MSK:
         // «I cannot see what weighs so much nor how to clean it»): the sum is the phone's own, each file counted once; the attachments
         // are chosen by kind on their pages, the copies waiting are cleared here

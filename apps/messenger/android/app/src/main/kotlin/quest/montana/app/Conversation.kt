@@ -51,8 +51,8 @@ fun letterWords(c: Context, t: String, meta: String? = null): String = when {
     ChessLetter.parse(t) != null -> ChessLetter.MARK + c.getString(R.string.chess_title)
     // a coin letter: the coin and the number (iOS MTRowLetter.coinCount)
     CoinLetter.parse(t) != null -> CoinLetter.preview(c, t) ?: t
-    // a shared secret's every preview names no title and no content (iOS MTRowLetter.preview)
-    SecretLetter.isOne(t) -> "\uD83D\uDD11 " + c.getString(R.string.pw_shared)
+    // a letter of a retired kind names nothing in a list (iOS MTRowLetter.preview, MTRetired.letter)
+    Retired.letter(t) -> ""
     else -> t
 }
 /** A query and a letter's words folded alike (iOS .caseInsensitive, .diacriticInsensitive): the accents off, one case. */
@@ -75,7 +75,7 @@ fun mediaWords(c: Context, man: JSONObject?): String {
     val cap = man.optString("cap").trim()
     val name = man.optString("n").ifEmpty { man.optString("name") }
     return when (man.optString("k")) {
-        "img" -> if (name == Stickers.CARD) c.getString(R.string.lw_sticker) else "📷 " + cap.ifEmpty { c.getString(R.string.lw_photo) }
+        "img" -> if (name == Stickers.DOC_NAME) c.getString(R.string.lw_sticker) else "📷 " + cap.ifEmpty { c.getString(R.string.lw_photo) }
         "vid", "video" -> "📹 " + if (man.optBoolean("r")) c.getString(R.string.lw_video_message) else cap.ifEmpty { c.getString(R.string.lw_video) }
         "aud" -> c.getString(R.string.voice_message)
         "doc" -> if (name.lowercase().endsWith(".gif")) c.getString(R.string.lw_gif) else "📄 " + name.ifEmpty { c.getString(R.string.file) }
@@ -236,22 +236,44 @@ object BubblePicture {
         override fun sizeOf(key: String, value: Shot) = value.pic.byteCount + value.blur.byteCount
     })
     private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
-    private val waiting = HashMap<String, MutableList<(Shot) -> Unit>>()
+    private class Ask(val done: (Shot) -> Unit, val refused: (() -> Unit)?)
+    private val waiting = HashMap<String, MutableList<Ask>>()
     private fun key(f: java.io.File, kind: String, px: Int) = f.path + "@" + f.lastModified() + "@" + kind + "@" + px
     fun kept(f: java.io.File, kind: String, px: Int): Shot? = kept.get(key(f, kind, px))
-    fun load(c: Context, f: java.io.File, kind: String, px: Int, done: (Shot) -> Unit) {
+    fun load(c: Context, f: java.io.File, kind: String, px: Int, refused: (() -> Unit)? = null, done: (Shot) -> Unit) {
         val k = key(f, kind, px)
         kept.get(k)?.let { done(it); return }
         synchronized(waiting) {
-            waiting[k]?.let { it.add(done); return }
-            waiting[k] = mutableListOf(done)
+            waiting[k]?.let { it.add(Ask(done, refused)); return }
+            waiting[k] = mutableListOf(Ask(done, refused))
         }
         worker.execute {
             val shot = Media.preview(c, f, kind, px)?.let { Shot(it, WallPlacer.mirrorBlur(it)) }
             if (shot != null) kept.put(k, shot)
             val all = synchronized(waiting) { waiting.remove(k) } ?: emptyList()
-            if (shot != null) MainThread.post { all.forEach { it(shot) } }
+            MainThread.post { all.forEach { a -> if (shot != null) a.done(shot) else a.refused?.invoke() } }
         }
+    }
+    /**
+     * THE CIRCLE ASKS UNTIL IT WEARS ITS FRAME (iOS MTNoteFrame.wear, atom 3ce81b0e64f9): the decoder refuses while a call or an
+     * encoder holds it, and one refusal left the manifest's small frame on the circle for the bubble's whole life. A refusal is
+     * asked again at a growing pause, one second to thirty; the asking ends at the frame, after five empty answers, or when the
+     * view that asked has left the screen. The small frame stands meanwhile.
+     */
+    fun wear(c: Context, f: java.io.File, kind: String, px: Int, view: View, done: (Shot) -> Unit) {
+        var empty = 0
+        var pause = 1000L
+        fun ask() {
+            load(c, f, kind, px, refused = {
+                empty++
+                android.util.Log.d("Montana", "note_frame refused try=" + empty + " -- the preview stands, the circle asks again")
+                if (empty < 5) {
+                    view.postDelayed({ if (view.isAttachedToWindow) ask() }, pause)
+                    pause = minOf(pause * 2, 30_000L)
+                }
+            }, done = done)
+        }
+        ask()
     }
 }
 
@@ -365,7 +387,7 @@ object Notify {
      * person's. The face is the chat's own file (Book.shownFace -- a group's lives under its key), drawn round; none -- no picture,
      * and no letter in a circle (iOS left the gold letter for the bare banner).
      */
-    private fun faceOf(ref: String): android.graphics.Bitmap? = runCatching {
+    fun faceOf(ref: String): android.graphics.Bitmap? = runCatching {
         val f = Book.shownFace(ref).takeIf { it.exists() } ?: return null
         val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
         android.graphics.BitmapFactory.decodeFile(f.path, o)
@@ -434,6 +456,7 @@ object Notify {
     /** The conversation left this device: every banner it named goes, the pins' and the keeper's too, and its alias with them. */
     fun forget(ref: String) {
         clear(ref)
+        ShareSuggest.forget(ref)   // the share sheet no longer offers it (iOS forgetSuggestions), named by the alias about to go
         val gone = (NoticeAlias.forget(ref) + ref).toSet()
         val nm = Book.ctx.getSystemService(NotificationManager::class.java) ?: return
         runCatching { nm.activeNotifications }.getOrNull()?.forEach { s ->
@@ -441,47 +464,6 @@ object Notify {
             if (t in gone || t.substringAfter(':') in gone) nm.cancel(t, s.id)
         }
     }
-    /**
-     * MY DELETION WAS KEPT THERE (iOS presentKept, MontanaNotify.swift:348 at 2242; MTLevelAccess.keepDeleted 16.10.2026 No.72): the
-     * keeper's own word -- the correspondent's name over the fact that the letter I deleted for everyone stays on their phone, and
-     * the rule of the levels that made it. An album is several letters, each kept by its own word: one banner a chat in half a
-     * minute; a newer one stands in its place. It shows in the open chat too -- it is no letter the chat draws.
-     */
-    private val keptToldAt = HashMap<String, Long>()
-    fun kept(ref: String) {
-        val c = Book.ctx
-        val nm = c.getSystemService(NotificationManager::class.java) ?: return
-        if (!Prefs.bool("notifMessages", true)) { android.util.Log.d("Montana", "notify_skip why=disabled kind=kept"); return }
-        val now = System.currentTimeMillis()
-        synchronized(keptToldAt) {
-            if (keptToldAt[ref]?.let { now - it < 30_000 } == true) { android.util.Log.d("Montana", "notify_skip why=kept-already-told"); return }
-            keptToldAt[ref] = now
-        }
-        val sound = Prefs.bool("notifSound", true)
-        val channel = if (sound) CHANNEL else QUIET
-        nm.createNotificationChannel(NotificationChannel(channel, c.getString(if (sound) R.string.channel_letters else R.string.channel_letters_quiet), NotificationManager.IMPORTANCE_HIGH).apply {
-            if (!sound) { setSound(null, null); enableVibration(false) }
-        })
-        val title = if (Prefs.bool("notifSender", true)) Book.chat(ref)?.shown?.ifBlank { null } ?: c.getString(R.string.peer) else "Montana"
-        val body = c.getString(R.string.kept_banner, KEEP_DELETED_LEVEL)
-        val n = Notification.Builder(c, channel)
-            .setSmallIcon(R.drawable.ic_launcher_monochrome)
-            .setContentTitle(title)   // USER-DATA: the correspondent's name
-            .setContentText(body)
-            .setStyle(Notification.BigTextStyle().bigText(body))
-            .setAutoCancel(true)
-            .setContentIntent(opening(c, ref))
-            .setPublicVersion(Notification.Builder(c, channel)
-                .setSmallIcon(R.drawable.ic_launcher_monochrome)
-                .setContentTitle(if (Prefs.bool("notifLockName", true)) title else "Montana")   // USER-DATA: the correspondent's name
-                .setContentText(body)
-                .build())
-            .build()
-        android.util.Log.d("Montana", "notify kind=kept from=" + ref.take(10))
-        runCatching { nm.notify("kept:" + NoticeAlias.of(ref), 0, n) }
-    }
-    /** The level that opens «Forbid deletion on my phone» (iOS MTLevelAccess.Feature.keepDeleted.level). */
-    const val KEEP_DELETED_LEVEL = 7
 }
 
 // ─────────────────────────── the chats as rows (iOS MTChatListView rows) ───────────────────────────
@@ -514,11 +496,13 @@ fun chatRow(act: MainActivity, chat: Chat): View {
                 addView(callHandset(act, false, chat.ref), lp(dp(44), dp(44)))   // 15.8 (iOS ChatRow 2150)
                 // a muted chat wears the struck bell after its name (iOS ChatRow muted)
                 if (ChatMarks.isMuted(chat.ref)) addView(c.icon(R.drawable.ic_bell_off, MT.gray, 12), lp(dp(12), dp(12)).apply { marginEnd = dp(5) })
+                // a group's living room: the small green mark after its name (iOS MTRoomRowMark)
+                Rooms.brief(chat.ref)?.let { b -> addView(c.icon(Rooms.glyph(b), SysColor.green, 12), lp(dp(12), dp(12)).apply { marginEnd = dp(5) }) }
                 if (last != null) {
                     // the ladder's dots left of the hour, only when the last word was mine; a letter that did not go, the red mark
                     // THE ROW READS A PLATE AS ITS LINE DOES (iOS ChatStore.ladderLetter, MTLadder): the last plate's slowest letter, so
                     // one pick never says two things at once — read on the feed's tail, where a plate stands whole
-                    val stage = if (!last.mine) last else feedRows(chat.msgs.takeLast(30).filter { !ChessLetter.isStep(it.text) }).lastOrNull()
+                    val stage = if (!last.mine) last else feedRows(chat.msgs.takeLast(30).filter { !ChessLetter.isStep(it.text) && !OldRecordings.hidden(it) }).lastOrNull()
                         ?.takeIf { r -> r.any { it.mid == last.mid } }?.minWithOrNull(compareBy<Msg>({ it.state }, { -it.statusMoment })) ?: last
                     addView(FrameLayout(c).apply {
                         addView(c.hstack {
@@ -897,7 +881,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     // ── the feed ──
     // THE FIRST UNREAD AT THIS OPENING (iOS firstUnreadId, MontanaConversation 1225, 2661): the quiet «Unread messages» line stands
     // before it while the page does; read before the page marks the chat read
-    val firstUnread = Book.chat(ref)?.let { ch -> if (0 < ch.unread) ch.msgs.filter { !it.mine }.takeLast(ch.unread).firstOrNull()?.mid else null }
+    val firstUnread = Book.chat(ref)?.let { ch -> if (0 < ch.unread) ch.msgs.filter { !it.mine }.takeLast(ch.unread).firstOrNull { !OldRecordings.hidden(it) }?.mid else null }
     // THE ROWS ARE KEPT BY THEIR LETTER (iOS MTFeedListView.apply, MontanaMessageFeed 821-913 at 2155: the snapshot names each cell
     // by its letter's MID and reconfigures only a cell whose fingerprint moved): every child of the column is named -- a letter's row
     // by its first letter, a day's line and the unread line by the letter they stand before -- and carries the signature of what it
@@ -908,6 +892,10 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     class FeedRow(val key: String, val sig: List<Any?>, val letter: Boolean) { var view: View? = null }
     val feed = ArrayList<FeedRow>()
     var laid = false
+    // THE FIRST SCREEN FIRST (iOS MTFeedListView firstScreenRows, P-4, 66475c68): the opening builds only the newest rows a screen
+    // holds; the rest follow once the first frame stands, above the reader, who stays where the first pass put them
+    val firstScreenRows = 12
+    var restPending = false
     // the chat a row reads at a tap (the next round note, the voice's sender): one object every pass refreshes, so a kept row never
     // reads the letters of the pass that built it
     val feedChat = Chat(ref, "")
@@ -983,13 +971,32 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         }
         android.util.Log.d("Montana", "row_birth born=" + births.size + " moved=" + moved)
     }
+    // A CHANNEL'S POSTS ON A SUBSCRIBER'S SCREEN (iOS the row's onAppear → MTChannelViews.shown): each post whose row stands in the
+    // feed's window is told to the owner once, for the eye under it
+    fun showPosts() {
+        if (!group || !Groups.isChannel(ref) || Groups.owns(ref) || !scroll.isLaidOut) return
+        val y0 = mediaPlateOffset(column, scroll) - scroll.scrollY
+        var byMid: Map<String, Msg>? = null
+        for (r in feed) {
+            val v = r.view ?: continue
+            if (!r.letter || !v.isLaidOut) continue
+            val y = y0 + v.top
+            if (y + v.height <= 0 || scroll.height <= y) continue
+            val m = (byMid ?: feedChat.msgs.associateBy { it.mid }.also { byMid = it })[r.key.trimEnd('\'')] ?: continue
+            ChannelViews.shown(m, ref)
+        }
+    }
+    if (group) scroll.setOnScrollChangeListener { _, _, _, _, _ -> showPosts() }   // a channel's posts the finger brings into the window are told
     fun redraw() {
         val chat = Book.chat(ref) ?: return
         feedChat.name = chat.name; feedChat.pin = chat.pin
         feedChat.msgs.clear(); feedChat.msgs.addAll(chat.msgs)
+        scroll.post { showPosts() }
         // the pass's own switches, read once: every row's signature takes the same answer
         val skin = BubbleStyle.style
         val canPull = !group || Groups.canWrite(ref)
+        val talks = group && Groups.talks(ref)   // a channel's comments: every post wears its count
+        val channel = group && Groups.isChannel(ref)   // a channel's eye: every post wears its number of people
         val played = Prefs.bool("plcap_$ref", false)
         val auto by lazy { Media.autoAllowed(c) }
         val byMid by lazy { chat.msgs.associateBy { it.mid } }
@@ -1000,10 +1007,12 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         // switches -- the skin, the reply's pull, the «played» word of the rung, the automatic download a waiting file obeys
         fun signOf(row: List<Msg>): List<Any?> {
             val m = row[0]
-            val s = ArrayList<Any?>(10 * row.size + 12)
-            for (x in row) { s.add(x.mid); s.add(x.text); s.add(x.state); s.add(x.edited); s.add(x.heard); s.add(x.reactions.toList()); s.add(x.myReact); s.add(x.file); s.add(x.meta); s.add(x.lp) }
+            val s = ArrayList<Any?>(11 * row.size + 12)
+            for (x in row) { s.add(x.mid); s.add(x.text); s.add(x.state); s.add(x.edited); s.add(x.heard); s.add(x.reactions.toList()); s.add(x.myReact); s.add(x.file); s.add(x.meta); s.add(x.lp); s.add(x.file == null && x.text.startsWith(Marks.MEDIA) && Media.cargoGone(x.mid)) }
             s.add(skin); s.add(canPull); s.add(m.mine && played); s.add(selecting); s.add(selecting && m.mid in picked)
-            if (m.qt != null && m.qt != FORWARDED_QUOTE) {
+            s.add(if (talks) ChannelComments.count(m.mid, ref) else -1)
+            s.add(if (channel) ChannelViews.views(m, ref) else -1)
+            if (m.qt != null && !isForwardQuote(m.qt)) {
                 val whose = m.qm?.let { byMid[it] }
                 s.add(if (whose?.mine == true) Prefs.userName else if (group) speakers.getOrPut(whose?.from) { Groups.speakerName(c, whose?.from) } else chat.shown)
             }
@@ -1063,26 +1072,49 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             // below the clock, and of the letters on the lowest rung the one that reached it last names the moment — the line spoke
             // the plate's last letter, «Read» while a video of the same pick still rode
             // a post's card is this phone's own row, not a letter: no rung under it (iOS MTRowLetter.ownRow, MTRowLetter.swift:60-63 at 2155)
-            if (m.mine && !local && WallCard.of(m.text) == null) (b.getChildAt(0) as LinearLayout).addView(c.deliveryLine(ref, row.minWithOrNull(compareBy<Msg>({ it.state }, { -it.statusMoment })) ?: row.last()),
+            // nor a channel's post: it goes out to every subscriber, no one rung speaks for it (iOS ladder !isChannel, MontanaConversation 2967)
+            val laddered = m.mine && !local && !channel && WallCard.of(m.text) == null
+            if (laddered) (b.getChildAt(0) as LinearLayout).addView(c.deliveryLine(ref, row.minWithOrNull(compareBy<Msg>({ it.state }, { -it.statusMoment })) ?: row.last()),
                 LinearLayout.LayoutParams(WRAP, WRAP).apply { topMargin = c.dp(3); marginEnd = c.dp(4) })
+            // ANY FAILED BUBBLE: A TAP SENDS IT AGAIN (iOS primaryTap → onResend → resendAny, the author's invariant 24.08): a plate's
+            // red letters each ride again, its other letters keep their own tap -- the red stands over every control inside the bubble
+            val red = row.filter { it.mine && it.state == -1 }
+            if (red.isNotEmpty() && !local) b.getChildAt(0).tapEverywhere { red.forEach { resendAny(act, ref, it) } }
+            val forward: () -> Unit = { hideKeys(); act.push { close -> forwardPage(act, ref, row, close) { to -> close(); if (to != ref) { onClose(); act.push { c2 -> conversationPage(act, to, c2) } } } } }
             // THE MENU OPENS ON EVERY LETTER (iOS: the long press is the bubble's, whatever it holds): a picture, a film, a circle, a
             // voice or a link's card keeps its own tap, and its long press opens the letter's menu as the words' does
             b.getChildAt(0).holdEverywhere { letterMenu(act, ref, m, onReply = { replyTo = m; editing = null; showStrip(); showKeys() },
                 onEdit = { val e = Media.captionLetter(row) ?: m
                     editing = e; replyTo = null; field.setText(if (e.text.startsWith(Marks.MEDIA)) Media.captionOf(e) else e.text)
                     field.setSelection(field.text.length); showStrip(); showKeys() },
-                onForward = { hideKeys(); act.push { close -> forwardPage(act, ref, row, close) { to -> close(); if (to != ref) { onClose(); act.push { c2 -> conversationPage(act, to, c2) } } } } },
+                onForward = forward,
                 onSelect = { hideKeys(); selecting = true; picked.clear(); picked.addAll(row.map { it.mid }); redraw(); drawFoot() }, group = group, members = row); true }
             // the pull to the left answers, as the menu's «Reply»; in a group, while this phone writes into it
             if (!group || Groups.canWrite(ref)) b.onReply = { replyTo = m; editing = null; showStrip(); showKeys() }
             b.tag = m.mid
             // TEXT WITH A QUOTE — A TAP GOES TO THE ORIGINAL (iOS MontanaBubble 475, jumpTo 2999-3012)
             val q = m.qm
-            if (q != null && m.qt != FORWARDED_QUOTE && !Marks.isService(m.text)) b.getChildAt(0).setOnClickListener { toQuoted(q) }
+            if (q != null && !isForwardQuote(m.qt) && !Marks.isService(m.text)) b.getChildAt(0).setOnClickListener { toQuoted(q) }
             // SAVE TO PHOTOS, BESIDE THE BUBBLE (iOS MTSaveBeside/saveBesideBadge/MTSaveMediaBadge, MontanaBubble.swift 383-396,
             // 861-880, 1891-1923, the author's words 11.09 and 20.09): strictly to the right of a correspondent's photo or film,
             // level with the media's own middle, never on the picture itself and never on one's own letters; a plate wears one
             // circle that saves every picture and film on it, once all of them are on disk.
+            // THE ROUND BESIDE A CHANNEL'S POST (iOS MTShareBeside, MTChannelShareRound; MontanaChannel 360-395, MontanaBubble 572): a round
+            // of glass 30 across, 8 beside the post, its foot at the post's foot (over the rung under one's own); it hands the post on by
+            // the menu's own «Forward». The finger keeps its 44 around the 30 drawn.
+            val core: View = if (!channel || local) b else {
+                val round = shareRound(c, forward)
+                b.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                    val col = b.getChildAt(0) as? android.view.ViewGroup ?: return@addOnLayoutChangeListener
+                    val last = col.getChildAt(col.childCount - if (laddered && 1 < col.childCount) 2 else 1) ?: return@addOnLayoutChangeListener
+                    round.translationY = (col.top + last.bottom - c.dp(1) + c.dp(7) - c.dp(44)).toFloat()
+                }
+                c.hstack {
+                    gravity = Gravity.TOP
+                    addView(b, if (m.mine) lp(0, WRAP, 1f) else lp(WRAP, WRAP))
+                    addView(round, lp(dp(44), dp(44)).apply { marginStart = dp(1) })
+                }
+            }
             saveMediaFiles(row)?.let { files ->
                 val badge = saveMediaBadge(act, files)
                 b.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
@@ -1092,14 +1124,14 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 }
                 val beside = c.hstack {
                     gravity = Gravity.TOP
-                    addView(b, lp(0, WRAP, 1f))
+                    addView(core, lp(0, WRAP, 1f))
                     addView(badge, lp(dp(40), dp(40)).apply { marginStart = dp(6) })
                 }
                 beside.layoutParams = lp().apply { topMargin = c.dp(3) }
                 return withFace(beside, m, tail)
             }
-            b.layoutParams = lp().apply { topMargin = c.dp(3) }
-            return withFace(b, m, tail)
+            core.layoutParams = lp().apply { topMargin = c.dp(3) }
+            return withFace(core, m, tail)
         }
         // the column as this pass wants it: each child named, its signature, and how it is built when it must be
         val want = ArrayList<FeedRow>()
@@ -1113,7 +1145,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         var lastDay = -1L
         // A MEDIA GROUP IS ONE ROW (iOS buildRows): its letters stand as one plate, chosen, forwarded and deleted together
         val asked = if (searching) searchFold(searchQuery.trim()) else ""
-        val rows = feedRows(chat.msgs.filter { !ChessLetter.isStep(it.text) }).toList()
+        val rows = feedRows(chat.msgs.filter { !ChessLetter.isStep(it.text) && !OldRecordings.hidden(it) }).toList()
             .let { all -> if (asked.isEmpty()) all else all.filter { r -> r.any { searchFold(searchWords(c, it)).contains(asked) } } }
         // A FOUND LETTER IS A WAY TO ITS PLACE (iOS searchJump: the row takes no tap of its own, the tap goes to the letter's place)
         fun searchHit(v: View, mid: String): View = FrameLayout(c).apply {
@@ -1165,6 +1197,11 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             else lay(m.mid, signOf(row) + listOf(head, tail, asked.isNotEmpty()), true) {
                 letterRow(m, row, head, tail).let { if (asked.isEmpty()) it else searchHit(it, m.mid) }
             }
+        }
+        if (!laid && jump == null && !searching && firstScreenRows < want.size) {
+            val cut = want.size - firstScreenRows
+            want.subList(0, cut).clear(); makers.subList(0, cut).clear()
+            restPending = true
         }
         if (want.size != feed.size || want.indices.any { want[it].key != feed[it].key || want[it].sig != feed[it].sig }) {
             val began = System.nanoTime()
@@ -1221,6 +1258,21 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             android.util.Log.d("Montana", "feed_pass rows=" + want.size + " built=" + built + " born=" + born + " gone=" + gone + " ms=" + (System.nanoTime() - began) / 1_000_000)
         }
         laid = true
+        if (restPending) {
+            restPending = false
+            // after the first frame (its animation phase, then the queue): the older rows come in above, and the scroll moves by
+            // what they added, so the rows on the screen stay where they stood (iOS feed-rest: no birth, the reader held)
+            scroll.postOnAnimation { scroll.post {
+                val before = column.height
+                column.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+                    override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or2: Int, ob: Int) {
+                        v.removeOnLayoutChangeListener(this)
+                        scroll.scrollTo(0, scroll.scrollY + (b - t) - before)
+                    }
+                })
+                redraw()
+            } }
+        }
         drawEmpty(column.childCount == 0, asked.isNotEmpty())
         // the other side closed it: read, not answered (iOS closedChats) — the note where the field stood
         if (Post.closed(ref)) { hideBar(); closedNote.visibility = View.VISIBLE }
@@ -1340,9 +1392,58 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         }.start()
     }
     // THE CAMERA BESIDE THE PHOTOS (iOS MTGalleryPick: the camera's tile, «All photos»): a shot goes the picked picture's road
+    // THE ORDER IS SET HERE (iOS MTTrayDrop and MTStagedOrder.moved, 2315; the author's words 27.10.2026 09:16 UTC, council links
+    // 9562-9563: «they are loaded into the field in the wrong order and it cannot be changed»): a plate held and carried over another
+    // takes its place the moment it enters it, every other keeps its turn, the numbers follow, and the arrow sends the tray in the
+    // order it stands. Only the other plates move in the row, never the one under the finger, so the touch is never cut.
+    val traySlop = android.view.ViewConfiguration.get(c).scaledTouchSlop
+    fun carryInTray(plate: View) {
+        var downX = 0f; var leftAtDown = 0; var carrying = false
+        val lift = Runnable {
+            carrying = true
+            plate.parent?.requestDisallowInterceptTouchEvent(true)
+            plate.animate().scaleX(1.06f).scaleY(1.06f).setDuration(120).start()
+            plate.elevation = c.dp(6).toFloat()
+            plate.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+        }
+        plate.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = e.rawX; leftAtDown = v.left; carrying = false
+                    v.postDelayed(lift, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                }
+                MotionEvent.ACTION_MOVE -> if (!carrying) { if (traySlop < kotlin.math.abs(e.rawX - downX)) v.removeCallbacks(lift) } else {
+                    val from = stagedRow.indexOfChild(v)
+                    val centre = leftAtDown + v.width / 2f + e.rawX - downX
+                    var to = from
+                    for (i in staged.indices) stagedRow.getChildAt(i)?.let { o -> if (o !== v && o.left <= centre && centre < o.right) to = i }
+                    if (from in staged.indices && to != from) {
+                        val moved = StagedOrder.moved(staged.toList(), from, to)
+                        staged.clear(); staged.addAll(moved)
+                        var at = from
+                        while (at < to) { val n = stagedRow.getChildAt(at + 1); stagedRow.removeView(n); stagedRow.addView(n, at); at++ }
+                        while (to < at) { val n = stagedRow.getChildAt(at - 1); stagedRow.removeView(n); stagedRow.addView(n, at); at-- }
+                        for (i in staged.indices) stagedRow.getChildAt(i)?.findViewWithTag<TextView>(TRAY_NUMBER)?.text = StagedOrder.number(i).toString()
+                    }
+                    v.translationX = e.rawX - downX - (v.left - leftAtDown)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.removeCallbacks(lift)
+                    if (carrying) {
+                        carrying = false
+                        v.animate().translationX(0f).scaleX(1f).scaleY(1f).setDuration(150).start()
+                        v.elevation = 0f
+                        android.util.Log.i("Montana", "tray_move place=" + StagedOrder.number(stagedRow.indexOfChild(v)) + " of=" + staged.size)
+                    }
+                }
+            }
+            true
+        }
+    }
     drawStaged = {
         stagedRow.removeAllViews()
         for ((place, s) in staged.toList().withIndex()) stagedRow.addView(FrameLayout(c).apply {
+            carryInTray(this)
             addView(ImageView(c).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 if (s.second != null) setImageBitmap(s.second) else setBackgroundColor(Color.rgb(51, 51, 51))
@@ -1364,6 +1465,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             // THE PLACE IT HOLDS (iOS stagedNumber, 2312): 1, 2, 3 in the order chosen, the order the arrow sends them in; read off
             // the place in the tray, so a cross closes the numbers up
             addView(c.text(StagedOrder.number(place).toString(), 12f, Color.BLACK, bold = true).apply {   // USER-DATA: the place of the person's own pick, digits only
+                tag = TRAY_NUMBER
                 gravity = Gravity.CENTER
                 minWidth = c.dp(20); minHeight = c.dp(20)
                 setPadding(c.dp(5), 0, c.dp(5), 0)
@@ -1429,7 +1531,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         val bmp = if (gif) null else android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         if (bmp != null && seeThrough(bmp)) {
             val png = java.io.ByteArrayOutputStream().also { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
-            Media.send(c, ref, Media.Picked(png, "img", "png", Stickers.CARD), "")
+            Media.send(c, ref, Media.Picked(png, "img", "png", Stickers.DOC_NAME), "")
             MainThread.post { toBottom() }
             return true
         }
@@ -1466,29 +1568,63 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         } },
         onAll = { act.pickVisualMany { stage(it) } }) }
     // «SEND LATER» (iOS: the send key's hold): the words leave the field and wait for their moment (Schedule.kt)
+    // THE COIN FROM THE FIELD (iOS sendCoin 1629-1645, coins: MTCoinSend.canPay at 3811): a pair's chat goes microphone, camera,
+    // coin; the number written goes as the pair's own transfer, a short balance is told and the number stays. A GROUP'S COIN
+    // (iOS groupCoin 3032, sheet .groupCoin 1632/2271; the author's word 17.10.2026 21:14 UTC) is a transfer to each person picked:
+    // the coin's key opens the Send page over the group's people at any tap, the number written stands beside each pick.
+    // THE AVAILABLE ABOVE THE FIELD (iOS MTCoinBalancePlate 1128-1160, composePreviews 3745; the author's word 06.10.2026 and 16.10.2026:
+    // «a transfer from the chat shows only the available»): in the coin's mode a plate stands where a reply's stands -- our coin,
+    // «Available» and the number a send is weighed by -- and its cross takes the button back to the microphone. It follows the book.
+    val coinCount = c.text("", 14f, Color.WHITE).apply { fontFeatureSettings = "tnum"; singleLineEllipsis() }   // USER-DATA: the coins available
+    val coinPlate = c.hstack {
+        visibility = View.GONE
+        background = c.glassPlate().apply { cornerRadius = dp(18).toFloat() }
+        setPadding(dp(16), dp(6), dp(8), dp(6))
+        addView(MintCoin(c, 22), lp(dp(22), dp(22)).apply { marginEnd = dp(10) })
+        addView(c.vstack(Gravity.NO_GRAVITY) { addView(c.text(c.getString(R.string.coin_available), 12f, MT.gray)); addView(coinCount) }, lp(0, WRAP, 1f))
+        addView(c.icon(R.drawable.ic_close, MT.gray).apply {
+            setPadding(dp(8), dp(8), dp(8), dp(8)); contentDescription = c.getString(R.string.close)
+            pressable { bar.toMic() }
+        }, lp(dp(36), dp(36)))
+    }
+    val coinListener: () -> Unit = { coinCount.text = CoinText.count(CoinBook.balance) }
+    bar.onCoinMode = { on -> coinPlate.visibility = if (on) View.VISIBLE else View.GONE; if (on) coinListener() }
+    // A CHANNEL'S FIELD (iOS channel/silent/onSilent, 3806-3808): «Broadcast...» and the bell that turns the sound of the next posts
+    if (group && Groups.isChannel(ref)) {
+        bar.channel = true
+        bar.silent = Groups.silent(ref)
+        bar.onSilent = { Groups.setSilent(ref, !Groups.silent(ref)); bar.silent = Groups.silent(ref) }
+    }
+    val groupCoin = Groups.takesCoins(ref)
+    bar.coinPicks = groupCoin
+    bar.coins = CoinSend.canPay(ref) || groupCoin
+    bar.onSendCoin = { n ->
+        if (groupCoin) { hideKeys(); act.push { close -> sendCoinsPage(act, close, ref, n) { field.setText(""); Prefs.setStr("draft.$ref", "") } } }
+        else when (CoinSend.transferResult(ref, n)) {
+            // the three honest answers (iOS sendCoin 1636-1645): sent -- the field empties; short -- the balance; refused -- nothing left
+            CoinSend.Sent.SENT -> { field.setText(""); Prefs.setStr("draft.$ref", "") }
+            CoinSend.Sent.SHORT -> AlertDialog.Builder(c).setTitle(R.string.coin_not_enough).setMessage(R.string.coin_not_enough_sub).setPositiveButton(R.string.ok, null).show()
+            CoinSend.Sent.REFUSED -> AlertDialog.Builder(c).setTitle(R.string.coin_not_sent).setMessage(R.string.coin_not_sent_sub).setPositiveButton(R.string.ok, null).show()
+        }
+    }
     bar.onSendLater = { v -> sendLaterMenu(act, v, ref, { field.text.toString() }) { field.setText(""); Prefs.setStr("draft.$ref", "") } }
     // A CONTACT OF THE PHONE (iOS ContactPicker): its name and number leave as one letter
     // A KEY OF THE BAR ASKS THE GROUP BEFORE ITS PAGE OPENS (iOS groupLets, 18b97c6c, G.5): a right the group took, or slow mode's
     // wait, is said at the tap, as the field says it at the arrow, so nothing chosen on a page is lost to a refusal
-    val groupLets: (String, Boolean) -> Boolean = lets@{ words, photo ->
+    val groupLets: (String) -> Boolean = lets@{ words ->
         if (!group) return@lets true
-        val why = (if (photo) Groups.mediaRefusal(c, ref, "img", false, "card.jpg", "") else Groups.refusal(c, ref, words, true)) ?: return@lets true
+        val why = Groups.refusal(c, ref, words, true) ?: return@lets true
         AlertDialog.Builder(c).setMessage(why).setPositiveButton(android.R.string.ok, null).show()
         false
     }
-    bar.onContact = { hideKeys(); if (groupLets("\uD83D\uDC64", false)) act.pickContact { u -> u?.let { contactLetter(c, it) }?.let { words -> sendWords(ref, words); toBottom() } } }
+    bar.onContact = { hideKeys(); if (groupLets("\uD83D\uDC64")) act.pickContact { u -> u?.let { contactLetter(c, it) }?.let { words -> sendWords(ref, words); toBottom() } } }
     // FILES BY THE HANDFUL, IN THE ORDER CHOSEN (iOS 1e46c25e, the author's word 23.10 20:5x), AND THEY WAIT ABOVE THE FIELD WITH
     // THEIR NUMBERS (iOS stageChosen, 2312; the author's word 25.10.2026 17:40 UTC, council link 8089): read one after another in the
     // page's order, off the screen's thread, into the one tray the pictures stand in -- numbered, taken out and sent as a picture is;
     // the tray's «+» opens the page again, the arrow sends the tray in its order. The diary names the count.
     bar.onFile = { hideKeys(); pickFiles() }
-    // THE CARD AS A PHOTO (iOS sendCardPhoto): the kept card drawn at the standard size, its words the caption under the card's mark
-    bar.onCard = { hideKeys(); if (groupLets("", true)) act.push { close -> businessCardPage(act, close) { card ->
-        close()
-        Thread { Media.send(c, ref, Media.Picked(cardPhoto(c, card), "img", "jpg", null), card.wire); MainThread.post { toBottom() } }.start()
-    } } }
     // THE PLACE (iOS onLocation → MTLocationPicker → mtSendPlace): this spot leaves as the place's words, by the one road of words
-    bar.onLocation = { hideKeys(); if (groupLets(PlaceLetter.ROAD, false)) act.push { close -> placePage(act, close) { words -> sendWords(ref, words); toBottom() } } }
+    bar.onLocation = { hideKeys(); if (groupLets(PlaceLetter.ROAD)) act.push { close -> placePage(act, close) { words -> sendWords(ref, words); toBottom() } } }
     // THE EMOJI KEY SWAPS THE KEYBOARD FOR THE FIELD'S OWN PANEL AND BACK (iOS emojiKey: showEmoji.toggle(), the glyph «keyboard»
     // while the panel stands; MontanaConversation.swift 803-813 at 2155). Android lets no app view be the field's input view, so the
     // panel stands in the keyboard's place under the bar, as tall as the keyboard last stood (Picker.kt); the keyboard rising puts it
@@ -1798,6 +1934,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     // THE PAIR'S MARKS BESIDE THE NAME (iOS chatRow 1866-1870 at 2155): the wallet with the balance short at its corner and the chess,
     // ringed while the pair's game is played, beside the handset -- in a pair's own chat (coinStands); a group wears none of them
     val coinStands = !group && CoinSend.canPay(ref)
+    val walletStands = coinStands && GooglePlay.COINS   // the Google Play build wears no wallet, the chess stays
     val rounds = mutableListOf<View>()     // the marks' plates: 44, or 40 where the row is short (iOS ViewThatFits)
     val gapped = mutableListOf<View>()     // the marks that stand the row's gap after the mark before them
     val handsets = mutableListOf<View>()   // the folded call's two handsets, outside the fitted row (iOS chatTop 1847, 1852)
@@ -1897,7 +2034,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     // «SEARCH» OF THE GROUP'S PAGE (iOS perform(.search), MontanaPeerInfoScreen.swift:634-639): the page goes down to its chat and asks it
     val openPage = { hideKeys(); act.push { close -> if (group) groupPage(act, ref, close, pageLanding, onSearch = { close(); openSearch() }) else peerInfoPage(act, ref, close, pageLanding) } }
     // THE CHESS MARK'S TAP (iOS chessMark 1975-1986): an invitation waiting for my answer is answered in the feed, a played game opens
-    // its board; with none the platform's question asks for a new game and takes the stake under the balance (iOS 2054-2067)
+    // its board; with none the platform's question asks for a new game — no stake and no balance (iOS 480cd898)
     fun chessTap() {
         val id = playedGame()
         if (id != null && ChessSend.awaitsMe(ref, id)) {
@@ -1905,18 +2042,11 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             if (invite != null) { jumpHere(invite.mid); return }
         }
         if (id != null) { act.push { chessBoardPage(act, ref, id, true, it) }; return }
-        val field = EditText(c).apply { inputType = android.text.InputType.TYPE_CLASS_NUMBER; hint = c.getString(R.string.chess_stake_field) }
-        val box = FrameLayout(c).apply { setPadding(c.dp(20), 0, c.dp(20), 0); addView(field, FrameLayout.LayoutParams(MATCH, WRAP)) }
         AlertDialog.Builder(c)
             .setTitle(R.string.chess_ask_new)
-            .setMessage(c.getString(R.string.coin_balance_line, CoinText.count(CoinBook.balance)))   // USER-DATA: the balance
-            .setView(box)
             .setPositiveButton(R.string.chess_new_game) { _, _ ->
-                val stake = field.text.toString().filter { it.isDigit() }.take(13).toLongOrNull() ?: 0L
-                val game = ChessSend.invite(c, ref, ChessSend.CHAT_CLOCK, stake)
+                val game = ChessSend.invite(c, ref, ChessSend.CHAT_CLOCK)
                 if (game != null) act.push { chessBoardPage(act, ref, game, true, it) }
-                else if (0L < stake) AlertDialog.Builder(c).setTitle(R.string.coin_not_enough).setMessage(R.string.coin_not_enough_sub)
-                    .setPositiveButton(R.string.ok, null).show()
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
@@ -1935,9 +2065,6 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         setPadding(dp(8), dp(4), dp(8), dp(4))
         addView(callHandset(act, true, null).also { handsets.add(it) }, lp(dp(44), dp(44)))   // 15.8: back to the folded call (iOS chatTop 1847)
         addView(roundMark(R.drawable.ic_arrow_back_ios_new, R.string.back) { hideKeys(); onClose() }.also { rounds.add(it) }, lp(dp(44), dp(44)))
-        // THE SHIELD ON THE INTERLOCUTOR'S BUBBLE (iOS MontanaConversation.swift:1957-1962): a badge over its top right corner while this
-        // phone keeps what others delete -- a sibling over the door, never inside it, its target centred on the corner. A pair's chat
-        // only: a group's deletion is not kept on Android yet (iOS MTGroup.tellKept), so its shield would say a false word.
         addView(FrameLayout(c).apply {
         nameBubble = this
         clipChildren = false
@@ -1960,10 +2087,8 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 }.show(); true
             }
         }, FrameLayout.LayoutParams(MATCH, MATCH))
-        if (!group && !local) addView(keepShield(act).apply { translationX = c.dp(18).toFloat(); translationY = -c.dp(18).toFloat() },
-            FrameLayout.LayoutParams(c.dp(44), c.dp(44), Gravity.TOP or Gravity.END))
-        }, lp(0, dp(44), 1f).apply { marginStart = dp(6); if (!group && !local) marginEnd = dp(6) })
-        if (coinStands) {
+        }, lp(0, dp(44), 1f).apply { marginStart = dp(6); if (!local) marginEnd = dp(6) })
+        if (walletStands) {
             // THE WALLET BESIDE THE COIN (iOS walletMark): the wallet page over the chat, the one road a coin's link takes
             addView(FrameLayout(c).apply {
                 clipChildren = false
@@ -1971,12 +2096,14 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                     FrameLayout.LayoutParams(MATCH, MATCH))
                 addView(walletBadge, FrameLayout.LayoutParams(WRAP, c.dp(20), Gravity.TOP or Gravity.END))
             }, lp(dp(44), dp(44)))
+        }
+        if (coinStands) {
             // THE CHESS MARK (iOS chessMark): the game's knight on the marks' round, the platform's blue ring while the game is played
             addView(FrameLayout(c).apply {
                 addView(roundMark(R.drawable.chess_knight, R.string.app_chess) { hideKeys(); chessTap() }.also { rounds.add(it) },
                     FrameLayout.LayoutParams(MATCH, MATCH))
                 addView(chessRing, FrameLayout.LayoutParams(MATCH, MATCH))
-            }.also { gapped.add(it) }, lp(dp(44), dp(44)).apply { marginStart = dp(6) })
+            }.also { if (walletStands) gapped.add(it) }, lp(dp(44), dp(44)).apply { if (walletStands) marginStart = dp(6) })
         }
         // THE HANDSET AS IT WAS (iOS handsetMark, a pair's chat): the calls' menu behind the one bar glyph — a voice call or a video call
         if (!group && !local) addView(roundMark(R.drawable.ic_bar_calls, R.string.pi_voice_call) { v ->
@@ -2012,7 +2139,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     top.addOnLayoutChangeListener { _, l, _, r, _, ol, _, or2, _ -> if (r - l != or2 - ol) top.post { fit(r - l) } }
     drawMarks()
 
-    val groupFoot = FrameLayout(c).apply { visibility = View.GONE }.also { if (group) fillGroupFoot(c, ref, it) }
+    val groupFoot = FrameLayout(c).apply { visibility = View.GONE }.also { if (group) fillGroupFoot(c, ref, it) { openSearch() } }
     var lane = false   // the live lane stands while the page does
     fun drawDraft() {
         val d = LiveDraft.of(ref)
@@ -2045,7 +2172,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         val before = column.childCount
         redraw(); drawHead(); drawMarks()
         if (group) {
-            drawPresence(); fillGroupFoot(c, ref, groupFoot)
+            drawPresence(); fillGroupFoot(c, ref, groupFoot) { openSearch() }
             // taken out of the group, or let back in: the field follows (iOS composeSlot)
             if (!selecting) bar.visibility = if (Groups.fieldOpen(ref)) View.VISIBLE else View.GONE
         }
@@ -2130,7 +2257,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
 
     hideBar = { bar.visibility = View.GONE }
     if (Book.isMontana(ref)) hideBar()   // the room speaks; nobody writes into it (iOS composeSlot, MontanaConversation.swift:3636)
-    return FrameLayout(c).apply {
+    return TabPan(act).apply {
         setBackgroundColor(Color.BLACK)
         addView(c.chatGround(ref), FrameLayout.LayoutParams(MATCH, MATCH))   // the chat's own ground, or the pages' crest (iOS MTWallpaper)
         // THE FEED RUNS UNDER THE BARS (iOS MTFeedFrame.underlap, MontanaOctagon 107-114, the author's word 21.09; the word of
@@ -2144,9 +2271,12 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             addView(selTop, lp(MATCH, WRAP))
             // THE PINNED PLATE under the header (iOS the pinned bar): shown while a letter of this chat is pinned
             addView(pinnedPlate(act, ref) { mid -> jumpTo(mid) }, lp().apply { marginStart = dp(10); marginEnd = dp(10); bottomMargin = dp(4) })
+            // THE ROOM'S BAR (iOS MTRoomBar): a group's living voice or video chat, or its stream
+            if (group) addView(roomBar(act, ref), lp().apply { marginStart = dp(8); marginEnd = dp(8); bottomMargin = dp(4) })
         }
         val under = c.vstack(Gravity.NO_GRAVITY) {
             addView(strip, lp().apply { marginStart = dp(10); marginEnd = dp(10); bottomMargin = dp(4) })
+            addView(coinPlate, lp().apply { marginStart = dp(10); marginEnd = dp(10); bottomMargin = dp(4) })
             addView(linkPlate, lp().apply { marginStart = dp(10); marginEnd = dp(10); bottomMargin = dp(4) })
             addView(mentionPlate, lp().apply { marginStart = dp(8); marginEnd = dp(8); bottomMargin = dp(4) })
             addView(stagedStrip, lp())
@@ -2274,14 +2404,17 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
             if (panelWas && !panel.up) { hold = minOf(panel.host.layoutParams.height, imeCover); ridePlace() }
             insets
         }
+        // a sticker sent from the panel answers the letter the plate holds, and the plate goes (Stickers.answering)
+        val takeAnswer: (String) -> Msg? = { r -> if (r != ref || editing != null) null else replyTo.also { if (it != null) { replyTo = null; showStrip() } } }
         val sayRefusal: (String) -> Unit = { why -> AlertDialog.Builder(c).setMessage(why).setPositiveButton(android.R.string.ok, null).show() }
         addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
                 v.requestApplyInsets()
-                Book.openChat = ref; Book.listen(listener); Notify.clear(ref)
+                Book.openChat = ref; Book.listen(listener); ChannelComments.listen(listener); ChannelViews.listen(listener); Notify.clear(ref)
                 // WHAT THE GROUP REFUSED IS SAID HERE (iOS groupRefusal's alert): the reference's sentence, the field left as it was
                 if (group) Groups.refused = sayRefusal
                 ShowLetter.open = showLetter
+                Stickers.answering = takeAnswer
                 // the banner's road measured (iOS chat_open why=banner ms=…, 4b49d03f071b): from the tap to the chat standing
                 if (Notify.tappedAt != 0L) {
                     val t0 = Notify.tappedAt
@@ -2299,6 +2432,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 Presence.listen(presenceListener); lane = true
                 LiveDraft.listen(draftListener); drawDraft()
                 LinkCompose.listen(linkListener); drawLink()
+                CoinBook.listen(coinListener); Thread { CoinBook.warm(); MainThread.post { coinListener() } }.start()
                 if (!local) { Presence.sayChat(ref, true); MainThread.later(Presence.BEAT, chatBeat); Signal.hold(ref, "chat") }
                 VoicePlayer.endedAtEar = earHook   // the open chat answers its peer's voice at the ear
                 if (!group && !local) LiveDraft.sayLink(ref)   // our daily link, to hand on (iOS sendLinkWord on a chat's opening)
@@ -2310,13 +2444,14 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 // behind a closed chat rolled on and the next one was refused. The recorder's own page lies over the chat, so it
                 // never detaches it; with nothing held the cancel does nothing.
                 if (VoicePlayer.endedAtEar === earHook) VoicePlayer.endedAtEar = null
+                if (Stickers.answering === takeAnswer) Stickers.answering = null
                 endEarReply()
                 bar.cancelRecording()
                 VoiceTape.standDown()   // a tape readied by a hold that never began goes with the chat (iOS MontanaConversation.swift:1667)
-                if (Book.openChat == ref) Book.openChat = null; Book.unlisten(listener)
+                if (Book.openChat == ref) Book.openChat = null; Book.unlisten(listener); ChannelComments.unlisten(listener); ChannelViews.unlisten(listener)
                 if (Groups.refused === sayRefusal) Groups.refused = null   // only this chat's own: another may stand over it
                 if (ShowLetter.open === showLetter) ShowLetter.open = null
-                Presence.unlisten(presenceListener); LiveDraft.unlisten(draftListener); LinkCompose.unlisten(linkListener)
+                Presence.unlisten(presenceListener); LiveDraft.unlisten(draftListener); LinkCompose.unlisten(linkListener); CoinBook.unlisten(coinListener)
                 // words left in the field stand on their screen as a checkpoint, frozen, not typing (iOS «ck»)
                 if (!local) field.text.toString().takeIf { it.isNotBlank() }?.let { LiveDraft.say(ref, it, field.selectionEnd, checkpoint = true) }
                 if (!local) Signal.release(ref, "chat")
@@ -2335,6 +2470,76 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
 }
 
 /** One letter: the quote it answers, its words, «edited» and the time; its reactions under it (iOS MessageBubble). */
+/**
+ * THE CHAT LEAVES FROM ITS CENTRE TOO (iOS MTTabPan on MontanaSlideController, e59b73a4; the author's word 18.10.2026: «the swipe out
+ * of a chat not only from the screen's edge but, as when a page is turned, from its centre, so that it catches»): a stroke to the right
+ * anywhere on the chat's page drags it off by the finger, the same road as the edge's back, and the release goes by the same rule as
+ * iOS's pan -- faster than 300 a second, its way; slower, past a third of the width. The first points decide (iOS MTTabPan
+ * touchesMoved): down at once is the feed's, flat at once is ours, else the dominant way after ten points; a stroke to the left is
+ * the bubble's reply (ReplySwipe), and a view under the finger that scrolls sideways keeps its own stroke (iOS refuses).
+ */
+class TabPan(private val act: MainActivity) : FrameLayout(act) {
+    private var x0 = 0f; private var y0 = 0f
+    private var validated = false; private var failed = true; private var dragging = false
+    private var tracker: android.view.VelocityTracker? = null
+    private val dpx = resources.displayMetrics.density
+
+    /** The deepest view under the point, the platform's own hit walk (iOS v.hitTest). */
+    private fun hit(v: View, x: Float, y: Float): View {
+        if (v is android.view.ViewGroup) for (i in v.childCount - 1 downTo 0) {
+            val ch = v.getChildAt(i)
+            if (ch.visibility != View.VISIBLE) continue
+            val cx = x + v.scrollX - ch.left - ch.translationX; val cy = y + v.scrollY - ch.top - ch.translationY
+            if (cx >= 0 && cy >= 0 && cx < ch.width && cy < ch.height) return hit(ch, cx, cy)
+        }
+        return v
+    }
+    private fun refuses(x: Float, y: Float): Boolean {
+        var v: View? = hit(this, x, y)
+        while (v != null && v !== this) { if (v.canScrollHorizontally(1) || v.canScrollHorizontally(-1)) return true; v = v.parent as? View }
+        return false
+    }
+    private fun judge(e: android.view.MotionEvent) {
+        when (e.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> {
+                x0 = e.rawX; y0 = e.rawY; validated = false; dragging = false
+                failed = !act.panOwns(this) || refuses(e.x, e.y)
+                tracker?.recycle(); tracker = if (failed) null else android.view.VelocityTracker.obtain()
+            }
+            android.view.MotionEvent.ACTION_MOVE -> if (!failed && !dragging) {
+                val dx = e.rawX - x0; val adx = kotlin.math.abs(dx) / dpx; val ady = kotlin.math.abs(e.rawY - y0) / dpx
+                if (!validated) {
+                    if (kotlin.math.hypot(adx, ady) > 10) { if (adx >= ady) validated = true else failed = true }   // the dominant way after ten points
+                    else if (ady > 2 && ady > adx * 2) failed = true   // down at once: the feed's
+                    else if (adx > 2 && ady * 2 < adx) validated = true   // flat at once: ours
+                }
+                if (validated && dx < 0) failed = true   // a stroke to the left is the bubble's
+                else if (validated) { dragging = true; parent?.requestDisallowInterceptTouchEvent(true); act.panBegin(this) }
+            }
+        }
+        tracker?.addMovement(android.view.MotionEvent.obtain(e).apply { setLocation(e.rawX, e.rawY) })
+    }
+    override fun onInterceptTouchEvent(e: android.view.MotionEvent): Boolean { judge(e); return dragging }
+
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(e: android.view.MotionEvent): Boolean {
+        if (!dragging) { judge(e); return !failed }
+        tracker?.addMovement(android.view.MotionEvent.obtain(e).apply { setLocation(e.rawX, e.rawY) })
+        when (e.actionMasked) {
+            android.view.MotionEvent.ACTION_MOVE -> act.panMove(this, e.rawX - x0)
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                val x = e.rawX - x0
+                val v = tracker?.run { computeCurrentVelocity(1000); xVelocity / dpx } ?: 0f
+                val out = e.actionMasked == android.view.MotionEvent.ACTION_UP && (if (kotlin.math.abs(v) > 300) v > 0 else x > width / 3f)
+                android.util.Log.d("Montana", "page_pan page=chat end=" + (if (e.actionMasked == android.view.MotionEvent.ACTION_UP) "completed" else "cancelled") + " close=" + (if (out) 1 else 0))
+                act.panEnd(this, out)
+                dragging = false; failed = true; tracker?.recycle(); tracker = null
+            }
+        }
+        return true
+    }
+}
+
 /**
  * A LETTER PULLED TO THE LEFT IS ANSWERED (iOS MTReplySwipe + SwipeReplyRow): the two first points decide — a stroke to the
  * right or an upright one is the scroll's, a flat one to the left is ours; the letter rides by the finger, the round glass with
@@ -2427,13 +2632,29 @@ class ReplySwipe(c: Context) : FrameLayout(c) {
 
 /**
  * THE GROUP'S FOOT IN PLACE OF THE FIELD (iOS composeSlot): out of the group — the note that its letters stay to read
- * (groupOutNote); a channel's subscriber — the platform's bell, the channel's sound off or on, the same switch as the list's
- * swipe (channelMuteBar).
+ * (groupOutNote); taken out of a channel -- «Join» in grey (channelJoinBar); a channel's subscriber -- the reference's channel panel:
+ * one wide round of glass saying «Mute» or «Unmute», the same switch as the list's swipe, and the chat's own search on a round of
+ * glass to its right (channelMuteBar, iOS MTChannelSubscriberBar, MontanaChannel 410-445).
  */
-private fun fillGroupFoot(c: Context, ref: String, into: FrameLayout) {
+private fun fillGroupFoot(c: Context, ref: String, into: FrameLayout, onSearch: () -> Unit) {
     into.removeAllViews()
+    // a room as wide as the right round stands on the left, so the word stays in the middle
+    fun panel(word: View, right: View?) = c.hstack {
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(12), dp(6), dp(12), dp(6))
+        addView(View(c), lp(dp(44), dp(44)).apply { marginEnd = dp(8) })
+        addView(word, lp(0, dp(44), 1f))
+        addView(right ?: View(c), lp(dp(44), dp(44)).apply { marginStart = dp(8) })
+    }
+    fun capsule(s: String, color: Int) = c.text(s, 17f, color, bold = true, center = true).apply {
+        gravity = Gravity.CENTER
+        background = c.rounded(GLASS_TONE, 22, Color.argb(46, 255, 255, 255))
+    }
+    // TAKEN OUT OF A CHANNEL (iOS channelJoinBar, 3.3): «Join» in grey on the same wide glass, answering nothing -- the owner alone lets
+    // a removed person back
+    if (Groups.isChannel(ref) && Groups.removed(ref)) into.addView(panel(capsule(c.getString(R.string.ch_join), MT.gray), null), FrameLayout.LayoutParams(MATCH, WRAP))
     // OUT OF A GROUP, THE FIELD'S PLACE IS THE WAY OUT (iOS groupDeleteBar, stage R): «Delete and Exit» after the platform's question
-    if (Groups.isOut(ref)) into.addView(c.text(c.getString(R.string.gr_erase), 17f, SysColor.red, center = true).apply {
+    else if (Groups.isOut(ref)) into.addView(c.text(c.getString(R.string.gr_erase), 17f, SysColor.red, center = true).apply {
         setPadding(c.dp(20), c.dp(14), c.dp(20), c.dp(14))
         pressable {
             AlertDialog.Builder(c).setTitle(c.getString(R.string.gr_erase_q, Book.chat(ref)?.shown ?: ""))   // USER-DATA: the group's title
@@ -2442,12 +2663,16 @@ private fun fillGroupFoot(c: Context, ref: String, into: FrameLayout) {
         }
     }, FrameLayout.LayoutParams(MATCH, WRAP))
     else if (!Groups.canWrite(ref)) {
-        val muted = ChatMarks.isMuted(ref)
-        into.addView(c.icon(if (muted) R.drawable.ic_bell_off else R.drawable.ic_set_bell, Color.WHITE).apply {
-            setPadding(c.dp(12), c.dp(12), c.dp(12), c.dp(12))
-            contentDescription = c.getString(if (muted) R.string.cl_unmute else R.string.cl_mute)
-            pressable { ChatMarks.toggleMute(ref); fillGroupFoot(c, ref, into) }
-        }, FrameLayout.LayoutParams(c.dp(44), c.dp(44), Gravity.CENTER).apply { topMargin = c.dp(6); bottomMargin = c.dp(6) })
+        val mute = capsule(c.getString(if (ChatMarks.isMuted(ref)) R.string.cl_unmute else R.string.cl_mute), Color.WHITE).apply {
+            pressable { ChatMarks.toggleMute(ref); fillGroupFoot(c, ref, into, onSearch) }
+        }
+        val search = FrameLayout(c).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(GLASS_TONE); setStroke(c.dp(1), Color.argb(46, 255, 255, 255)) }
+            addView(c.icon(R.drawable.ic_search, Color.WHITE, 20), FrameLayout.LayoutParams(c.dp(20), c.dp(20), Gravity.CENTER))
+            contentDescription = c.getString(R.string.search)
+            pressable { onSearch() }
+        }
+        into.addView(panel(mute, search), FrameLayout.LayoutParams(MATCH, WRAP))
     }
     // A MEMBER WHO MAY SEND NOTHING (iOS groupMutedNote, G.5): the reference's sentence stands where the field stood
     else if (Groups.mutes(ref)) into.addView(c.text(c.getString(R.string.gn_text), 13f, MT.gray, center = true).apply {
@@ -2456,16 +2681,58 @@ private fun fillGroupFoot(c: Context, ref: String, into: FrameLayout) {
     into.visibility = if (into.childCount > 0) View.VISIBLE else View.GONE
 }
 
-private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = listOf(m), head: Boolean = true): ReplySwipe = ReplySwipe(c).apply {
+/** The footer of a channel's post (its comments): the failed bubble's resend tap passes it by. */
+private const val COMMENTS_TAG = "channel-comments"
+
+/** The context the recogniser is given for a voice of this chat: one's own name, the chat's, its speakers', and the chat's words
+ *  (iOS voiceHints, MontanaConversation at b2fe4814). */
+private fun voiceHints(c: Context, chat: Chat): List<String> {
+    val speakers = chat.msgs.mapNotNull { it.from }.distinct().take(20).map { Groups.speakerName(c, it) }
+    return VoiceText.hints(listOf(Prefs.userName, chat.shown) + speakers, chat.msgs.map { it.text })
+}
+
+/** HOW WIDE A BUBBLE MAY GROW (iOS bubbleCeiling, MontanaBubble.swift:596; the measure taken from PR #43, Conversation.kt wordsMax): four
+ *  fifths of the window, a channel's post the window but the round's room. The bubble's own padding stands inside this measure. */
+internal fun bubbleCeiling(c: Context, ref: String = ""): Int {
+    val window = c.dp(c.resources.configuration.screenWidthDp)
+    return if (Groups.isKey(ref) && Groups.isChannel(ref)) window - c.dp(61) else (window * 0.8f).toInt()
+}
+
+/** IN THE MENU THE WORDS BELONG TO THE FINGER (iOS MTMessageText, MontanaBubble.swift 721-727, textIsSelectable): a person takes a PART
+ *  of them with the system's own knobs and menu. In the feed the hold is the menu's, so only the menu's copy of the bubble asks for
+ *  this. No link is found here (iOS dataDetectorTypes = []); knobs and highlight wear iOS's tint, white 0.92 at 0.55. */
+private fun TextView.takesSelection(words: String) {
+    text = words
+    setTextIsSelectable(true)
+    val tint = Color.argb(140, 235, 235, 235)
+    highlightColor = tint
+    if (android.os.Build.VERSION.SDK_INT >= 29) {
+        textSelectHandle?.mutate()?.let { it.setTint(tint); setTextSelectHandle(it) }
+        textSelectHandleLeft?.mutate()?.let { it.setTint(tint); setTextSelectHandleLeft(it) }
+        textSelectHandleRight?.mutate()?.let { it.setTint(tint); setTextSelectHandleRight(it) }
+    }
+}
+
+private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = listOf(m), head: Boolean = true, selectable: Boolean = false): ReplySwipe = ReplySwipe(c).apply {
     mine = m.mine
     val mine = m.mine
+    val wordsMax = bubbleCeiling(c, chat.ref) - c.dp(24)   // the words' measure inside the bubble's padding of 12 on each side
     // THE SPEAKER AT THE HEAD OF THEIR RUN (iOS speakerPlace, MTSpeakerHead -- the reference's group feed): once a run, in the colour
     // every phone gives them; inside a bubble of words, over a file, a voice, a round note and our own plates, nowhere over a picture
-    val place = if (head) speakerPlace(c, m, members) else SPEAKER_NONE
+    val kindPlace = speakerPlace(c, m, members)
+    val place = if (head) kindPlace else SPEAKER_NONE
     val who = if (place != SPEAKER_NONE) Groups.speakerLine(c, m, chat.ref) else null
     addView(c.vstack(if (mine) Gravity.END else Gravity.START) {
         if (who != null && place == SPEAKER_ABOVE) addView(c.text(who, 12f, Groups.tint(m.from ?: ""), bold = true).apply {   // USER-DATA: the speaker's name
-            singleLineEllipsis(); setPadding(c.dp(8), c.dp(6), 0, c.dp(2))
+            singleLineEllipsis(); setPadding(c.dp(6), c.dp(6), c.dp(6), c.dp(2))
+        }, lp(WRAP, WRAP))
+        // THE FORWARD MARK, ONE PLACE FOR EVERY KIND OF LETTER (iOS isForwarded, MontanaBubble.swift:604-617, the author's word 16.09; taken from PR #43,
+        // Conversation.kt): the arrow and the word in the caption's grey ABOVE the bubble, the channel's name on a post it forwards
+        if (isForwardQuote(m.qt)) addView(c.hstack {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(6), 0, dp(6), dp(1))
+            addView(c.icon(R.drawable.ic_reply, MT.gray, 12).apply { scaleX = -1f }, lp(dp(12), dp(12)).apply { marginEnd = dp(4) })
+            addView(c.text(forwardedFrom(m.qt)?.let { c.getString(R.string.ld_forwarded_from, it) } ?: c.getString(R.string.ld_forwarded), 12f, MT.gray).apply { singleLineEllipsis() })   // USER-DATA: a channel's title
         }, lp(WRAP, WRAP))
         // THE PICTURE IS THE BUBBLE (iOS mediaBubble 1534-1600 and gifBubble 1113-1160, MontanaBubble.swift at 2155): a photo, a film or a
         // moving picture fills its bubble edge to edge, clipped to the bubble's own shape; the time stands ON the picture in a dark
@@ -2473,39 +2740,63 @@ private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = li
         // a media group's plate is its bubble the same way (iOS groupBubble 1431-1468): the tiles fill it, the caption of the pick under them
         val edge = (1 == members.size && edgePlate(m)) || 1 < members.size
         val edgeCap = if (edge) members.firstNotNullOfOrNull { Media.manifestOf(it)?.optString("cap")?.takeIf { c -> c.isNotEmpty() } } else null
-        val onPlate = edge && (edgeCap == null || BusinessCard.lines(edgeCap) != null)
+        val onPlate = edge && edgeCap == null
         // A STICKER OR A LETTER OF EMOJI ALONE STANDS BARE (iOS bigEmojiText branch, MontanaBubble.swift 758-776): the quote keeps a
         // small bubble of its own above it, the time stands under it in the same dark capsule as on a picture
         val bare = Stickers.bare(m)
         val darkMeta = onPlate || (bare && !edge)
+        // THE FILTER IS READ FIRST (iOS kinds, MontanaBubble.swift 814): one fold over a letter of any kind, a card, a coin and a place
+        // included; a plate reads its caption, every other letter its own text (iOS filterFolds)
+        val folds = if (1 < members.size || m.text.startsWith(Marks.MEDIA)) ContentFilter.plateFolds(m, members) else ContentFilter.folded(m)
         addView(c.vstack(Gravity.END) {
             background = if (Stickers.bare(m)) null else BubbleStyle.drawable(context, mine)   // a sticker stands without a bubble
+            if (Groups.isKey(chat.ref) && Groups.talks(chat.ref)) minimumWidth = dp(210)   // a post over its comments' footer (iOS MontanaBubble 506-541)
+            var openTop = 0; var openBottom = 0
             if (edge) {
                 setPadding(0, 0, 0, 0)
                 outlineProvider = object : android.view.ViewOutlineProvider() {
                     override fun getOutline(v: View, o: android.graphics.Outline) = o.setRoundRect(0, 0, v.width, v.height, v.dp(18).toFloat())
                 }
                 clipToOutline = true
-            } else setPadding(dp(12), dp(7), dp(12), dp(6))
-            if (who != null && place == SPEAKER_INSIDE) addView(speakerHead(c, who, m.from), lp(WRAP, WRAP).apply { gravity = Gravity.START; bottomMargin = dp(2) })   // the name widens the bubble, never cut by its words
-            // A FORWARDED LETTER (iOS isForwarded): one grey line over its words, no name and no bar
-            if (m.qt == FORWARDED_QUOTE) addView(c.text(c.getString(R.string.ld_forwarded), 13f, BubbleStyle.time(mine)), lp(WRAP, WRAP).apply { bottomMargin = dp(3) })
-            else if (m.qt != null) {
+            } else {
+                // EACH KIND OF LETTER KEEPS ITS OWN ROOM (iOS MontanaBubble): words 6 (textBubble; PR #43 Conversation.kt), a call 9 (callBubble),
+                // a file, a voice and our own plates 8; a bare sticker keeps the time's line under it
+                val room = when {
+                    Stickers.bare(m) -> 0
+                    Calls.info(m.text) != null -> 9
+                    m.text.startsWith(Marks.LONG) -> 8   // iOS lostLetterBubble 12 and 8
+                    kindPlace == SPEAKER_INSIDE -> 6
+                    kindPlace == SPEAKER_ABOVE -> 8
+                    else -> 0
+                }
+                openTop = if (room == 0) 7 else room; openBottom = if (room == 0) 6 else room
+                if (folds) setPadding(dp(12), dp(8), dp(12), dp(8)) else setPadding(dp(12), dp(openTop), dp(12), dp(openBottom))   // iOS the fold's own 12 and 8
+            }
+            val bodyAt = childCount   // the speaker's line and the quote stand inside iOS's kinds: the fold hides them too
+            if (who != null && place == SPEAKER_INSIDE) {
+                val line = speakerHead(c, who, m.from)
+                // the role stands at the bubble's far edge (iOS Spacer in speakerHeadLine): the line fills the bubble, and the bubble holds the line's own room
+                if (Groups.roleOf(m.from) != 0) {
+                    minimumWidth = maxOf(minimumWidth, minOf(line.minimumWidth + dp(24), bubbleCeiling(c, chat.ref)))
+                    addView(line, lp(MATCH, WRAP).apply { bottomMargin = dp(2) })
+                } else addView(line, lp(WRAP, WRAP).apply { gravity = Gravity.START; bottomMargin = dp(2) })
+            }   // the name widens the bubble, never cut by its words
+            if (m.qt != null && !isForwardQuote(m.qt)) {
                 val whose = m.qm?.let { q -> chat.msgs.find { it.mid == q } }
-                // in a group the quoted letter's speaker wears their own colour (iOS quoteTint)
-                val quoteInk = if (!mine && whose != null && !whose.mine && Groups.isKey(chat.ref) && whose.from != null) Groups.tint(whose.from) else BubbleStyle.text(mine)
+                // THE QUOTE (iOS replyQuote, MontanaBubble.swift:1816; taken from PR #43, Conversation.kt): a bar of 3, white at 0.6 on mine, the speaker's
+                // tint on theirs in a group, the accent elsewhere; the author 12 bold; one line of the words at 12
+                val authorInk = if (!mine && whose?.from != null && !whose.mine && Groups.isKey(chat.ref)) Groups.tint(whose.from) else Color.WHITE
                 addView(c.hstack {
                     if (bare) { background = BubbleStyle.drawable(context, mine); setPadding(dp(10), dp(6), dp(10), dp(6)) }
-                    addView(View(c).apply { setBackgroundColor(quoteInk) }, lp(dp(2), MATCH).apply { marginEnd = dp(6) })
+                    addView(View(c).apply { setBackgroundColor(if (mine) MT.withAlpha(Color.WHITE, 0.6f) else authorInk) }, lp(dp(3), MATCH).apply { marginEnd = dp(6) })
                     addView(c.vstack(Gravity.NO_GRAVITY) {
-                        addView(c.text(if (whose?.mine == true) Prefs.userName.ifBlank { "·" } else if (Groups.isKey(chat.ref)) Groups.speakerName(c, whose?.from) else chat.shown.ifBlank { c.getString(R.string.peer) }, 13f, quoteInk, bold = true))
-                        addView(c.text(m.qt, 13f, BubbleStyle.time(mine)).apply { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END; maxWidth = dp(240) })   // USER-DATA
+                        addView(c.text(if (whose?.mine == true) Prefs.userName.ifBlank { "·" } else if (Groups.isKey(chat.ref)) Groups.speakerName(c, whose?.from) else chat.shown.ifBlank { c.getString(R.string.peer) }, 12f, authorInk, bold = true).apply { singleLineEllipsis(); maxWidth = wordsMax - dp(9) })
+                        addView(c.text(m.qt ?: "", 12f, if (mine) MT.withAlpha(Color.WHITE, 0.85f) else MT.gray).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END; maxWidth = wordsMax - dp(9) })   // USER-DATA
                     })
-                }, lp(WRAP, WRAP).apply { bottomMargin = dp(4) })
+                }, lp(WRAP, WRAP).apply { bottomMargin = dp(if (bare) 2 else 4) })   // over the bare glyphs the stack's own 2 (iOS 870)
             }
             val call = Calls.info(m.text) != null
-            val plateFolds = (1 < members.size || m.text.startsWith(Marks.MEDIA)) && ContentFilter.plateFolds(m, members)
-            val bodyAt = childCount
+            var foldOpens: ((() -> Unit) -> Unit)? = null   // the folded letter stands without its time (iOS the fold's Button has no metaLine); the tap gives it back
             if (1 < members.size) albumBody(c, members, this)   // the plate of a media group (Album.kt)
             else if (Stickers.body(c, m, this)) Unit else if (m.text.startsWith(Marks.MEDIA)) mediaBody(c, m, this, chat)
             else if (call) Calls.body(c, m, this)   // a call's row carries its moment inside, as iOS callBubble
@@ -2518,60 +2809,30 @@ private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = li
             else if (ChessSend.letterOf(m)?.kind == ChessLetter.INVITE) addView(c.chessPlate(c as? MainActivity, chat.ref, m, ChessSend.letterOf(m)!!, mine), lp(WRAP, WRAP))
             // A COIN LETTER (iOS MTCoinLetter's bubble): our coin, the signed number, which way the coins went
             else if (CoinSend.coinOf(m) != null) addView(c.coinPlate(m, CoinSend.coinOf(m)!!, mine, c as? MainActivity, chat.ref), lp(WRAP, WRAP))
-            // A SECRET SHARED FROM PASSWORDS (iOS MTSecretLetter): the key and the title; the receiver's tap saves it
-            else if (SecretLetter.parse(m.text) != null) addView(c.secretPlate(c as? MainActivity, SecretLetter.parse(m.text)!!, mine), lp(WRAP, WRAP))
             // A PLACE LETTER (iOS MTPlaceLetter.parse → the map plate): the pin, the name and the spot instead of the link's words
             else if (PlaceLetter.parse(c, m.text) != null) addView(c.placePlate(PlaceLetter.parse(c, m.text)!!, mine), lp(WRAP, WRAP))
-            // THE FILTER (iOS MontanaBubble 672-691): a letter of theirs with a word of the list stands folded; the tap unfolds it
-            else if (ContentFilter.folded(m)) {
-                // EVERY MONTANA LINK OPENS AT A TOUCH (iOS MTMessageText.swift:227-252, MTLinkedText.updateUIView, atom
-                // 20c5cef6f490): the web's own finder and a Montana link alike, underlined in the bubble's own ink (iOS
-                // MontanaShapes.swift:524).
-                val words = c.text(linkedWords(letterWords(c, m.text)) { u -> (c as? MainActivity)?.openLink(u.toString()) }, 16f * MontanaTextSize.system, BubbleStyle.text(mine)).apply {
-                    maxWidth = dp(260); setTextIsSelectable(false); visibility = View.GONE
-                    movementMethod = android.text.method.LinkMovementMethod.getInstance()
-                    setLinkTextColor(BubbleStyle.text(mine))
-                }   // USER-DATA: the letter
-                val fold = c.vstack(Gravity.NO_GRAVITY) {
-                    addView(c.hstack {
-                        gravity = Gravity.CENTER_VERTICAL
-                        addView(c.icon(R.drawable.ic_set_eye_slash, BubbleStyle.text(mine), 16), lp(dp(16), dp(16)).apply { marginEnd = dp(6) })
-                        addView(c.text(c.getString(R.string.filter_hidden), 16f, BubbleStyle.text(mine)), lp(WRAP, WRAP))
-                    }, lp(WRAP, WRAP))
-                    addView(c.text(c.getString(R.string.filter_tap), 12f, BubbleStyle.text(mine)).apply { alpha = 0.7f }, lp(WRAP, WRAP).apply { topMargin = dp(4) })
-                    pressable { ContentFilter.open(m.mid); visibility = View.GONE; words.visibility = View.VISIBLE }
-                }
-                addView(fold, lp(WRAP, WRAP))
-                addView(words, lp(WRAP, WRAP))
-            }
+            // A LONG LETTER WHOSE WORDS NEVER CAME (iOS lostLetterBubble, MontanaBubble.swift 1761-1772): a row keeps its reference here
+            // only when the reference can never open (Pipes.fetchLong ""), so iOS's waiting wheel has no row on Android: it is said once
+            // and for good, the mark and the words at 0.8 of the bubble's ink, never the reference and never the list's «New message».
+            else if (m.text.startsWith(Marks.LONG)) addView(c.text(c.getString(R.string.message_unavailable), 16f * MontanaTextSize.system, BubbleStyle.text(mine)).apply {
+                val ink = (BubbleStyle.text(mine) and 0x00FFFFFF) or (0xCC shl 24)
+                maxWidth = wordsMax; setTextColor(ink)
+                compoundDrawablePadding = dp(8)
+                setCompoundDrawablesRelativeWithIntrinsicBounds(c.getDrawable(R.drawable.ic_letter_lost)?.mutate()?.apply { setTint(ink) }, null, null, null)
+            }, lp(WRAP, WRAP))
             // EVERY MONTANA LINK OPENS AT A TOUCH (iOS MTMessageText.swift:227-252, MTLinkedText.updateUIView, atom
             // 20c5cef6f490): the web's own finder and a Montana link alike, underlined in the bubble's own ink (iOS
             // MontanaShapes.swift:524).
             // THE SYSTEM'S TEXT SIZE REACHES ONLY THE LETTER'S OWN WORDS (iOS montanaTextScale/letterFont, the author's
             // word 11.09): every other size in the app stays pinned (pinnedText, Ui.kt), the bubble's own text does not.
             else addView(c.text(linkedWords(letterWords(c, m.text)) { u -> (c as? MainActivity)?.openLink(u.toString()) }, 16f * MontanaTextSize.system, BubbleStyle.text(mine)).apply {
-                maxWidth = dp(260); setTextIsSelectable(false)
+                maxWidth = wordsMax; setTextIsSelectable(false)
                 movementMethod = android.text.method.LinkMovementMethod.getInstance()
                 setLinkTextColor(BubbleStyle.text(mine))
+                if (selectable) takesSelection(letterWords(c, m.text))
             }, lp(WRAP, WRAP).apply { if (who != null && place == SPEAKER_INSIDE) gravity = Gravity.START })   // USER-DATA: the letter; under a speaker's name it keeps the bubble's leading edge (iOS VStack .leading)
-            // THE FILTER FOLDS A PLATE OF PICTURES TOO (iOS filterFolds, read before the plate's branch): the plate stands hidden under the
-            // same fold, and the person's own tap shows it whole
-            if (plateFolds) {
-                val body = (bodyAt until childCount).map { getChildAt(it) }
-                body.forEach { it.visibility = View.GONE }
-                addView(c.vstack(Gravity.NO_GRAVITY) {
-                    setPadding(dp(12), dp(7), dp(12), dp(6))
-                    addView(c.hstack {
-                        gravity = Gravity.CENTER_VERTICAL
-                        addView(c.icon(R.drawable.ic_set_eye_slash, BubbleStyle.text(mine), 16), lp(dp(16), dp(16)).apply { marginEnd = dp(6) })
-                        addView(c.text(c.getString(R.string.filter_hidden), 16f, BubbleStyle.text(mine)), lp(WRAP, WRAP))
-                    }, lp(WRAP, WRAP))
-                    addView(c.text(c.getString(R.string.filter_tap), 12f, BubbleStyle.text(mine)).apply { alpha = 0.7f }, lp(WRAP, WRAP).apply { topMargin = dp(4) })
-                    pressable { ContentFilter.open(m.mid); visibility = View.GONE; body.forEach { it.visibility = View.VISIBLE } }
-                }, bodyAt, lp(WRAP, WRAP))
-            }
             // THE LINK'S CARD UNDER THE WORDS (iOS the link card in the bubble), drawn from the letter's own bytes
-            LinkCard.parse(m.lp)?.let { addView(linkCardView(c, it, mine), lp(WRAP, WRAP)) }
+            LinkCard.parse(m.lp)?.let { addView(linkCardView(c, it, mine, wordsMax), lp(WRAP, WRAP)) }
             // A VOICE'S STAMP STANDS UNDER ITS CAPSULE (iOS voiceCapsuleBubble 982-994): the microphone with the length and the stamp,
             // each on its quiet pill (MTVoicePill: black 0.38, a white 0.18 rim), white, on the feed under the capsule
             val voiceMan = if (m.text.startsWith(Marks.MEDIA)) (m.meta?.let { runCatching { JSONObject(it) }.getOrNull() } ?: Media.inline(m.text)) else null
@@ -2581,6 +2842,33 @@ private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = li
             fun pill(v: View) = v.apply {
                 background = GradientDrawable().apply { cornerRadius = dp(100).toFloat(); setColor(Color.argb(97, 0, 0, 0)); setStroke(1, Color.argb(46, 255, 255, 255)) }
                 setPadding(dp(8), dp(3), dp(8), dp(3))
+            }
+            // THE VOICE'S WORDS UNDER ITS CAPSULE (iOS voiceTranscript, b2fe4814 at 2315): read on this phone, between the capsule
+            // and its pills, where the person opened them; the glyph that opens them stands after the stamp's pill (below)
+            val voiceFile = if (voice && VoiceText.canRead(c)) m.file?.takeIf { java.io.File(it).exists() } else null
+            if (voiceFile != null) addView(voiceWordsView(c, voiceFile, mine, bubbleCeiling(c, chat.ref)), lp(WRAP, WRAP).apply { topMargin = dp(6); if (!mine) gravity = Gravity.START })
+            // THE FOLD (iOS MontanaBubble 815-835, MTFilterFold): nothing of the letter is read by surprise, its speaker, quote and link card
+            // included; the person's own tap gives it back whole, with its time and the bubble's own room
+            if (folds) {
+                val body = (bodyAt until childCount).map { getChildAt(it) }
+                body.forEach { it.visibility = View.GONE }
+                val bubble = this
+                var onOpen: () -> Unit = {}
+                addView(c.vstack(Gravity.NO_GRAVITY) {
+                    if (edge) setPadding(dp(12), dp(8), dp(12), dp(8))
+                    addView(c.hstack {
+                        gravity = Gravity.CENTER_VERTICAL
+                        addView(c.icon(R.drawable.ic_set_eye_slash, BubbleStyle.text(mine), 16), lp(dp(16), dp(16)).apply { marginEnd = dp(6) })
+                        addView(c.text(c.getString(R.string.filter_hidden), 16f, BubbleStyle.text(mine)), lp(WRAP, WRAP))
+                    }, lp(WRAP, WRAP))
+                    addView(c.text(c.getString(R.string.filter_tap), 12f, BubbleStyle.text(mine)).apply { alpha = 0.7f }, lp(WRAP, WRAP).apply { topMargin = dp(4) })
+                    pressable {
+                        ContentFilter.open(m.mid); visibility = View.GONE; body.forEach { it.visibility = View.VISIBLE }
+                        if (!edge) bubble.setPadding(dp(12), dp(openTop), dp(12), dp(openBottom))
+                        onOpen()
+                    }
+                }, bodyAt, lp(WRAP, WRAP))
+                foldOpens = { f -> onOpen = f }
             }
             if (!call) addView(c.hstack {
                 gravity = Gravity.CENTER_VERTICAL
@@ -2605,8 +2893,17 @@ private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = li
                 }
                 val meta = c.hstack {
                     gravity = Gravity.CENTER_VERTICAL
+                    // THE EYE AND ITS NUMBER BEFORE THE TIME (iOS metaLine, the reference's channel stamp): the owner's count of people
+                    if (Groups.isKey(chat.ref) && Groups.isChannel(chat.ref)) {
+                        addView(c.icon(R.drawable.ic_set_eye, metaInk, 11), lp(dp(11), dp(11)).apply { marginEnd = dp(2) })
+                        addView(c.text(ChannelViews.short(ChannelViews.views(m, chat.ref)) + " ", 11f, metaInk).apply { fontFeatureSettings = "tnum" })   // USER-DATA: a count of people
+                    }
                     if (m.edited) addView(c.text(c.getString(R.string.edited) + " ", 11f, metaInk))
-                    addView(c.text(android.text.format.DateFormat.getTimeFormat(c).format(Date(m.at)), 11f, metaInk))
+                    // a signed channel's post: its signer before the time, «Name, 12:30» (iOS signature, Sign Messages)
+                    val time = android.text.format.DateFormat.getTimeFormat(c).format(Date(m.at))
+                    val signer = if (Groups.isKey(chat.ref)) Groups.signature(c, m, chat.ref) else null
+                    if (signer != null) addView(c.text(signer, 11f, metaInk).apply { singleLineEllipsis(); maxWidth = dp(160) })   // USER-DATA: the post's signer, cut, never its time
+                    addView(c.text(if (signer == null) time else ", $time", 11f, metaInk))
                     // the letter's gematria right of the time, the same number on both phones (iOS metaLine's seal, MTLetterSeal.mark)
                     LetterSeal.gematria(m.mid)?.let { g ->
                         addView(c.text(" · $g", 11f, metaInk).apply { fontFeatureSettings = "tnum" })   // USER-DATA: the letter's gematria
@@ -2615,10 +2912,28 @@ private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = li
                     if (mine && m.state == -1) addView(c.failedMark(), lp(dp(12), dp(12)).apply { marginStart = dp(4) })
                 }
                 addView(if (voice) pill(meta) else meta, lp(WRAP, WRAP))
+                if (voiceFile != null) addView(voiceTextGlyph(c, voiceFile) { voiceHints(c, chat) }, lp(WRAP, WRAP))
             // iOS 966: the voice's stack leans to its own side -- their pills stand at the capsule's left edge, mine at its right
-            }, lp(if (note) MATCH else WRAP, WRAP).apply { if (voice) { topMargin = dp(8); if (!mine) gravity = Gravity.START } })
+            }.also { row -> foldOpens?.let { hold -> row.visibility = View.GONE; hold { row.visibility = View.VISIBLE } } }, lp(if (note) MATCH else WRAP, WRAP).apply { if (voice) { topMargin = dp(8); if (!mine) gravity = Gravity.START } })
             if (edge) edgeLay(this, onPlate)
         }, lp(WRAP, WRAP))
+        // A POST'S COMMENTS (iOS MontanaBubble 506-541, the reference's «Leave a Comment»): under the post a plate of the bubble's own
+        // fill across its width -- the bubble, «Leave a Comment» or «N Comments», the chevron; the touch opens the post's comments
+        if (Groups.isKey(chat.ref) && Groups.talks(chat.ref)) {
+            val n = ChannelComments.count(m.mid, chat.ref)
+            val ink = BubbleStyle.text(mine)
+            addView(c.hstack {
+                tag = COMMENTS_TAG
+                gravity = Gravity.CENTER_VERTICAL
+                background = BubbleStyle.drawable(context, mine)
+                setPadding(dp(12), dp(8), dp(10), dp(8))
+                addView(c.icon(R.drawable.ic_set_textbubble, ink, 18), lp(dp(18), dp(18)).apply { marginEnd = dp(8) })
+                addView(c.text(if (n == 0) c.getString(R.string.ch_leave_comment) else c.resources.getQuantityString(R.plurals.ch_comments_n, n, n), 15f, ink, bold = true).apply { singleLineEllipsis() }, lp(WRAP, WRAP))
+                addView(android.widget.Space(c), lp(0, 0, 1f))
+                addView(c.icon(R.drawable.ic_chevron_right, ink, 14).apply { alpha = 0.6f }, lp(dp(14), dp(14)))
+                pressable { (c as? MainActivity)?.let { act -> act.push { back -> channelCommentsPage(act, chat.ref, m, back) } } }
+            }, lp(MATCH, WRAP).apply { topMargin = dp(2) })
+        }
         // ONE PLATE PER ANSWER, THE FACES ON IT (iOS MontanaBubble.swift 505-555 at 2155): the same emoji from both sides is one
         // plate with two faces; the correspondent's face stands only on the answer they are named on, mine on mine; my own answer
         // is taken back by a touch where it is shown (iOS onTapReaction), theirs is not mine to remove and answers no touch.
@@ -2689,28 +3004,32 @@ private const val SPEAKER_INSIDE = 2
 private fun speakerPlace(c: Context, m: Msg, members: List<Msg>): Int = when {
     1 < members.size || edgePlate(m) -> SPEAKER_NONE
     m.text.startsWith(Marks.MEDIA) || Stickers.bare(m) || Calls.info(m.text) != null || WallCard.of(m.text) != null
-        || ChessSend.letterOf(m) != null || CoinSend.coinOf(m) != null || SecretLetter.parse(m.text) != null -> SPEAKER_ABOVE
+        || ChessSend.letterOf(m) != null || CoinSend.coinOf(m) != null -> SPEAKER_ABOVE
     m.qt == null && PlaceLetter.parse(c, m.text) != null -> SPEAKER_NONE
     else -> SPEAKER_INSIDE
 }
 /**
  * THE SPEAKER'S LINE INSIDE A GROUP'S BUBBLE (iOS speakerHeadLine): the name semibold at fourteen seventeenths of the letter in the
- * speaker's colour, the role's word a point smaller at its right on a capsule of its own colour -- owner in violet, admin in green.
+ * speaker's colour, the role's word or the title the owner gave a point smaller at the bubble's far edge on a capsule of its own colour --
+ * owner in violet, admin in green. With a role the line's minimumWidth says the room it needs, for the bubble to hold.
  */
 private fun speakerHead(c: Context, who: String, ref: String?): View = c.hstack {
     gravity = Gravity.CENTER_VERTICAL
     val size = Math.floor(16.0 * MontanaTextSize.system * 14 / 17).toFloat()
-    addView(c.text(who, size, Groups.tint(ref ?: "")).apply {   // USER-DATA: the speaker's name
-        singleLineEllipsis(); typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
-    }, lp(WRAP, WRAP))
     val role = Groups.roleOf(ref)
+    val name = c.text(who, size, Groups.tint(ref ?: "")).apply {   // USER-DATA: the speaker's name
+        singleLineEllipsis(); typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+    }
+    addView(name, if (role != 0) LinearLayout.LayoutParams(0, WRAP, 1f) else lp(WRAP, WRAP))
     if (role != 0) {
         val tone = if (role == 1) Color.rgb(0x95, 0x6a, 0xc8) else Color.rgb(0x49, 0xa3, 0x55)
-        addView(c.text(c.getString(if (role == 1) R.string.gp_owner else R.string.gp_admin), size - 1, tone).apply {
+        val word = Groups.rankOf(ref) ?: c.getString(if (role == 1) R.string.gp_owner else R.string.gp_admin)   // USER-DATA: the owner's custom title
+        addView(c.text(word, size - 1, tone).apply {
+            singleLineEllipsis()
             gravity = Gravity.CENTER
             setPadding(c.dp(5), 0, c.dp(5), 0)
             background = c.rounded(Color.argb(51, Color.red(tone), Color.green(tone), Color.blue(tone)), 100)
-        }, lp(WRAP, c.dp(17)).apply { marginStart = c.dp(8) })
+        }.also { chip -> minimumWidth = (name.paint.measureText(who) + chip.paint.measureText(word)).toInt() + c.dp(19) }, lp(WRAP, c.dp(17)).apply { marginStart = c.dp(8) })
     }
 }
 /**
@@ -2779,6 +3098,9 @@ private val fieldEmojiPanel: List<String> by lazy { EMOJI_CATEGORIES.flatMap { i
 object QuickReactions {
     private const val KEY = "reactionUse"
     private val common = listOf("👍", "❤️", "🔥", "😂", "😮", "😢", "🎉", "🙏", "👏")
+    /** THE REACTIONS A CHANNEL'S OWNER CHOOSES AMONG (iOS MTChannelReactionsPage.choice): the common ones first, then the field's
+     * emoji panel, each once, at most the list's limit. */
+    val channelChoice: List<String> by lazy { (common + fieldEmojiPanel).distinct().take(Groups.REACT_LIST_LIMIT) }
 
     /** A new answer sent is counted once (iOS note(_:) 97-102); only when it is set, never when it is taken off. */
     fun note(e: String) {
@@ -2872,7 +3194,8 @@ fun letterMenu(act: MainActivity, ref: String, m: Msg, onReply: () -> Unit, onEd
             if (canForward(m)) row(c.getString(R.string.ld_forward), R.drawable.ic_reply, mirrored = true) { onForward() }
         } else {
             // THE RUNG AND ITS MOMENT over the actions (iOS MontanaMessageMenu ladder): the same line as under the bubble, with the time
-            if (m.mine && !Book.isLocal(ref)) actions.addView(c.deliveryLine(ref, m, withMoment = true).apply { setPadding(dp(16), dp(11), dp(16), dp(11)) }, lp())
+            // none for a channel's post (iOS ladder !isChannel, MontanaConversation 2428)
+            if (m.mine && !Book.isLocal(ref) && !(group && Groups.isChannel(ref))) actions.addView(c.deliveryLine(ref, m, withMoment = true).apply { setPadding(dp(16), dp(11), dp(16), dp(11)) }, lp())
             // «N SEEN» (iOS MTSeenByRow, B.13): who read a letter of mine in a group, «Nobody Viewed» while none has; a tap opens their names under it
             val seen = if (group && m.mine) Groups.seenBy(c, m, ref) else null
             if (seen != null) {
@@ -2893,9 +3216,10 @@ fun letterMenu(act: MainActivity, ref: String, m: Msg, onReply: () -> Unit, onEd
             if (writes) row(c.getString(R.string.reply), R.drawable.ic_reply) { onReply() }
             // EDIT STICKER (iOS MontanaMessageMenu 474-476, MontanaConversation 2251-2254): a letter's own card sticker, re-cut into a new one
             if (Stickers.editable(m)) row(c.getString(R.string.sticker_edit), R.drawable.ic_pencil) { Stickers.editFromLetter(act, ref, m) }
-            // VIEW STICKER SET (iOS onViewSet: MontanaMessageMenu.swift:479-482, MontanaConversation.swift:2256-2259 at
-            // 2155): any card sticker, mine or theirs, opens the same panel a hold on the emoji key opens
-            if (Stickers.viewable(m)) row(c.getString(R.string.sticker_view_set), R.drawable.ic_grid_2x2) { Stickers.setPage(act, ref) }
+            // VIEW STICKER SET · COPY LINK (iOS MontanaMessageMenu.swift:498-503, MontanaConversation.swift:2387-2402 at 2314): a
+            // sticker of mine opens my own set, a sticker of another the set its passport names; the link is that set's
+            if (Stickers.viewable(m)) row(c.getString(R.string.sticker_view_set), R.drawable.ic_grid_2x2) { Stickers.setPage(act, ref, Stickers.setOf(m)) }
+            if (Stickers.viewable(m)) row(c.getString(R.string.copy_link), R.drawable.ic_link) { Stickers.copyLink(c, m) }
             // COPY (iOS MontanaMessageMenu 483-485): the letter's own text, whatever it carries — not narrowed to a kind
             if (m.text.isNotEmpty()) row(c.getString(R.string.copy), R.drawable.ic_content_copy) {
                 // a post's card copies the post's words, never its record (iOS MTRowLetter.words, MTRowLetter.swift:55-59 at 2155)
@@ -2938,6 +3262,10 @@ fun letterMenu(act: MainActivity, ref: String, m: Msg, onReply: () -> Unit, onEd
     // THE QUICK REACTIONS FIT THE WIDTH AND LEARN FROM USE (iOS MTReactions 93-142, 239-262): five to seven answers — what this
     // person reaches for most stand first, filled out with the common ones — never a fixed nine on a narrow screen.
     fun react(e: String) { close(); answerLetter(ref, m, e, group) }
+    // A CHANNEL THAT TAKES SOME REACTIONS (iOS reactionsOnly, «Some Reactions»): the row and the whole choice offer its list alone;
+    // one whose owner turned them off (iOS reactionsAllowed, «Allow Reactions») stands no row at all
+    val only = if (group) Groups.reactionList(ref) else null
+    val reactsHere = !group || Groups.reactionsOn(ref)
     // THE WHOLE CHOICE AS A GRID (iOS cloud's reactionsOpen 355-374): the nine reached for most, then every emoji of the
     // field's panel, each name once (QuickReactions.all) — nine to a row, a choice here reacting exactly as a quick one does
     val grid = ScrollView(c).apply {
@@ -2946,7 +3274,7 @@ fun letterMenu(act: MainActivity, ref: String, m: Msg, onReply: () -> Unit, onEd
         background = c.rounded(Color.argb(235, 44, 44, 46), 20, Color.argb(26, 255, 255, 255))
         addView(c.vstack(Gravity.NO_GRAVITY) {
             setPadding(dp(10), dp(8), dp(10), dp(8))
-            val rows = QuickReactions.all.chunked(9)
+            val rows = (only ?: QuickReactions.all).chunked(9)
             for ((i, row) in rows.withIndex()) {
                 if (i > 0) gap(6)
                 addView(c.hstack {
@@ -2963,13 +3291,13 @@ fun letterMenu(act: MainActivity, ref: String, m: Msg, onReply: () -> Unit, onEd
         addView(c.hstack {
             setPadding(dp(8), dp(4), dp(8), dp(4))
             val count = QuickReactions.fitCount(c, c.resources.displayMetrics.widthPixels)
-            for (e in QuickReactions.top(count)) addView(c.text(e, 28f).apply {
+            for (e in only?.take(count) ?: QuickReactions.top(count)) addView(c.text(e, 28f).apply {
                 setPadding(dp(6), dp(4), dp(6), dp(4))
                 pressable { react(e) }
             })
             // THE CHEVRON OPENS EVERY REACTION (iOS MontanaMessageMenu.reactionsRow 244-251): the row's last key, a 17-point
             // glyph wearing the 44-point target, turns the quick row into the grid above
-            addView(FrameLayout(c).apply {
+            if ((only?.size ?: Int.MAX_VALUE) > count) addView(FrameLayout(c).apply {
                 addView(c.icon(R.drawable.ic_chevron_down, Color.argb(191, 255, 255, 255), 17), FrameLayout.LayoutParams(dp(17), dp(17), Gravity.CENTER))
                 contentDescription = c.getString(R.string.reactions_all)
                 pressable { reactions.visibility = View.GONE; grid.visibility = View.VISIBLE }
@@ -2977,10 +3305,10 @@ fun letterMenu(act: MainActivity, ref: String, m: Msg, onReply: () -> Unit, onEd
         })
     }
     val chat = Book.chat(ref)
-    val copy = if (chat != null) letterBubble(c, m, chat, members) else View(c)
+    val copy = if (chat != null) letterBubble(c, m, chat, members, selectable = true) else View(c)
     val menuColumn = c.vstack(if (m.mine) Gravity.END else Gravity.START) {
         setPadding(dp(14), 0, dp(14), 0)
-        if (!group || !Groups.isOut(ref)) { addView(reactions, lp(WRAP, WRAP)); addView(grid, lp(MATCH, dp(220))); gap(8) }
+        if ((!group || !Groups.isOut(ref)) && reactsHere) { addView(reactions, lp(WRAP, WRAP)); addView(grid, lp(MATCH, dp(220))); gap(8) }
         addView(copy, lp())
         gap(8)
         addView(actions, lp(dp(250), WRAP))
@@ -3035,6 +3363,8 @@ private fun mediaBody(c: Context, m: Msg, into: LinearLayout, chat: Chat? = null
     // yet on the phone falls back to the waiting plate below, as any other picture does. A GIF LEAVES AN IPHONE AS A DOCUMENT
     // (iOS sendGifFile, kind "doc", MontanaConversation.swift 3807-3820 at 2155): the extension finds it under either kind.
     val isGif = f?.extension?.lowercase() == "gif" && (kind == "img" || kind == "doc")
+    // A MUSIC FILE IS HEARD, NOT OPENED (iOS audioBubble voice=false): the voice's bubble with the track's name (trackBody)
+    if (man != null && isTrackLetter(m, man)) { trackBody(c, m, man, into, chat); return }
     if (kind == "aud") {
         val wv = man?.optString("wv")?.takeIf { it.isNotEmpty() }?.let { runCatching { android.util.Base64.decode(it, android.util.Base64.DEFAULT) }.getOrNull() }
         voiceBody(c, m, man?.optDouble("du", 0.0) ?: 0.0, into, wv?.let { b -> FloatArray(b.size) { (b[it].toInt() and 0xFF) / 255f } }, chat)
@@ -3054,9 +3384,9 @@ private fun mediaBody(c: Context, m: Msg, into: LinearLayout, chat: Chat? = null
         var spinner: View? = null
         // ONE PLATE FOR A PICTURE AND A VIDEO (iOS mediaBubble 1526-1574, the author's word 15.09): as wide as the widest of its contents —
         // the picture fitted, or the caption's own bubble — never the picture alone; a picture narrower than the plate keeps its fitted
-        // size in the middle and the sides are a mirrored blur of the picture itself. A card's words are not drawn under it.
+        // size in the middle and the sides are a mirrored blur of the picture itself.
         val fit = mediaBox(c, pic?.width ?: 4, pic?.height ?: 3)
-        val words = man?.optString("cap")?.takeIf { it.isNotEmpty() && BusinessCard.lines(it) == null }
+        val words = man?.optString("cap")?.takeIf { it.isNotEmpty() }
         val boxW = minOf(c.dp(PLATE_CEILING), maxOf(fit.first, words?.let { captionWidth(c, it, c.text(it, 16f, tint).paint) } ?: 0))
         val narrow = pic != null && fit.first < boxW - 1
         capRoom = boxW
@@ -3120,23 +3450,13 @@ private fun mediaBody(c: Context, m: Msg, into: LinearLayout, chat: Chat? = null
     }
     if (m.state == -1) into.addView(c.text(c.getString(R.string.media_failed), 12f, SysColor.red))
     val cap = man?.optString("cap")?.takeIf { it.isNotEmpty() }
-    // A CARD'S PHOTO (iOS: a build that knows the mark draws the photo alone, and offers its words to the contacts — MTCardContactBadge)
-    val card = cap?.let { BusinessCard.lines(it) }
-    if (card != null && !m.mine) into.addView(c.hstack {
-        gravity = Gravity.CENTER_VERTICAL
-        addView(FrameLayout(c).apply {
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.argb(115, 0, 0, 0)) }
-            addView(c.icon(R.drawable.ic_person_add, Color.WHITE, 18), FrameLayout.LayoutParams(c.dp(18), c.dp(18), Gravity.CENTER))
-        }, lp(c.dp(40), c.dp(40)).apply { marginEnd = c.dp(8) })
-        addView(c.text(c.getString(R.string.bc_add_contacts), 15f, tint), lp(WRAP, WRAP))
-        pressable { (c as? MainActivity)?.let { a -> cardToContacts(a, card) } }
-    }, lp(WRAP, WRAP))
-    else if (card == null) cap?.let { into.addView(c.text(it, 16f, tint).apply { maxWidth = capRoom }) }   // USER-DATA: the caption
+    // A CARD OF AN EARLIER BUILD IS A PHOTO WITH ITS WORDS (iOS a2a4f782, decision 601): the card left the app, what was sent stays readable
+    cap?.let { into.addView(c.text(it, 16f, tint).apply { maxWidth = capRoom }) }   // USER-DATA: the caption
 }
 
 /**
  * A CORRESPONDENT'S PICTURE OR FILM, WHOLE ON DISK (iOS the guard before MTSaveMediaBadge, MontanaBubble.swift 865-880): not a
- * round note (it plays, it does not save) and not a business card's photo (its own badge offers the contacts instead).
+ * round note (it plays, it does not save).
  */
 private fun saveMediaFile(m: Msg): Pair<java.io.File, Boolean>? {
     if (m.mine || !m.text.startsWith(Marks.MEDIA)) return null
@@ -3146,8 +3466,6 @@ private fun saveMediaFile(m: Msg): Pair<java.io.File, Boolean>? {
     val kind = man?.optString("k")?.ifEmpty { null } ?: byExt
     if (kind != "img" && kind != "vid") return null
     if (kind == "vid" && man?.optBoolean("r") == true) return null
-    val cap = man?.optString("cap")?.takeIf { it.isNotEmpty() }
-    if (cap != null && BusinessCard.lines(cap) != null) return null
     return f to (kind == "vid")
 }
 
@@ -3184,6 +3502,16 @@ private object SavedMedia {
  * carries -- one picture, or all of a plate's -- and a picture saved before is not saved twice; then the green diskette stays.
  * Files all saved before show the diskette at once (iOS MontanaSavedToPhotos); a failed save offers the arrow again.
  */
+/** The round of glass beside a channel's post (iOS MTChannelShareRound): the forward arrow on 30 across, the finger's 44 around it. */
+private fun shareRound(c: Context, onTap: () -> Unit): View = FrameLayout(c).apply {
+    addView(FrameLayout(c).apply {
+        background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(GLASS_TONE); setStroke(c.dp(1), Color.argb(46, 255, 255, 255)) }
+        addView(c.icon(R.drawable.ic_reply, Color.WHITE, 15).apply { scaleX = -1f }, FrameLayout.LayoutParams(c.dp(15), c.dp(15), Gravity.CENTER))
+    }, FrameLayout.LayoutParams(c.dp(30), c.dp(30), Gravity.CENTER))
+    contentDescription = c.getString(R.string.share)
+    pressable { onTap() }
+}
+
 private fun saveMediaBadge(act: MainActivity, files: List<Pair<java.io.File, Boolean>>): View {
     val c: Context = act
     val circle = FrameLayout(c).apply {
@@ -3265,9 +3593,17 @@ private fun gifCeilingDp(c: Context): Int {
  * stands. A first showing plays its three cycles once in the file's life (the mark survives a relaunch, 3000 files, iOS ranCap);
  * after that only a tap plays them, from where it stands; a tap on a playing one stops it there. Three cycles end where they
  * began: a natural end rests on the first frame (iOS 23.09, «they stop crookedly»).
+ *
+ * GIFS DO NOT STOP BY DEFAULT (iOS cfc6ec68, MTGifPlay.forever/reduceKey at 2351, the author's word 02.11.2026: «gifs do not stop by
+ * default; in Appearance a checkmark "reduce gif animation"»): without the checkmark every gif plays on, a tap stops it and a tap
+ * plays it on again; with it the three cycles above are the rule. FOREVER is the time a frame never spends.
  */
 internal object GifPlay {
     const val CYCLES = 3
+    const val FOREVER = Long.MAX_VALUE
+    const val REDUCE = "gifReduceMotion"
+    val reduced: Boolean get() = Prefs.bool(REDUCE, false)
+    private val live = LinkedHashSet<Runnable>()   // the gifs on the screen, woken when the checkmark turns
     private const val KEY = "gifFirstRun"
     private const val CAP = 3000
     private var ran: MutableList<String>? = null
@@ -3286,6 +3622,7 @@ internal object GifPlay {
     /** What is left to play; a file never shown before is handed its first three cycles (and marked: iOS shown(_:at:)). */
     @Synchronized fun left(key: String, duration: Long): Long {
         left[key]?.let { return it }
+        if (!reduced) { left[key] = FOREVER; return FOREVER }
         if (load().contains(key)) { left[key] = 0; return 0 }
         val n = CYCLES * maxOf(1L, duration)
         left[key] = n
@@ -3295,7 +3632,8 @@ internal object GifPlay {
     @Synchronized fun standingAt(key: String): Long = standing[key] ?: 0L
     /** Time went by while it played: it stands further on and has less to play; zero rests it on its first frame. */
     @Synchronized fun played(key: String, dt: Long, duration: Long): Long {
-        val l = maxOf(0L, (left[key] ?: 0L) - dt)
+        val was = left[key] ?: 0L
+        val l = if (was == FOREVER) was else maxOf(0L, was - dt)
         left[key] = l
         standing[key] = if (l == 0L) 0L else ((standing[key] ?: 0L) + dt) % maxOf(1L, duration)
         return l
@@ -3303,9 +3641,16 @@ internal object GifPlay {
     /** The finger: a playing file stops where it stands; a standing one plays three cycles from there. True -- it plays now. */
     @Synchronized fun toggle(key: String, duration: Long): Boolean {
         val playing = (left[key] ?: 0L) > 0L
-        left[key] = if (playing) 0L else CYCLES * maxOf(1L, duration)
+        left[key] = if (playing) 0L else if (reduced) CYCLES * maxOf(1L, duration) else FOREVER
         mark(key)
         return !playing
+    }
+    @Synchronized fun watch(r: Runnable, on: Boolean) { if (on) live.add(r) else live.remove(r) }
+    /** The checkmark turned (iOS reduceChanged): every count is dropped and every gif on the screen asks the book again -- off,
+     *  they play on; on, the ones whose first cycles were spent rest. */
+    fun reduceChanged() {
+        val woken = synchronized(this) { left.clear(); live.toList() }
+        woken.forEach { it.run() }
     }
     /** The file's picture was replaced by its full one (iOS MTGifPlay.renew): it plays its own three cycles again. */
     @Synchronized fun renew(file: String) {
@@ -3371,8 +3716,9 @@ private class GifView(c: Context, private val f: java.io.File) : View(c) {
         if (!GifPlay.toggle(key, duration)) { ticking = false; last = 0L; invalidate() } else wake()
     }
 
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); wake() }
-    override fun onDetachedFromWindow() { ticking = false; last = 0L; removeCallbacks(tick); super.onDetachedFromWindow() }
+    private val asked = Runnable { post { ticking = false; last = 0L; removeCallbacks(tick); wake() } }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); GifPlay.watch(asked, true); wake() }
+    override fun onDetachedFromWindow() { GifPlay.watch(asked, false); ticking = false; last = 0L; removeCallbacks(tick); super.onDetachedFromWindow() }
 
     override fun onDraw(canvas: android.graphics.Canvas) {
         val w = movie?.width() ?: still?.width ?: return
@@ -3471,7 +3817,7 @@ private fun noteBody(c: Context, m: Msg, f: java.io.File?, man: JSONObject?, int
         addView(NoteWindow(c, NoteWindow.cornerOf(man?.optString("rb"))).holding(ImageView(c).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
             if (pic != null) setImageBitmap(pic) else setBackgroundColor(Color.argb(60, 255, 255, 255))
-            if (full == null && f != null) BubblePicture.load(c, f, "vid", 600) { s -> background = null
+            if (full == null && f != null) BubblePicture.wear(c, f, "vid", 600, this) { s -> background = null
                 setImageBitmap(s.pic) }
         }), FrameLayout.LayoutParams(side, side))
         if (f == null && Media.waiting(c, m)) {
@@ -3547,9 +3893,10 @@ private fun speed(p: android.media.MediaPlayer) { runCatching { p.playbackParams
  */
 private object LetterMotion {
     const val RISE = 0.9f
-    private fun read(key: String, lo: Double, hi: Double, def: Double): Double = Prefs.dbl(key, def).let { if (it.isFinite()) it.coerceIn(lo, hi) else def }
-    val duration: Double get() = read("chatSpringDuration", 0.25, 0.8, 0.55)
-    val bounce: Double get() = read("chatSpringBounce", 0.0, 0.4, 0.18)
+    // ONE SPRING FOR EVERYONE (iOS b9e68f7f, MTLetterMotion at 2351): the feed's motion is no setting; the values a person set
+    // before are forgotten at launch (Retired).
+    const val duration = 0.55
+    const val bounce = 0.18
     val fade: Double get() = minOf(0.28, duration / 2)
     val on: Boolean get() = android.animation.ValueAnimator.areAnimatorsEnabled()
     /** What is left of the way `t` seconds in, on iOS spring(duration:bounce:): the natural frequency 2π/duration, the damping ratio
@@ -3770,6 +4117,31 @@ fun captionPage(act: MainActivity, p: Media.Picked, draft: String, onCancel: () 
 }
 
 /** The long press reaches the letter's menu through every part of the bubble that takes its own tap. */
+/** The tap of a failed bubble (iOS primaryTap's first word): the bubble and every control inside it answer it alike. */
+private fun View.tapEverywhere(root: Boolean = true, tap: () -> Unit) {
+    if (tag == COMMENTS_TAG) return   // a post's comments keep their own tap: the thread opens, the post does not ride again
+    if (root || hasOnClickListeners()) setOnClickListener { tap() }
+    if (this is android.view.ViewGroup) for (i in 0 until childCount) getChildAt(i).tapEverywhere(false, tap)
+}
+
+/**
+ * ONE RESEND FOR EVERY BUBBLE KIND (iOS resendAny): a file seals and rides again; a group's letter rides again on its own copies;
+ * words re-knock through the queue under the SAME name -- the receiver keeps one row by the name, so a double tap makes no second.
+ * A coin letter's coins came back with its red: the retry takes them again, or a short balance refuses it.
+ */
+private fun resendAny(act: MainActivity, ref: String, m: Msg) {
+    if (!CoinSend.mayRetry(m)) {
+        AlertDialog.Builder(act).setTitle(R.string.coin_not_enough).setMessage(R.string.coin_not_enough_sub).setPositiveButton(R.string.ok, null).show()
+        return
+    }
+    if (m.file != null) { Media.resend(act, ref, m); return }
+    if (Groups.isKey(ref)) { Thread { Groups.resend(ref, m) }.start(); return }
+    Thread { Post.retry(ref, m) }.start()
+}
+
+/** The tag of a tray plate's number, found again when a carried plate changes the places. */
+private const val TRAY_NUMBER = "trayNumber"
+
 private fun View.holdEverywhere(root: Boolean = true, menu: () -> Unit) {
     if (root || isClickable) setOnLongClickListener { menu(); true }
     if (this is android.view.ViewGroup) for (i in 0 until childCount) getChildAt(i).holdEverywhere(false, menu)

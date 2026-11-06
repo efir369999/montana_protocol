@@ -18,6 +18,7 @@ import android.os.Build
 import android.util.Base64
 import android.util.Log
 import android.view.Gravity
+import android.view.View
 import android.widget.LinearLayout
 import org.json.JSONArray
 import org.json.JSONObject
@@ -126,6 +127,7 @@ object Calls {
                     val r = outOf(ref, w, epoch)
                     if (r != null && sdp != null) {
                         synchronized(gate) { if (!r.answered) r.answeredAt = System.currentTimeMillis(); r.answered = true }
+                        SystemCall.talking(r.seed)
                         ringingHere(r)
                         tone(false)
                         CallLine.answered(ref, epochOf(r.seed), sdp)
@@ -133,7 +135,7 @@ object Calls {
                 }
                 "call-hold", "call-resume" -> CallLine.peerHeld(ref, w.optString("e").ifEmpty { epoch }, ctrl == "call-hold")
                 // the picture and the descriptions in the middle of the call (iOS 2391-2543): the line owns them
-                "call-video-ask", "call-video-ok", "call-video-no", "call-video-end", "call-restart", "call-restart-answer",
+                "call-video-ask", "call-video-ok", "call-video-no", "call-video-end", "call-camera-off", "call-camera-on", "call-restart", "call-restart-answer",
                 "call-screen-on", "call-screen-off" -> CallLine.heard(ref, w.optString("e").ifEmpty { epoch }, ctrl, w)
                 // the caller's candidates (iOS 2368): one in «candidate», an old build's batch in «candidates»
                 "call-ice" -> {
@@ -214,6 +216,7 @@ object Calls {
         Signal.hold(ref, "call")
         CallLine.updateProximity()   // a call in any state holds the sensor while its sound stands at the ear (iOS 4401)
         show(ref, video)
+        SystemCall.incoming(seed, ref, callerName(ref), video)   // the system's own list holds it too (iOS reportNewIncomingCall)
         CallScreen.ring(ref)   // the app in front rings on its own screen too (iOS incomingScreen)
         MainThread.later(LIFE_MS) { synchronized(gate) { ring?.takeIf { it.seed == seed && !it.answered } }?.let { end(it, "timeout") } }
         log("ring video=" + video)
@@ -246,10 +249,29 @@ object Calls {
         val r = synchronized(gate) { ring?.takeIf { !it.out }?.also { if (!it.answered) it.answeredAt = System.currentTimeMillis(); it.answered = true } } ?: return
         hide()
         CallService.start(Book.ctx, r.ref) { refused(r, "service-refused") }
+        SystemCall.talking(r.seed)
         voice(r)
         // iOS 2639-2647: an offer still on its way is waited for fifteen seconds, then the call honestly ends
         MainThread.later(15_000) { if (synchronized(gate) { ring === r && !r.line }) hangUp("offer-missing") }
     }
+
+    /** The system's own «answer» on this call's ring (a headset, a car: SystemCall); a ring of another seed is not ours to take. */
+    fun systemAnswer(seed: String) {
+        if (synchronized(gate) { ring?.takeIf { it.seed == seed && !it.out } } == null) return
+        log("answer by the system")
+        answer()
+    }
+
+    /** The system's own «decline» or «hang up» on this call (a headset, a car: SystemCall). */
+    fun systemEnd(seed: String) {
+        if (synchronized(gate) { ring?.seed } != seed) return
+        log("end by the system")
+        hangUp(if (synchronized(gate) { ring?.answered } == true) "hangup" else "declined")
+    }
+    private val BY_US = setOf("declined", "hangup", "pill", "no-answer", "offer-missing", "service-refused")
+
+    /** The caller's name as the ring, the system's list and the call log show it (iOS callerName: my record first). */
+    fun callerName(ref: String): String = Book.chat(ref)?.shown?.ifBlank { null } ?: Book.ctx.getString(R.string.peer)
 
     /** The call in hand — answered and not yet ended — by its person; null when none (the call's screen asks it). */
     fun held(): String? = synchronized(gate) { ring?.takeIf { it.answered || it.out }?.ref }
@@ -259,6 +281,10 @@ object Calls {
 
     /** A call stands in any state — ringing, dialling, talking (iOS stateSnapshot other than «idle»): its words knock every door. */
     fun busy(): Boolean = synchronized(gate) { ring != null }
+    /** THE CARGO YIELDS TO A CALL BEING BORN, NOT TO A CALL THAT STANDS (iOS MontanaCall.isConnecting, 8b1932d3 at 2351; the author's
+     *  words 02.11.2026: in a call the media, gifs and the wall's post did not leave): the roads are the call's while it dials, rings
+     *  or connects; a standing call carries its sound on its own line, and one piece at a time beside it costs it nothing. */
+    fun connecting(): Boolean = busy() && CallLine.connectedAt == 0L
     /** The correspondent of the call in hand, in any state (iOS MontanaCall.peerSnapshot): while it stands the radio is theirs. */
     fun peer(): String? = synchronized(gate) { ring?.ref }
 
@@ -297,6 +323,7 @@ object Calls {
         Signal.hold(ref, "call")
         CallLine.updateProximity()
         CallService.start(Book.ctx, ref) { refused(r, "service-refused") }
+        SystemCall.outgoing(seed, ref, callerName(ref), video)   // the system's own list holds it too (iOS CXStartCallAction)
         MainThread.later(1200) { pipsOn(r) }   // the searching pips until the far phone's own word «ringing» (iOS 1855, 4548-4556)
         Thread { knock(r) }.start()
         // one ring letter per call, its name the call's (iOS E2E 1162-1166): the road of a phone the wake does not reach
@@ -468,6 +495,7 @@ object Calls {
         story(r, why, spoken)
         holdOnDisk()   // the call ended: its record goes (iOS 3508-3510)
         CallService.stop()
+        SystemCall.end(r.seed, incoming = !r.out, answered = r.answered, declined = why == "declined", byUs = why in BY_US)
         CallScreen.hide()
         Signal.release(r.ref, "call")
         hide()
@@ -677,7 +705,7 @@ object Calls {
         else -> R.string.call_voice
     })
 
-    /** iOS MessageBubble.callBubble: the glyph, red when missed; the kind; under it the arrow, how it went and the moment. */
+    /** iOS MessageBubble.callBubble: the glyph, red when missed; the kind; under it the arrow, how it went and the stamp: the moment, the seal, the failed mark. */
     fun body(c: Context, m: Msg, into: LinearLayout) {
         val i = info(m.text) ?: return
         val ink = BubbleStyle.text(m.mine)
@@ -688,18 +716,53 @@ object Calls {
             else -> c.getString(R.string.call_failed)
         }
         val time = android.text.format.DateFormat.getTimeFormat(c).format(Date(m.at))
+        val metaInk = BubbleStyle.time(m.mine)
         into.addView(c.hstack {
             gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(36)   // iOS rowPlate 54 with the bubble's 9 above and below: one height with the voice capsule
             addView(c.icon(if (i.video) R.drawable.ic_peer_video else R.drawable.ic_peer_phone, accent, 18), lp(dp(18), dp(18)).apply { marginEnd = dp(10) })
             addView(c.vstack(Gravity.NO_GRAVITY) {
                 addView(c.text(c.getString(if (i.video) R.string.call_video else R.string.call_voice), 15f, ink, bold = true), lp(WRAP, WRAP))
-                addView(c.hstack {
+                val duration = c.hstack {
                     gravity = Gravity.CENTER_VERTICAL
                     addView(c.icon(if (i.incoming) R.drawable.ic_call_received else R.drawable.ic_call_made, accent, 10), lp(dp(10), dp(10)).apply { marginEnd = dp(4) })
-                    addView(c.text(how + " · " + time, 12f, BubbleStyle.time(m.mine)), lp(WRAP, WRAP))
-                }, lp(WRAP, WRAP).apply { topMargin = dp(2) })
+                    addView(c.text(how, 12f, MT.withAlpha(ink, 0.85f)), lp(WRAP, WRAP))
+                }
+                val dot = c.text("·", 12f, MT.withAlpha(ink, 0.65f))
+                val stamp = c.hstack {
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(c.text(time, 11f, metaInk), lp(WRAP, WRAP))
+                    // the letter's gematria right of the time, as on every other letter (iOS metaLine's seal, PR #43 sealMarks)
+                    LetterSeal.gematria(m.mid)?.let { g ->
+                        addView(c.text(" · $g", 11f, metaInk).apply { fontFeatureSettings = "tnum" })   // USER-DATA: the letter's gematria
+                    }
+                    if (m.mine && m.state == -1) addView(c.failedMark(), lp(dp(12), dp(12)).apply { marginStart = dp(4) })
+                }
+                addView(CallStamp(c, duration, dot, stamp), lp(WRAP, WRAP).apply { topMargin = dp(2) })
             }, lp(WRAP, WRAP))
         }, lp(WRAP, WRAP))
+    }
+
+    /** iOS callBubble's ViewThatFits: how it went, the dot and the stamp in one line while they fit; else the stamp under it, with no dot. */
+    private class CallStamp(c: Context, duration: View, private val dot: View, private val stamp: View) : LinearLayout(c) {
+        init {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(duration, LayoutParams(WRAP, WRAP))
+            addView(dot, LayoutParams(WRAP, WRAP).apply { marginStart = c.dp(4); marginEnd = c.dp(4) })   // the dot goes with its room when the stamp moves under
+            addView(stamp, LayoutParams(WRAP, WRAP))
+        }
+        override fun onMeasure(w: Int, h: Int) {
+            lay(true)
+            super.onMeasure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), h)
+            if (MeasureSpec.getMode(w) != MeasureSpec.UNSPECIFIED && measuredWidth > MeasureSpec.getSize(w)) lay(false)
+            super.onMeasure(w, h)
+        }
+        private fun lay(line: Boolean) {
+            orientation = if (line) HORIZONTAL else VERTICAL
+            gravity = if (line) Gravity.CENTER_VERTICAL else Gravity.START
+            dot.visibility = if (line) VISIBLE else GONE
+            (stamp.layoutParams as LayoutParams).topMargin = if (line) 0 else context.dp(2)
+        }
     }
 
     // ── the ring on the screen (iOS: CallKit's incoming call; here the call's own notification) ──
@@ -713,7 +776,7 @@ object Calls {
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 1000, 1000)
         })
-        val name = Book.chat(ref)?.shown?.ifBlank { null } ?: c.getString(R.string.peer)
+        val name = callerName(ref)
         val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         fun page(answer: Boolean) = PendingIntent.getActivity(c, if (answer) 2 else 1,
             Intent(c, MainActivity::class.java).putExtra(EXTRA_REF, NoticeAlias.of(ref)).putExtra(EXTRA_ANSWER, answer)
@@ -724,6 +787,7 @@ object Calls {
             .setContentTitle(name)   // USER-DATA: the caller's name
             .setContentText(c.getString(if (video) R.string.call_video else R.string.call_voice))
             .setCategory(Notification.CATEGORY_CALL)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)   // the caller's name on the lock screen too, as the system's own call (iOS CallKit)
             .setOngoing(true)
             .setContentIntent(page(false))
             .setFullScreenIntent(page(false), true)

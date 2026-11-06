@@ -629,9 +629,10 @@ object Card {
         "cbPeerFill1" to Form.WORD, "cbPeerFill2" to Form.WORD, "cbPeerOpacity" to Form.FRACTION, "cbPeerText" to Form.WORD,
         "cbPeerOutline" to Form.WORD, "cbPeerOutlineOp" to Form.FRACTION, "cbPeerOutlineW" to Form.FRACTION,
         "bubbleColorIndex" to Form.FRACTION,
-        // the feed's motion (MontanaChatMotion.swift 6-9), the note (MontanaFeeds.swift 1718, 1783-1808), the voice (MontanaMedia.swift 324-326),
-        // the voice orb's look (MTVoiceBuble.swift 114; MontanaChatStore.swift settingKeys 6214)
-        "chatSpringBounce" to Form.FRACTION, "chatSpringDuration" to Form.FRACTION,
+        // the gifs' checkmark (MontanaGif.swift reduceKey, iOS cfc6ec68; the feed's motion left the copy, b9e68f7f), the note
+        // (MontanaFeeds.swift 1718, 1783-1808), the voice (MontanaMedia.swift 324-326), the voice orb's look (MTVoiceBuble.swift 114;
+        // MontanaChatStore.swift settingKeys 6214)
+        GifPlay.REDUCE to Form.SWITCH,
         "noteQuality" to Form.WORD, "vnoteCorner" to Form.WHOLE_WORD, "voiceRate" to Form.FRACTION_WORD, "voiceOrb.look" to Form.WORD,
         // the field (MontanaBubble.swift 2361-2362, MontanaConversation.swift 661), the panes (ContentView.swift 226-227, 4296;
         // MontanaChatsList.swift 454), the mesh switch (MontanaNetworkView.swift 123), the daily copies to one's own node
@@ -722,15 +723,15 @@ object Card {
             val held = m.filterKeys { MontanaBackup.plainName(it) && Book.myFace(it).exists() }
             if (held.isEmpty()) out.remove("d:manualPhotos") else out.put("d:manualPhotos", b64(JSONObject(held).toString()))
         }
-        // One's own node and its certificate's digest (iOS MontanaHomeNode.swift 22-48), the business card (MontanaProfile.swift
-        // 113-136), the face as the iPhone carries it (avatarData: the bytes as they are)
+        // One's own node and its certificate's digest (iOS MontanaHomeNode.swift 22-48), the face as the iPhone carries it (avatarData:
+        // the bytes as they are); an earlier build's contact card leaves the copy (iOS a2a4f782, decision 601)
         for ((k, v) in listOf(NODE to MontanaHomeNode.host, NODE_PIN to MontanaHomeNode.pin)) if (v.isEmpty()) out.remove("d:$k") else out.put("d:$k", b64(v))
-        BusinessCard.stored()?.let { out.put("d:businessCard", b64(it.json().toString())) } ?: out.remove("d:businessCard")
+        out.remove("d:businessCard")
         SelfFace.bytes(c)?.let { out.put("b:avatarData", android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP)) } ?: out.remove("b:avatarData")
         // The records sealed in the same JSON on both phones (iOS SeedScope.dataKeys 6132-6133): the peers' read marks (ChatStore
         // notePeerRead 2872-2879), the name held in the network (MontanaNames.swift 113-132), the permanent link, its keys and the
         // day's cards (MontanaFirstContact.swift 626-868)
-        val records = listOf("peerReadMap" to Post.PeerRead.carried(), "mt.name" to Names.record()) +
+        val records = listOf("peerReadMap" to Post.PeerRead.carried(), "mt.name" to DeviceVault.get("mt.name")) +
             MontanaCard.RECORDS.map { it to MontanaCard.record(it) }
         for ((k, v) in records) if (v == null) out.remove("d:$k") else out.put("d:$k", b64(v))
         // What each correspondent said of themselves (iOS MTPeerAbout, MontanaE2E.swift 74-125: one sealed map of conversation to bio,
@@ -816,7 +817,6 @@ object Card {
         var faces: Map<String, String>? = null
         var node: String? = null
         var nodePin: String? = null
-        var card: JSONObject? = null
         var face: ByteArray? = null
         var mesh: Boolean? = null
         var readMarks: Map<String, Long>? = null
@@ -858,7 +858,6 @@ object Card {
                 tag == "d:" && k == "manualPhotos" -> faces = strings(v)
                 tag == "d:" && k == NODE -> node = unb64(v)?.toString(Charsets.UTF_8)
                 tag == "d:" && k == NODE_PIN -> nodePin = unb64(v)?.toString(Charsets.UTF_8)
-                tag == "d:" && k == "businessCard" -> card = unb64(v)?.let { JSONObject(it.toString(Charsets.UTF_8)) }
                 tag == "b:" && k == "avatarData" -> face = unb64(v)
                 tag == "d:" && k == "peerReadMap" -> readMarks = json(v)?.let { o -> o.keys().asSequence().associateWith { o.getLong(it) } }
                 tag == "d:" && k == "mt.name" -> nameRecord = unb64(v)
@@ -894,11 +893,10 @@ object Card {
             { for ((ref, v) in grounds) wearable(ref, v, walls)?.let { w -> if (w !is ChatWall.Choice.Photo || mirror(File(walls, w.file), ChatWall.folder())) ChatWall.set(ref, w) } },
             { node?.let { MontanaHomeNode.setHost(it) } },
             { nodePin?.let { MontanaHomeNode.setPin(it) } },
-            { card?.let { BusinessCard(it.optString("name"), it.optString("phone"), it.optString("email"), it.optString("other")).keep() } },
             { face?.let { SelfFace.set(c, it) } },
             { mesh?.let { if (it != Mesh.discoverable) Mesh.setDiscoverable(it) } },
             { readMarks?.let { Post.PeerRead.lay(it) } },
-            { nameRecord?.let { Names.lay(it) } },
+            { nameRecord?.let { DeviceVault.set("mt.name", it) } },   // iOS keeps the key in SeedScope.dataKeys at 2361: a copy carries it unread
             { for ((k, d) in cards) MontanaCard.lay(k, d) },
             { about?.let { PeerAbout.lay(it) } },
             { links?.let { PeerLinks.lay(it, born ?: emptyMap()) } },

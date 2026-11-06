@@ -266,7 +266,11 @@ internal class Panes(val bar: View, val pane: LinearLayout, val foot: View, val 
 internal fun panesOf(act: MainActivity, ref: String, group: Boolean, onClose: () -> Unit, toChat: (String, String?) -> Unit,
                      onFoot: (Boolean) -> Unit): Panes {
     val c: Context = act
-    val tabs = if (group) listOf(Tab.MEDIA, Tab.FILES, Tab.LINKS, Tab.MUSIC, Tab.VOICE) else Tab.values().toList()
+    // A CHANNEL'S PAGE HOLDS A PERSON'S PANES WITHOUT THE WALL (iOS paneTabs, MontanaPeerInfoScreen 996 at 2315): Media its photos,
+    // Video its films, Files, Links, Music and Voice; a group's Media holds its photos and its videos together
+    val channel = group && Groups.isChannel(ref)
+    val tabs = if (channel) listOf(Tab.MEDIA, Tab.VIDEO, Tab.FILES, Tab.LINKS, Tab.MUSIC, Tab.VOICE)
+               else if (group) listOf(Tab.MEDIA, Tab.FILES, Tab.LINKS, Tab.MUSIC, Tab.VOICE) else Tab.values().toList()
     // ── THE STRIP (iOS MTTabStrip): the system's glass capsule 44 tall stands still on the page's margin and the words roll inside it,
     // under its edge; the chosen word wears the system's grey pill, which rides to the next one; while every word fits, the tabs
     // share the capsule equally ──
@@ -407,38 +411,39 @@ internal fun panesOf(act: MainActivity, ref: String, group: Boolean, onClose: ()
         val j = tabs.indexOf(tab) + step
         if (j in tabs.indices) choose(tabs[j])
     }
-    fun emptyPane(): View = c.vstack(Gravity.CENTER_HORIZONTAL) {
+    fun emptyPane(words: String = c.getString(tab.empty)): View = c.vstack(Gravity.CENTER_HORIZONTAL) {
         setPadding(0, dp(36), 0, dp(36))
         addView(c.icon(tab.icon, MT.gray), lp(dp(42), dp(42)))
-        addView(c.text(c.getString(tab.empty), 15f, MT.gray, center = true), lp().apply { topMargin = dp(10) })
+        addView(c.text(words, 15f, MT.gray, center = true), lp().apply { topMargin = dp(10) })
     }
+    // a post that did not change keeps its own cell where it stands: a mark does not shake the wall (PostCells)
+    val wallCells = PostCells(act)
     drawPane = {
-        pane.removeAllViews()
-        val msgs = select(tab, Book.chat(ref)?.msgs ?: emptyList(), group)
+        val msgs = select(tab, (Book.chat(ref)?.msgs ?: emptyList()).filter { !OldRecordings.hidden(it) }, group && !channel)   // a channel's films have their own pane
         if (tab == Tab.WALL) {
+            val rows = mutableListOf<View>()
+            fun row(v: View, top: Int = 10) { if (v.layoutParams == null) v.layoutParams = lp().apply { topMargin = c.dp(top) }; rows += v }
             // THE WRITE BUTTON WHILE THE OWNER LETS ME WRITE (iOS MTBoardRows, MontanaBoardViews.swift:156-161 at 2155): it opens the
             // one new post's page over their wall (MTBoardComposer.present(on: owner)), and the post goes to them
-            if (Board.canWrite(ref)) pane.addView(c.hstack {
-                gravity = Gravity.CENTER_VERTICAL
-                background = c.glassPlate()
-                setPadding(dp(14), dp(10), dp(14), dp(10))
-                addView(FrameLayout(c).apply {
-                    background = c.glassPlate(oval = true)
-                    addView(c.icon(R.drawable.ic_compose, Color.WHITE), FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER))
-                }, lp(dp(44), dp(44)).apply { marginEnd = dp(14) })
-                addView(c.text(c.getString(R.string.pi_write_wall), 17f))
-                pressable { act.push { close -> newPostPage(act, close, wall = ref) } }
-            }, lp().apply { topMargin = c.dp(12) })
+            if (Board.canWrite(ref)) row(writeFace(act, ref), 12)
+            // MY DRAFT ON THEIR WALL stands over the posts on their way (iOS MTBoardRows 165-169)
+            draftCell(act, ref)?.let { row(it) }
             // A POST ON ITS WAY TO THEIR WALL stands at once as it will be published, under the bar of its files (iOS MTBoardRows 167-172)
             val onItsWay = MyWall.sending(ref)
-            onItsWay.forEach { o -> pane.addView(goingCell(act, o), lp().apply { topMargin = c.dp(10) }) }
+            onItsWay.forEach { o -> row(goingCell(act, o)) }
             // THE WALL'S OWN ROWS (iOS MTBoardRows, MontanaPeerInfoScreen.swift:646): a person's page shows their wall --
             // the same cells the feed draws (Board.postCell), with no "on X's wall" line of its own (onItsWall).
             val wallPosts = Board.posts(ref)
-            if (wallPosts.isEmpty() && onItsWay.isEmpty()) pane.addView(emptyPane(), lp())
-            else wallPosts.forEach { item -> pane.addView(postCell(act, item, onItsWall = true), lp().apply { topMargin = c.dp(10) }) }
-        } else if (msgs.isEmpty()) pane.addView(emptyPane(), lp())
-        else paneRows(act, tab, msgs.reversed(), pane, law)   // newest on top
+            // A PIPE NOBODY HAS ANSWERED YET SAYS SO (iOS MTBoardRows.empty, 55fca77b): until their phone answers on this road
+            // nothing of theirs can come by it, and the page says whose phone it waits for instead of «No posts yet».
+            if (wallPosts.isEmpty() && onItsWay.isEmpty() && !Board.hasPage(ref) && Meeting.first(ref) != null)
+                row(emptyPane(c.getString(R.string.wall_waits_phone, Board.nameOf(c, ref))), 0)
+            else if (wallPosts.isEmpty() && onItsWay.isEmpty()) row(emptyPane(), 0)
+            else wallPosts.forEach { item -> row(wallCells.cell(item, onItsWall = true)) }
+            pane.relay(rows)
+            wallCells.keepOnly(rows)
+        } else if (msgs.isEmpty()) { pane.removeAllViews(); pane.addView(emptyPane(), lp()) }
+        else { pane.removeAllViews(); paneRows(act, tab, msgs.reversed(), pane, law) }   // newest on top
     }
 
     // the one player's turn redraws the music's glyphs, and only its turn: the clock's ticks change nothing here
