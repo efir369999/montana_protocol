@@ -597,7 +597,7 @@ enum MTKeepDerive {
     }
 
     // ── the light copy (Network «The light copy»; the author's word 08.10.2026 20:5x UTC: «the person, the face, the name and
-    // everything else back by the words, down to the chess games») ──
+    // everything else back by the words [...]») ──
     /// THE COPY WITHOUT ITS ATTACHMENTS -- every letter, every room, the profile, the faces and the head of every
     /// correspondence -- sealed as every copy is, laid on the nodes and named by one letter in the pipe of light, once a day while
     /// the copy is kept. The pieces live a week there and the letter in the box as long, so a phone lost today is opened by the

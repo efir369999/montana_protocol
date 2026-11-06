@@ -5,7 +5,7 @@ import MontanaBindings
 
 /// THE TIMECHAINS OF THE MINTING (the author's words 03.10.2026 21:25 UTC: «in chess too its own TimeChain of the minting for
 /// every move, put in order»; the chain's constitution, points 4 and 5: «build by the Architecture of TimeChains», «build the
-/// Economy of Time»). Every source of coins keeps its own chain on this phone -- chess, the Pantheon, the VPN wall, the Timer, the
+/// Economy of Time»). Every source of coins keeps its own chain on this phone -- chess, the Pantheon, the Timer, the
 /// chats' letters, the coins received, given and sent: one link per move of coins, numbered, stamped in milliseconds and sealed
 /// by SHA-256 over the link and the seal of the one before, so a link changed or moved breaks every seal after it. The book keeps
 /// the balance; the chains keep how every coin came. One seam writes them -- the book's keep, where every new move is written --
@@ -24,9 +24,16 @@ enum MTTimeChain {
     /// named»): the games, the chats, the comments, the calls and the letters minted or burned coins on this phone until the chain
     /// alone minted (decisions 375 and 383 «a»). Their chains stay sealed on the phone; the wallet names them by one word, the
     /// builds before, and shows no road of coins by them.
-    static let before = Set(["chess", "pantheon", "vpnwall", "timer", "chats", "groups", "channels", "comments", "calls", "letters"])
+    static let before = Set(["chess", "pantheon"] + protocolOwn + ["timer", "chats", "groups", "channels", "comments", "calls", "letters"])
     /// The sources, each its own chain, in the wallet's order.
-    static let sources = ["pi", "chess", "pantheon", "vpnwall", "vpnpay", "timer", "chats", "groups", "channels", "comments", "wall", "received", "spent", "sent", "calls", "letters", "system"]
+    static let sources = ["pi", "chess", "pantheon"] + protocolOwn + protocolPay + ["timer", "chats", "groups", "channels", "comments"] + protocolPosts + ["received", "spent", "sent", "calls", "letters", "system"]
+    /// The chains of the Protocol's own applications are the Protocol's alone (decision 651 = a, decision 685): Montana Messenger
+    /// names none.
+    #if MONTANA_MESSENGER
+    private static let protocolOwn: [String] = [], protocolPay: [String] = [], protocolPosts: [String] = []
+    #else
+    private static let protocolOwn = ["vpnwall"], protocolPay = ["vpnpay"], protocolPosts = ["wall"]
+    #endif
     private static let q = DispatchQueue(label: "montana.TimeChains", qos: .utility)
     private struct Held { var n: Int; var hash: String; var refs: Set<String> }
     private static var held: [String: Held] = [:]   // each chain read once, on q
@@ -60,6 +67,7 @@ enum MTTimeChain {
     static func note(_ chain: String, kind: String, coins: Int, ref: String, at moment: Double = Date().timeIntervalSince1970) {
         q.async { write(chain, kind: kind, coins: coins, ref: ref, at: moment) }
     }
+    #if !MONTANA_MESSENGER
     /// THE WALL'S CHAIN (the author's word 03.10.2026 23:38 UTC): my wall's posts as they stand -- a post not yet chained joins as
     /// born (post), one whose words or files moved as changed (edit), one chained and no longer standing as taken down (gone); the
     /// births in the order the posts were born. One queue, so every link keeps its place.
@@ -86,6 +94,7 @@ enum MTTimeChain {
             }
         }
     }
+    #endif
     /// Queue-only: one link joins its chain, once by its name.
     private static func write(_ chain: String, kind: String, coins: Int, ref: String, at moment: Double) {
         let at = ms(moment)
@@ -277,7 +286,9 @@ enum MTTimeChain {
         seconds = spans.reduce(0) { n, s in n + (s.b - s.a + 1) }
         MTPersonLevel.set(level)
         MTFabric.shared.refresh()   // the ceiling stands on the person's level (MTFabric)
+        #if !MONTANA_MESSENGER   // no levels in Messenger (decision 618 (b))
         MTLevelDistribution.shared.changed()
+        #endif
         let fresh = Self.chain(spans)
         guard fresh.last?.hash != links.last?.hash else { return }   // the head's seal seals the whole chain
         links = fresh
@@ -419,7 +430,7 @@ enum MTSeedVault {
 
 /// THE TIMECHAIN FOLDER (the author's words 04.10.2026 10:42 UTC: «in the Montana folder make a folder TimeChain, so I see it on all
 /// devices, with the wallet's TimeChain of each device in it»; «TimeChain is written so, exactly, everywhere»): the one folder the
-/// Files app shows as On My iPhone, Montana, TimeChain -- the comment chains a person wrote (MTBoardSeen, the author's word 02.10
+/// Files app shows as On My iPhone, Montana, TimeChain -- the comment chains a person wrote (the author's word 02.10
 /// 15:09) and the wallet's chains, one file a source (wallet-pantheon.jsonl, wallet-chats.jsonl ...). The folder is the seated
 /// person's (SeedScope.seatFolders): parked and lifted with them, so no chain of one person stays to the next. Laid once a seat:
 /// the comment chains' folder of the builds before («Timechain») takes the one name -- through a step on a disk that knows no case,

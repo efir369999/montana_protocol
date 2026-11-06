@@ -33,14 +33,19 @@ private func mtUnprotect(_ url: URL) {
         [.protectionKey: FileProtectionType.none], ofItemAtPath: url.path)
 }
 enum MontanaLog {
-    enum Channel {
-        case telemetry, trace, vpn
+    enum Channel: CaseIterable {
+        case telemetry, trace
+        #if !MONTANA_MESSENGER
+        case vpn   // the VPN's diary, the Protocol's alone (decision 651 = a)
+        #endif
 
         var file: String {
             switch self {
             case .telemetry: return "telemetry.log"
             case .trace:     return "trace.log"
+            #if !MONTANA_MESSENGER
             case .vpn:       return "vpn.log"
+            #endif
             }
         }
         /// Half the budget: each channel keeps a current file and a previous one, so rotating here caps
@@ -49,7 +54,9 @@ enum MontanaLog {
             switch self {
             case .telemetry: return 512 * 1024
             case .trace:     return 512 * 1024
+            #if !MONTANA_MESSENGER
             case .vpn:       return 256 * 1024
+            #endif
             }
         }
     }
@@ -67,7 +74,7 @@ enum MontanaLog {
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         mtExcludeFromBackup(d)
         mtUnprotect(d)
-        for ch in [Channel.telemetry, .trace, .vpn] {
+        for ch in Channel.allCases {
             mtUnprotect(d.appendingPathComponent(ch.file))
             mtUnprotect(d.appendingPathComponent(ch.file + ".prev"))
         }

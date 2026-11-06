@@ -292,11 +292,13 @@ enum MTNameBook {
     static func invalidateContacts() {
         contactCache = nil
         bookLock.lock(); bookRefs = nil; bookLock.unlock()
+        #if !MONTANA_MESSENGER
         // A WALL KEPT FOR CONTACTS FOLLOWS THE BOOK (the critic 25.09; MTWallDoor.bookChanged).
         MTApps.wall?.bookChanged()
+        #endif
     }
-    /// THE BOOK'S PEOPLE, BY REFERENCE (the author's word 25.09: «only contacts», for who sees my wall and who writes on
-    /// it): every card of the book, named or not. Read for every presence word and from any thread — held under its own
+    /// THE BOOK'S PEOPLE, BY REFERENCE (the author's word 25.09: «only contacts»):
+    /// every card of the book, named or not. Read for every presence word and from any thread — held under its own
     /// lock, and let go with the book's other caches at every change of the book.
     private static let bookLock = NSLock()
     private static var bookRefs: Set<String>?

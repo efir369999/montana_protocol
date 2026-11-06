@@ -6,6 +6,11 @@
 MT_NAME_PROTOCOL = MT Protocol
 MT_NAME_PROTOCOL_MAC = Montana Core
 MT_NAME_MESSENGER = Montana
+// THE APPS' NAMES IN THE STORE (the author's decision 642 and word 16777, 04.11.2026 23:14 UTC): Apple refuses «Montana» as a
+// store's name -- 409 DUPLICATE.DIFFERENT_ACCOUNT, held by another account; each page is named by its line here alone
+// (tools/mt-appstore.py), and the names under the icons stay the lines above.
+MT_NAME_PROTOCOL_STORE = Montana Protocol
+MT_NAME_MESSENGER_STORE = Montana Messenger
 
 // THE APPS' LINK SCHEMES -- ONE OWNER EACH (the author's word 16667, 05.11.2026: «montana:// for the Messenger and mt-protocol://»):
 // each app registers its own, both Info.plists name both to ask whether the other stands, and the «Open in» choice reads them

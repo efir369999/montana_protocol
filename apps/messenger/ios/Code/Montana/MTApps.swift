@@ -21,13 +21,20 @@ enum MTApps {
     /// A chat's Money Flow (slice S2b b7d2): on only where the coins stand and the chat turned it on; its turn, watched.
     static func flowOn(_ conv: String) -> Bool { coins?.flowOn(conv) == true }
     @MainActor static let flowWatch = MTDoorWatch(coins?.changes(.flow))
+    #if !MONTANA_MESSENGER
     static let vpn: MTVPNDoor? = MTEdition.vpn
-    static let chess: MTChessDoor? = MTEdition.chess
-    static let wall: MTWallDoor? = MTEdition.wall
-    static let messenger: MTMessengerDoor? = MTEdition.messenger
-    static let youtube: MTYouTubeDoor? = MTEdition.youtube
     static let mesh: MTMeshDoor? = MTEdition.mesh
-    static let passwords: MTPasswordsDoor? = MTEdition.passwords
+    #endif
+    #if !MONTANA_MESSENGER   // no chess in Messenger (the author's words 16913 and 17086; cut C5): its door is not declared there
+    static let chess: MTChessDoor? = MTEdition.chess
+    #endif
+    #if !MONTANA_MESSENGER
+    static let wall: MTWallDoor? = MTEdition.wall
+    #endif
+    static let messenger: MTMessengerDoor? = MTEdition.messenger
+    #if !MONTANA_MESSENGER
+    static let youtube: MTYouTubeDoor? = MTEdition.youtube
+    #endif
 }
 
 /// THE MESSENGER DOOR (slice S5b-g): what the shared groups ask of Montana Messenger -- a letter of mine into a group that carries an
@@ -43,6 +50,10 @@ protocol MTMessengerDoor: AnyObject {
     @MainActor func page() -> AnyView
 }
 
+#if !MONTANA_MESSENGER
+// THE PROTOCOL'S VPN AND MESH ARE NOT COMPILED INTO MONTANA MESSENGER (the author's words 16789 and 16791, 04.11.2026 23:23-23:25
+// UTC, App Review 2.3.1(a): «the binary carries VPN, vpn, Proxy, tunnel /// clean it out»): a nil door still wrote its names into
+// the binary, so here alone an #if names an edition -- MONTANA_MESSENGER, set by the MontanaMessenger target -- and removes them.
 /// THE MESH DOOR (the author's words 03.11.2026 22:30-22:32 UTC, links 15844-15846: «take the mesh and the P2P walls wholly out
 /// of the Messenger», «cut the mesh wholly out of the Messenger»): the radio between phones nearby and the mesh wall's room. The
 /// Protocol carries them; Montana Messenger does not -- its door is nil, MontanaBLEMesh.swift and MontanaMeshView.swift stand
@@ -74,34 +85,18 @@ protocol MTMeshDoor: AnyObject {
     func openRouterDoor()
     var routerDoor: (open: Bool, external: String, port: UInt16) { get }
 }
-
-/// THE PASSWORDS DOOR (the author's word 03.11.2026 23:57 UTC, link 15962: «take Passwords out of the Messenger's side panel and
-/// wipe its code out wholly»): the person's secrets -- the library's page, a secret shared into a chat, its saving and the keychain
-/// item they live in. The Protocol carries them; Montana Messenger does not -- its door is nil and MTPasswords.swift stands outside
-/// its target. A secret letter that reaches Messenger is known by its machine line alone (MTRowLetter.isSecret) and drawn as the key
-/// and «Shared password»: no title, no content and nothing that saves it.
-protocol MTPasswordsDoor: AnyObject {
-    /// The page, opened from the library over the tabs.
-    @MainActor func page() -> AnyView
-    /// A secret shared into a chat, its face inside the bubble's plate: the key, its title and what a tap does (mine: shared from
-    /// here); nil -- the letter does not read as a secret.
-    @MainActor func letterFace(_ text: String, mine: Bool) -> AnyView?
-    /// The correspondent's secret tapped: its saving sheet rises.
-    @MainActor func take(_ text: String)
-    /// The saving sheet's host, worn once by the shell.
-    @MainActor func saving() -> AnyView
-    /// The vault's keychain item: this device's alone, no copy and no backup carries it (SeedScope.keychainStays); parked with the
-    /// seat and never shown to the next person (SeedScope.seatKeychain).
-    var keychainStays: [String] { get }
-    var seatKeychain: [String] { get }
-}
+#endif
 
 /// THE LOCAL NETWORK (the author's word 03.11.2026 22:44 UTC, link 15863: «remove wholly everything connected with the local
 /// network, the mesh and Bluetooth too, and everything connected with it»): the local network is the mesh's and is reached only
 /// where the mesh door stands. Montana Messenger has none, so it knocks on no address of a local network, names none of its own,
 /// lets no call pair over one, and its Info.plist claims no such access -- the system never asks it about the local network.
 enum MTLocalNetwork {
+    #if MONTANA_MESSENGER
+    static let reached = false
+    #else
     static var reached: Bool { MTApps.mesh != nil }
+    #endif
     /// An address this app may knock on: any where the local network is reached; else a worldwide one, or the device itself.
     static func admits(_ ip: String) -> Bool {
         reached || MontanaTransport.isGlobalIP(ip) || MontanaTransport.isLoopback(ip)
@@ -199,7 +194,7 @@ protocol MTCoinDoor: AnyObject {
     @MainActor func gifted(_ c: Int, from peer: String, ref: String, on target: String)
     /// A word named a SEND of the chain (a paid reaction, coins on a post): its coins come by the scan alone.
     @MainActor func heardSend(_ tx: String, on target: String)
-    /// Coins on another's post leave by the pair's SEND under the post's name; the wall's word only names it.
+    /// Coins on another's post leave by the pair's SEND under the post's name; the post's word only names it.
     @MainActor func send(_ coins: Int, to conv: String, on target: String) async -> MTCoinSent
     /// Whether coins can go to this pair: every open pair of other words than mine.
     @MainActor func canPay(_ chat: Chat, store: ChatStore) -> Bool
@@ -262,7 +257,7 @@ protocol MTCoinDoor: AnyObject {
     /// coin mode, the note of a chat a coin letter of which is on its way, the seed's line -- keys of the catalog the coins say, so
     /// an edition without coins writes none of them in a shared file.
     func said(_ w: MTCoinWord) -> String
-    /// THE COINS' OWN KEYS (guard 4 of docs/APPS-API.md, as the VPN's, chess's and the wall's): the settings a copy carries -- the
+    /// THE COINS' OWN KEYS (guard 4 of docs/APPS-API.md, as every door's): the settings a copy carries -- the
     /// owner's switch and what it said, the retired badges' switch, the person's rate, the main unit -- the keys of the person on this
     /// phone -- the balances and the levels the pairs told -- and the person's coin folder a seat parks. An edition without coins
     /// writes none of them, and its copy names none.
@@ -281,6 +276,7 @@ protocol MTCoinDoor: AnyObject {
     func shelfLanded(_ text: String, mid: String, from conv: String, words: String, seat: String) async
 }
 
+#if !MONTANA_MESSENGER
 /// THE VPN DOOR: what shared code asks of the VPN (slice S3a). Its first member is the VPN wall's page, the pane .vpn, searched by
 /// the word at the head; the app's moments, the phone's path and the call's word come through it (slice S3b b1).
 protocol MTVPNDoor: AnyObject {
@@ -318,8 +314,15 @@ protocol MTVPNDoor: AnyObject {
     /// its keys of this device alone (the tunnel's clock, the delays, the hand, the install road, the nodes' access token).
     var settingKeys: [String] { get }
     var deviceKeys: [String] { get }
+    /// Its keys a seat parks (the retired names of the VPN wall's asking, kept for old copies), and its collections a copy lays
+    /// back as a union, each with what a record is known by (a server by its id, a plan by its link) -- named here, never in
+    /// SeedScope, so that Montana Messenger compiles no word of them (decision 651 = a).
+    var seatKeys: [String] { get }
+    var unionKnownBy: [String: [String]] { get }
 }
+#endif
 
+#if !MONTANA_MESSENGER   // no chess in Messenger (the author's words 16913 and 17086; cut C5)
 /// THE CHESS DOOR: what shared code asks of chess (slice S4b) -- the library's icon and page, a game's board on a chat's stack, the
 /// chat's mark and the invitation's answer. A game's letter itself is read by the edition's reader (MTEditionLetters.game), which
 /// the notification extension holds too.
@@ -346,7 +349,9 @@ protocol MTChessDoor: AnyObject {
     var dataKeys: [String] { get }
     var settingKeys: [String] { get }
 }
+#endif
 
+#if !MONTANA_MESSENGER
 /// THE WALL DOOR: what shared code asks of the Wall of Thoughts (slice S4c2) -- the app's moments the wall keeps its own work at,
 /// the files it names, its words on the wire, a channel's wall and the keys a copy carries. The wall's word itself (wallMark) is
 /// the wire's: every edition buries it unread, and an edition with no wall carries none of a channel's wall words (.refused).
@@ -421,11 +426,14 @@ protocol MTWallDoor: AnyObject {
     var deviceKeys: [String] { get }
     var seatKeys: [String] { get }
 }
+#endif
 
+#if !MONTANA_MESSENGER
 /// THE YOUTUBE DOOR (slice S8; decision 531 (a), App Review 5.2.2 -- a third party's content played inside the app): a YouTube link
-/// in a letter, a card or a peer's page plays in YouTube's own player inside our mini player. Messenger carries no YouTube and its
-/// door is nil: a YouTube link opens where it lives. No search goes out of the app: the music page finds the person's own tracks
-/// alone (the author's word 04.11.2026 13:21 UTC: «only internal, and no external services of music search»).
+/// in a letter, a card or a peer's page plays in YouTube's own player inside our mini player. Messenger carries no YouTube and
+/// compiles neither this door nor its uses (cut C4): a YouTube link opens where it lives. No search goes out of the app: the music
+/// page finds the person's own tracks alone (the author's word 04.11.2026 13:21 UTC: «only internal, and no external services of
+/// music search»).
 protocol MTYouTubeDoor: AnyObject {
     /// A tap on a link: a YouTube video plays here; false -- the link is not this player's.
     func play(_ url: URL, title: String?) -> Bool
@@ -433,7 +441,9 @@ protocol MTYouTubeDoor: AnyObject {
     var sounds: Bool { get }
     func rest()
 }
+#endif
 
+#if !MONTANA_MESSENGER   // the game's page and push are chess's alone (cut C5)
 /// The chess page opened from the library: its own sheet over the tabs, at most one.
 struct MTGameOpen: Identifiable {
     let id = UUID()
@@ -448,17 +458,18 @@ struct MTGamePush: Hashable, Identifiable {
     let game: String
     var id: String { game }
 }
+#endif
 
 /// WHERE A WRITER'S NAME LEADS (the author's word 25.09: «it shows the page crookedly — it must show it whole; the page has one
 /// owner, nothing is redrawn»): my own name leads to My page — the one «My profile» and the drawer's face open, face and all
 /// (MontanaMyProfileView) — never to the room of my saved letters, which is its panes alone; a correspondent's leads to their
-/// page (MontanaPeerInfoScreen). Every edition's (slice S4c2: MTBoardRoute until then); an application's own page
+/// page (MontanaPeerInfoScreen). Every edition's (slice S4c2); an application's own page
 /// rides it too, drawn behind its door and known to the stack by its name alone (MTAppPage).
 enum MTPageRoute: Hashable, Identifiable {
     case mine
     case person(Chat)
     case words(MTLetterRead)   // a folded post opened whole on the letter's page (26.09)
-    case app(MTAppPage)        // an application's page: the wall's pictures and videos, one screen each, up and down (29.09)
+    case app(MTAppPage)        // an application's page: its pictures and videos, one screen each, up and down (29.09)
     var id: String {
         switch self {
         case .mine: return "me"
@@ -482,10 +493,10 @@ struct MTAppSheet: Identifiable {
     let draw: @MainActor (_ page: Binding<MTPageRoute?>, _ close: @escaping () -> Void) -> AnyView
 }
 
-/// THE ONE PRESENTER OF A PAGE (the critic 25.09; slice S4c2: the wall's presenter, MTBoardPresenting, made every page's): an
+/// THE ONE PRESENTER OF A PAGE (the critic 25.09; slice S4c2: one application's presenter made every page's): an
 /// application's sheet and a page of the route rise OVER the list or the stack that draws the page -- never from inside one of its
 /// rows. A destination or a sheet set inside a lazy container is lost when its row leaves the screen (the platform says so of
-/// navigationDestination), so every page that draws a wall -- a person's page, my page, the feed -- wears this once, on the
+/// navigationDestination), so every page that draws posts -- a person's page, my page, the feed -- wears this once, on the
 /// container itself.
 struct MTPagePresenting: ViewModifier {
     @Binding var sheet: MTAppSheet?
@@ -504,6 +515,7 @@ struct MTPagePresenting: ViewModifier {
     }
 }
 
+#if !MONTANA_MESSENGER   // a game's letter is the Protocol's alone (cut C5)
 extension Message {
     /// A letter of a game as the edition reads it (MTRowLetter.game): a forwarded, edited or answering letter, or one with a file, is none.
     var gameLetter: MTGameLetter? {
@@ -515,6 +527,7 @@ extension Message {
     /// it by.
     var isGameStep: Bool { gameLetter?.step == true }
 }
+#endif
 
 /// A word the coins say in a shared view (MTCoinDoor.said): a title and its reason for each answer of a coin from the field, the
 /// field's hint, a chat's note while a coin letter travels, the seed's line.
@@ -560,8 +573,12 @@ struct MTCoinAbout {
 /// The seed forgetting (slice S2b b7c): what the seed stands in on the nodes leaves while its words still derive the names.
 /// The transfers asked (slice S2b b7d): a person's transactions tab opens, so the coins fold once.
 /// The app shown, returned after a leaving, and hidden (slice S3b b1): the VPN page's quiet beats and the tunnel's reading.
-enum MTAppMoment { case launched, launching, active, tunnelConnected, seatLeaving, forgottenAlone, seated, seedForgetting,
-                   transfersAsked, shown, returned, hidden }
+enum MTAppMoment {
+    case launched, launching, active, seatLeaving, forgottenAlone, seated, seedForgetting, transfersAsked, shown, returned, hidden
+    #if !MONTANA_MESSENGER
+    case tunnelConnected
+    #endif
+}
 
 /// A PAGE OF THE WEB INSIDE THE APP (the author's word 12.10.2026 10:1x UTC: «inside the Explorer at once in the app»; slice S2b b7d:
 /// the browser is no coins' own -- a document of Montana opens in it too): the platform's own browser sheet over the page, never a

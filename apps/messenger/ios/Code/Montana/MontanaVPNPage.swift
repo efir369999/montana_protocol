@@ -784,8 +784,13 @@ final class MTVPNAppDoor: MTVPNDoor {
          MontanaVPNDelayBook.key,   // what every server last answered on this network, this hour (29.09): never a copy's
          MontanaVPNSelection.handKey,   // the person's last hand on this device's VPN (30.09): the ten minutes nothing automatic overrides
          MTInstallPrepare.offKey,   // the install road switched the tunnel off on this device (29.09): said on the page until it is raised
-         MTVPNPay.tokenKey]   // this device's own access to the VPN of Montana's nodes (05.10.2026): one device's, never a copy's
+         MTVPNPay.tokenKey,   // this device's own access to the VPN of Montana's nodes (05.10.2026): one device's, never a copy's
+         "diagWmVpn", "diagGenVpn"]   // the VPN diary's watermark and the birth of its file (MontanaWakePush): this device's own
     }
+    var seatKeys: [String] {
+        ["vpnwall.sent", "vpnwall.asked", "vpnwall.cap"]
+    }
+    var unionKnownBy: [String: [String]] { ["mt.vpn.servers": ["uid"], "mt.vpn.plans": ["url"]] }
 }
 
 // SSOT VPN glyph ([I-10]/[C-1]): the author-specified globe-on-a-stand asset (MontanaVPNGlobe, template),

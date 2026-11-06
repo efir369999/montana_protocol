@@ -304,8 +304,9 @@ enum MTLinkPreviewBuilder {
         return nil
     }
 
-    /// The card a wall post carries. The words have four seconds; a picture not already in the card
-    /// has two more. A slow picture host keeps the words.
+    #if !MONTANA_MESSENGER
+    /// The card a post of the Protocol's wall carries (cut C6: its callers are the wall's files alone). The words have four seconds;
+    /// a picture not already in the card has two more. A slow picture host keeps the words.
     static func wallCard(in text: String) async -> MTLinkPreview? {
         guard enabled, firstWebURL(in: text) != nil else { return nil }
         guard let card = await buildBounded(in: text, ceiling: 4) else { return nil }
@@ -313,6 +314,7 @@ enum MTLinkPreviewBuilder {
         if let full = await picture(for: card, timeout: 2) { return full }
         return card
     }
+    #endif
 
     private static func youtubeCard(_ url: URL, _ tube: Tube) async -> MTLinkPreview? {
         if Task.isCancelled { return nil }

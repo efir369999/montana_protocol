@@ -29,7 +29,9 @@ final class MontanaNATService {
     /// nobody can dial it, and a word that names it only spends the peer's dials.
     func selfEndpoint() -> String? {
         lock.lock(); let port = directPort; lock.unlock()
+        #if !MONTANA_MESSENGER
         if let pm = MTApps.mesh?.routerDoor, pm.open, !pm.external.isEmpty, pm.port > 0 { return "\(pm.external):\(pm.port)" }
+        #endif
         guard port > 0 else { return nil }
         if let v6 = MontanaSelfEndpoint.candidates().first(where: { $0.contains(":") && MontanaTransport.isGlobalIP($0) }) {
             return "[\(v6)]:\(port)"

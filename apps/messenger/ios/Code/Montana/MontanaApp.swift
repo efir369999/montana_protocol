@@ -271,9 +271,11 @@ enum MontanaOutsideOpen {
     nonisolated(unsafe) static var tappedFor: String = ""
     /// The same tap's clock handed to the feed: its first laid-out frame writes feed_first.
     nonisolated(unsafe) static var openedAt: TimeInterval? = nil
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
     /// THE GAME A BANNER OPENS (29.09): the chat opens by the one road below, and the conversation raises this game on its
     /// own stack as the invitation's tap does (MTGamePush) -- the invitee's entry accepts the invitation.
     nonisolated(unsafe) static var pendingGame: (chat: String, game: String)? = nil
+    #endif
     static func chat(_ ref: String) {
         UserDefaults.standard.set(ref, forKey: "pendingOpenChat")   // cold start: views not yet subscribed
         DispatchQueue.main.async {
@@ -348,7 +350,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// a real sleep.
     private static var away = true   // the launch is the first return
     static func appBecameActive() {
+        #if !MONTANA_MESSENGER
         MTApps.vpn?.moment(.shown)   // the quiet beats of the VPN page live while the app stands on the screen (29.09)
+        #endif
         // The level the words say is read before the first of them (MTLevelShow, 11.10): otherwise the seconds are read at the
         // first node's answer, and the greeting would carry no level and take it from every pair. The observer runs on the main queue.
         if MTLevelShow.on { MainActor.assumeIsolated { MTPersonChain.shared.prime() } }
@@ -356,7 +360,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         guard away else { return }               // SILENT-OK: the shade, a sheet, Face ID — the person never left
         away = false
         Task { @MainActor in await MTReleaseState.shared.refresh() }
+        #if !MONTANA_MESSENGER   // no levels in Messenger (decision 618 (b))
         Task { @MainActor in await MTLevelDistribution.shared.refresh() }
+        #endif
         MontanaTelemetry.carryExtensionLines()   // what the extensions wrote while the app slept rides the next ship
         MontanaDiagShip.shipNow()   // back with the person — last run's tail ships at once
         MontanaMeeting.replayPendingInvite()   // the link that waited for an identity opens by itself (F-8)
@@ -366,11 +372,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         MontanaBlobUpload.sweepOrphanBodies()   // orphan handoff bodies mute the cargo check; a newborn body is spared
         // The tunnel is read at every return, not only when its page opens: a tunnel that stands is asked what its
         // reconnect says, and what the extension wrote while the app was away (a death, a raise by the system) rides.
+        #if !MONTANA_MESSENGER
         MTApps.vpn?.moment(.returned)
+        #endif
     }
     /// THE APPLICATION LEAVES THE PERSON (24.09): the farewell, and the diary says what it holds before the sleep.
     static func appLeft() {
+        #if !MONTANA_MESSENGER
         MTApps.vpn?.moment(.hidden)
+        #endif
         away = true                           // the next activation is a return
         E2E.shared.appPresence(open: false)   // the farewell
         MontanaDiagShip.shipNow()   // leaving the person — say it now, another occasion may not come
@@ -385,7 +395,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        #if !MONTANA_MESSENGER
         if MTApps.vpn?.installRoad() == true { return true }   // the install road: lift the reconnect, stop, leave (MTInstallPrepare)
+        #endif
         MontanaTrace.mark("launch_begin")
         SeedScope.forgetRetired()
         // ONE ICON, NO VARIANTS (the author's words 15641 and 15651, 03.11.2026): the four alternate icons left the bundle; a phone
@@ -468,7 +480,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // screen and not oftener than once a day (the critic, 23.09).
         MontanaArchive.onOwnQueue { MontanaBackup.sweep() }
         CopyInventory.tickSoon()   // after the feed is read: a plan that leaves something out needs the letters
+        #if !MONTANA_MESSENGER   // one's own node is the Protocol's alone (word 16428)
         HomeNodeWatch.shared.tickSoon()   // the person's own node: the daily copy, when it is named and switched on (28.09)
+        #endif
         MTHomeKeep.shared.tickSoon()      // the files on it: the pass over Wi-Fi, or the book back on a new phone (18.10)
         MTKeeping.shared.tickSoon()       // the copy kept by the people one writes to: the daily renewal, when the person chose it (08.10)
         return true
@@ -798,6 +812,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // THE JUDGE SPEAKS EVERY VERDICT (21.09, the critic): its silences left no line, and a
         // «second banner» could not be told from «composed, never shown» in the diary.
         let jm = (info["mid"] as? String) ?? ""
+        #if MONTANA_MESSENGER
+        let chatOpen = !chat.isEmpty && chat == ChatStore.openConvNow
+        #else
         // A GAME'S WORD IS JUDGED BY ITS BOARD (29.09): the end of a game has no bubble in the chat, so the open chat does
         // not read it; the board on the screen does (MTApps.chess.shownGame).
         let game = (info["game"] as? String) ?? ""
@@ -806,7 +823,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             completionHandler([]); return
         }
         let gameEnd = (info["game_end"] as? Int) == 1
-        if !chat.isEmpty, !gameEnd, chat == ChatStore.openConvNow {
+        let chatOpen = !chat.isEmpty && !gameEnd && chat == ChatStore.openConvNow
+        #endif
+        if chatOpen {
             E2E.shared.recalcBadge()   // revert the NSE increment: an open chat is read by definition
             MontanaTrace.mark("notify_judge", mid: jm.isEmpty ? nil : jm, "why=chat-open")
             completionHandler([]); return
@@ -849,6 +868,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         MontanaWakePush.drainInbox()   // a banner tap: the letter is in the chat before it opens
         MontanaWakePush.fetchBoxKick()   // and everything waiting in the node mailbox, by the same movement
+        #if !MONTANA_MESSENGER
         // THE SHARE SHEET'S NOTICE FOR MY WALL (ShareWallHandoff.bell, 16.10.2026): its tap is the way onto the wall's new-post page.
         // The tap itself takes nothing: the activation it brings takes the sheet's record (scheduleShareIngest, MTBoard.takeFromSheet)
         // once the screens stand -- taken here on a cold launch the page would be asked to rise before any window holds it.
@@ -857,6 +877,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             completionHandler()
             return
         }
+        #endif
         // A missed call carries a TOKEN, not a conversation link: the system keeps delivered
         // notifications, and a link has no place there. The conversation is found by the token in the vault.
         let chat = (info["call_token"] as? String).map { MontanaMissedCall.conv(forToken: $0) ?? MontanaCallHandle.conv(for: $0) }
@@ -897,7 +918,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             completionHandler()
             return
         }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         if let game = info["game"] as? String, !game.isEmpty, !chat.isEmpty { MontanaOutsideOpen.pendingGame = (chat, game) }
+        #endif
         // A ROOM'S INVITATION IS THE WAY IN (the author's word 07.10.2026: «the link opens the way into the room»): the tap goes
         // into the room -- at once if its word has landed here, the moment it lands otherwise (MTGroupRoom.joinFromBanner).
         if let room = info["room"] as? String, !room.isEmpty, !chat.isEmpty { MTGroupRoom.shared.joinFromBanner(chat, room: room) }
@@ -1206,9 +1229,12 @@ enum MontanaNetWitness {
     private static var netSigSeen = false
     private static var rejudgeDue = false   // the signature changed; the doors are re-judged on the first path that carries
 
+    #if !MONTANA_MESSENGER
     /// Whether ANY tunnel stands on this device — ours or a third-party VPN client alike.
     /// The system scopes its proxy settings per interface; a scoped entry named utun/ipsec/ppp
     /// is a standing tunnel. Only the FACT leaves the device — never a name, never an address.
+    /// MONTANA MESSENGER READS NO TUNNEL (the author's decision 651 = a, 05.11.2026 12:19 UTC: «remove even the indirect hints»):
+    /// the question itself is the Protocol's alone.
     static func tunnelPresent() -> Bool {
         guard let dict = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any],
               let scoped = dict["__SCOPED__"] as? [String: Any] else { return false }
@@ -1216,6 +1242,7 @@ enum MontanaNetWitness {
             k.hasPrefix("utun") || k.hasPrefix("ipsec") || k.hasPrefix("ppp") || k.hasPrefix("tap")
         }
     }
+    #endif
 
     /// Margarita's phone, 03.10 09:48-13:20 UTC on 2063: a third-party tunnel stood, ours was off, every door of the nodes died
     /// through it, and her call at 13:20:14 fell into that window; the doors answered 0.7 s after the tunnel left. A socket bound
@@ -1238,10 +1265,14 @@ enum MontanaNetWitness {
             // fact changes, every door is judged afresh (a web door dead on cellular is the only
             // road under a full tunnel). Not on every re-evaluation — a flapping tunnel re-evals
             // several times a second — only on a real change of the signature.
+            #if MONTANA_MESSENGER
+            let sig = p.availableInterfaces.map { String(describing: $0.type) }.joined(separator: ",")
+            #else
             let sig = p.availableInterfaces.map { String(describing: $0.type) }.joined(separator: ",") + "|vpn=\(tunnelPresent() ? 1 : 0)"
             // THE SYSTEM'S WORD FOR EVERY APP, carried to the tunnel (29.09, MTTunnelDeath): the tunnel sees its bytes and the
             // phone's own network, never whether the system lets an app through it.
             MTApps.vpn?.path(satisfied: p.status == .satisfied, tunnel: sig.hasSuffix("|vpn=1"))
+            #endif
             // ONE owner of «the network changed» ([C-1]): the door verdicts (16.6.19) and the signal
             // lanes to the store (15.4) both hang on this signature — the interface set and the
             // tunnel fact — and nowhere else.
@@ -1252,8 +1283,10 @@ enum MontanaNetWitness {
                 Self.netSigSeen = true
                 // A tunnel that is not ours is judged by the doors three seconds on (MontanaVPNTunnel, 25.09): one that
                 // kills them is overtaken by our own configuration and the recovery.
+                #if !MONTANA_MESSENGER
                 let present = tunnelPresent(), sat = p.status == .satisfied
                 Task { @MainActor in MTApps.vpn?.foreignTunnel(present: present, satisfied: sat) }
+                #endif
             }
             // THE NEW NETWORK IS KNOCKED WHEN IT CARRIES (29.09). The signature changes before the path is satisfied —
             // the tunnel's interface appears, its route a moment later — and every door knocked at the first change met
@@ -1273,11 +1306,13 @@ enum MontanaNetWitness {
             // tunnelled path several times a second — 97 identical lines in nine minutes, twice
             // within the same millisecond. The environment is a STATE: it speaks when it changes,
             // and once a quarter-hour to prove it is still being watched.
-            MontanaTrace.markChanged("net_env",
-                "status=\(p.status) ifs=\(ifs.isEmpty ? "-" : ifs)"
+            var env = "status=\(p.status) ifs=\(ifs.isEmpty ? "-" : ifs)"
                 + " v4=\(p.supportsIPv4 ? 1 : 0) v6=\(p.supportsIPv6 ? 1 : 0) dns=\(p.supportsDNS ? 1 : 0)"
                 + " metered=\(p.isExpensive ? 1 : 0) constrained=\(p.isConstrained ? 1 : 0)"
-                + " utun=\(tunnelPresent() ? 1 : 0)", every: 900)
+            #if !MONTANA_MESSENGER
+            env += " utun=\(tunnelPresent() ? 1 : 0)"
+            #endif
+            MontanaTrace.markChanged("net_env", env, every: 900)
         }
         monitor.start(queue: DispatchQueue(label: "montana.net.witness", qos: .utility))
     }
@@ -1515,7 +1550,7 @@ enum MTMainStack {
 
 
 /// ONE OWNER OF EVERY PICTURE CACHE (the critic 25.09, the fleet's diaries: three phones stood in the background with
-/// 140–420 MB — the wall's pictures alone were let 160 MB — and were ended at the door within seconds, the person opening the
+/// 140–420 MB — one application's pictures alone were let 160 MB — and were ended at the door within seconds, the person opening the
 /// app again cold; four «terminated … unexplained» in one morning). A cache is born through this door and named; leaving the
 /// screen, and at the system's warning, every cache is emptied here, once, and the footprint is measured before and after —
 /// the number the memory killer reads. An NSCache purges itself only on a warning a background run never gets.

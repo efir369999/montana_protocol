@@ -246,14 +246,16 @@ struct CopyChatsPage: View {
 /// the kind's own files; the mark on the row says whether the copy takes that kind.
 /// WHAT THIS PHONE HOLDS, MEASURED ON ITS DISK (the author's word 18.10.2026 07:2x UTC: «on T1 Montana weighs 20 GB, and I cannot see
 /// what weighs so much nor how to clean it; Data and Storage shows other numbers, the backup's»). T1 18.10.2026 measured: Application
-/// Support 20.6 GB -- Montana 10.6 (the media, the videos of walls opened among them), MontanaBackup 9.0 (the shares of a copy a killed
+/// Support 20.6 GB -- Montana 10.6 (the media), MontanaBackup 9.0 (the shares of a copy a killed
 /// hand left), MontanaKeeping 1.0 -- and 6.9 GB of hard links to the media in tmp. The page counted only what the backup takes. One
 /// walk over the app's own folders now, off the main thread: every file counted once by its identity (a hard link names the bytes it
 /// links, never a second copy) and by the disk it takes, each under the one place it belongs to.
 struct MTDiskUse {
     var chats: Int64 = 0      // attachments the letters name
-    var unnamed: Int64 = 0    // files of the store no letter names: videos of walls opened, a letter deleted elsewhere
+    var unnamed: Int64 = 0    // files of the store no letter names: a letter deleted elsewhere
+    #if !MONTANA_MESSENGER
     var walls: Int64 = 0      // the walls' pictures brought to be seen (MTBoardLook), a gigabyte at most by its own trim
+    #endif
     var shelf: Int64 = 0      // copies and their shares waiting on the shelf (MontanaBackup)
     var kept: Int64 = 0       // the shares this phone keeps for the people who write to it (MTKeeping)
     // «History and the rest» named, each part where it lies (the author's word 18.10.2026 20:3x UTC: «I must manage every point of the
@@ -262,7 +264,11 @@ struct MTDiskUse {
     var history: Int64 = 0    // the letters, the chats' rows and the chains of time
     var faces: Int64 = 0      // the faces of the people and of the groups
     var other: Int64 = 0      // the caches and the temporary the system keeps
+    #if MONTANA_MESSENGER
+    var total: Int64 { chats + unnamed + shelf + kept + opened + history + faces + other }
+    #else
     var total: Int64 { chats + unnamed + walls + shelf + kept + opened + history + faces + other }
+    #endif
 
     static func measure(named: Set<String>) -> MTDiskUse {
         let fm = FileManager.default
@@ -280,7 +286,9 @@ struct MTDiskUse {
         walk(MontanaMediaStore.dir) { u, b in
             if named.contains(u.lastPathComponent) { use.chats += b } else { use.unnamed += b }
         }
+        #if !MONTANA_MESSENGER
         walk(MTApps.wall?.folder) { _, b in use.walls += b }
+        #endif
         walk(try? MontanaBackup.shelf()) { _, b in use.shelf += b }
         walk(MTKeeping.folder) { _, b in use.kept += b }
         let lib = fm.urls(for: .libraryDirectory, in: .userDomainMask).first

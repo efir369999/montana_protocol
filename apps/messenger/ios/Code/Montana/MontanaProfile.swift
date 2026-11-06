@@ -454,7 +454,9 @@ struct MontanaMyProfileView: View {
                 head   // the face, the page's first row: it scrolls away with the page (25.09)
                 Color.clear.frame(height: 1)
                     .background(face.probe)   // the scroll up closes the face; only a tap opens it
+                #if !MONTANA_MESSENGER
                 MTApps.wall?.pane(owner: nil)   // my own wall, as the people I write to see it (the author's word 24.09)
+                #endif
             }
             .scrollBounceBehavior(.always)
         }

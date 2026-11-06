@@ -57,7 +57,7 @@ struct MTInfoRow: Identifiable {
 /// section's own header, its rows the list's rows with the list's own separators and insets.
 /// THE ROWS STAND ON THE SYSTEM'S GLASS (the author's word 25.09: the rows between the buttons and the tabs
 /// transparent, in the dress of the buttons and the tab strip): the one glass plate of the tree (MTGlassRowPlate) --
-/// the wall's rows and the settings' cards wear it -- so the page's ground shows through them as it does through the
+/// the settings' cards wear it too -- so the page's ground shows through them as it does through the
 /// buttons' plates and the strip; a dead grey stood there and looked another page.
 struct MTInfoSectionsView: View {
     let sections: [MTInfoSection: [MTInfoRow]]
@@ -71,7 +71,7 @@ struct MTInfoSectionsView: View {
                 } header: {
                     if let h = cut.header { Text(h) }
                 }
-                .listRowBackground(MTGlassRowPlate())   // the system's one-tone glass, as the wall's rows (the author's word 25.09)
+                .listRowBackground(MTGlassRowPlate())   // the system's one-tone glass, as the settings' cards (the author's word 25.09)
             }
         }
     }

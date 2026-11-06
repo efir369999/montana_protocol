@@ -437,7 +437,7 @@ enum MontanaWakePush {
         // A failed POST cannot cancel a successful read, at this node or any other.
         // Ask the new mailbox now; the old request finishes under its own bounded deadline.
         if wasChosen {
-            sigQ.async { for c in sigConvs.union(chatConvs).union(boardConvs).union(roomConvs) { fetchSignals(c) } }
+            sigQ.async { for c in heldConvs { fetchSignals(c) } }
         }
     }
     /// Any answer proves the door alive: the silence count and the rest streak are forgiven -- in every book that
@@ -477,7 +477,9 @@ enum MontanaWakePush {
         MontanaTrace.mark("door_alive", "\(host) answered after silence — the queue drains now")
         forgetGoneChunks("\(host) came back")
         MontanaDeliveryEngine.shared.drainOnDoorAlive(host)
+        #if !MONTANA_MESSENGER
         DispatchQueue.main.async { MTApps.wall?.roadBack("door-alive") }   // a post's files the node did not take go again (25.09)
+        #endif
         registerConvs()   // a door back from the dead gets the pairs it missed while it rested (20.09)
     }
     /// The knock lane keeps its own memory of silence, by host: it does not sit under the one death
@@ -641,7 +643,7 @@ enum MontanaWakePush {
             for s in sigSessions.values { s.invalidateAndCancel() }
             sigSessions.removeAll(); sigInFlight.removeAll(); sigLaneDirty.removeAll(); sigReadRetryAt.removeAll()
             MontanaTrace.mark("sig_lane", "\(why) — asking again now")
-            for c in sigConvs.union(chatConvs).union(boardConvs).union(roomConvs) { fetchSignals(c) }
+            for c in heldConvs { fetchSignals(c) }
         }
     }
     static func prepareCallLane(_ conv: String?) {
@@ -991,7 +993,7 @@ enum MontanaWakePush {
     private static var regTrail = false
     /// THIS ROUND NEVER STANDS ON THE MAIN THREAD (28.09, the author's word: «find every cause of the chat and the
     /// chat list freezing»). Measured on the 17 Pro Max under 1963: EVERY letter that landed held the main thread
-    /// here -- main_slow what=wake ms=345, doors ms=345, rx:wall ms=375 -- sixty-three such lines in five hours, a
+    /// here -- main_slow what=wake ms=345, doors ms=345 -- sixty-three such lines in five hours, a
     /// quarter to a third of a second frozen at every arrival, which is exactly what the author sees. Nothing in
     /// this round belongs to a screen: the pipe book is unsealed, a tag is derived for every pipe and every window
     /// of the month, each door's standing map is unsealed, compared and sealed again, and the differences are
@@ -1483,7 +1485,7 @@ enum MontanaWakePush {
     }
     /// A REFERENCE LIVES AS LONG AS ITS LETTER RIDES (the critic B-6; the author's words 11.10.2026 17:1x UTC: «check the whole
     /// architecture of the chats' time chains, so there are no holes by the constitution», 18:5x: «carry out all 13»). Only a
-    /// letter's end took its reference (takeLongRef), and a letter that left the queue another way -- a wall's page replaced by a
+    /// letter's end took its reference (takeLongRef), and a letter that left the queue another way -- a page replaced by a
     /// newer one, a state retired, a word expired -- left it for good: T1 kept 6.7 MB of them. Every write keeps only the
     /// references of letters on the delivery line now; before the line has read its store, those whose name says they were born
     /// longer ago than a carriage and the box's term.
@@ -1710,16 +1712,16 @@ enum MontanaWakePush {
         // One call, one slot: two loud letters of the same call replace each other on the screen
         // instead of standing side by side.
         if !silent, !slot.isEmpty { body["slot"] = slot }
-        // THE LETTER RIDES THE LANE BESIDE THE BOX (the author's word 29.09: a move must be as instant as a word in the chat --
-        // we play there). While this phone holds the live lane to the correspondent (their chat or their board on the screen),
+        // THE LETTER RIDES THE LANE BESIDE THE BOX (the author's word 29.09: [...] as instant as a word in the chat). While
+        // this phone holds the live lane to the correspondent (their chat on the screen, lettersRide),
         // the very envelope the box will hold leaves on the lane too and lands at once on a peer whose lane is up; the box stays
         // the road that survives a sleeping peer, and the receiver buries the box's copy as a repeat (the mid dedup of the one
-        // incoming door). Measured 1998 with both boards open: the box's walk waited five seconds on a dead door (T3 16:07:59.48
+        // incoming door). Measured 1998 on a held lane: the box's walk waited five seconds on a dead door (T3 16:07:59.48
         // to 16:08:04.51) and the store's hint came five seconds late (T1 16:08:18.13 to 16:08:23.22); the lane answers the
         // same millisecond. Nothing rides twice to a phone whose chat is closed here; bells and recalls carry no envelope.
         if let laneEnv = envelope?() ?? sealedEnvelopeB64 {
             sigQ.async {
-                guard chatConvs.contains(conv) || boardConvs.contains(conv) else { return }
+                guard lettersRide(conv) else { return }
                 MontanaTrace.mark("lane_letter", "tx mid=\(String(mid.prefix(8))) to=\(String(conv.prefix(10)))")
                 DispatchQueue.global(qos: .userInitiated).async { postSignal(conv, epoch: "letter", payloadB64: laneEnv) }
             }
@@ -2633,9 +2635,9 @@ enum MontanaWakePush {
         }
         return wait
     }
-    /// THE STORE'S HINT IS FETCHED NOW (the author's word 29.09: «everything must be instant in the game»): the node's
+    /// THE STORE'S HINT IS FETCHED NOW (the author's word 29.09: «everything must be instant [...]»): the node's
     /// «box» on the held lane is its own word that a letter of mine lies in the box, and booked behind the gate above it
-    /// cost a chess move up to eight seconds («box hint -- deferred 7s», T1 13:44:06) while a silent push carried the
+    /// cost a letter up to eight seconds («box hint -- deferred 7s», T1 13:44:06) while a silent push carried the
     /// rest eight to fourteen seconds late. The hint refreshes the gate, so the activation calls that follow still fold
     /// onto this pickup; one pickup in flight is fetchBox's own rule (busy: a trail, repeated once).
     static func fetchBoxNow() {
@@ -3912,15 +3914,34 @@ enum MontanaWakePush {
     /// also closes «two calls at once».
     private static var sigConvs = Set<String>()
     private static var chatConvs = Set<String>()
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
     /// Conversations whose BOARD is on the screen (29.09): the board and the chat held the lane in one set, and the chat's
     /// farewell under the pushed board (T1 15:25:10.656 open=0 why=left, 15:25:10.845 stop) took the board's hold with it --
     /// the correspondent's move then rode the silent push, eight to fourteen seconds. Each holder owns its own set; the lane
     /// dies only when every set is empty.
     private static var boardConvs = Set<String>()
+    #endif
     /// A GROUP ROOM'S PAIR LANES (MTGroupRoom, the author's word 06.10.2026 21:2x UTC: calls of up to 13 in a group). Two people of
     /// a group carried by its owner hold no pipe between them, so their lane is sealed by a key the two derive from the room's key
     /// and their two seats; it is named here by the room, never written into the book of pipes, and asked only while the room lives.
     private static var roomConvs = Set<String>()
+    /// EVERY CONVERSATION WHOSE LANE IS HELD -- a call, an open chat, a room's pair: the one union the lane's turns ask, read on
+    /// sigQ as the sets are. Each holder owns its own set; the lane dies only when every set is empty.
+    private static var heldConvs: Set<String> {
+        #if MONTANA_MESSENGER
+        return sigConvs.union(chatConvs).union(roomConvs)
+        #else
+        return sigConvs.union(chatConvs).union(boardConvs).union(roomConvs)   // and a board on the screen
+        #endif
+    }
+    /// A conversation whose letters ride the lane beside the box: its chat stands on the screen here.
+    private static func lettersRide(_ conv: String) -> Bool {
+        #if MONTANA_MESSENGER
+        return chatConvs.contains(conv)
+        #else
+        return chatConvs.contains(conv) || boardConvs.contains(conv)   // or its board
+        #endif
+    }
     private static let roomLock = NSLock()
     private static var roomSecrets: [String: MTPipeKey] = [:]
     static func openRoomLane(_ conv: String, secret: Data) {
@@ -3954,6 +3975,7 @@ enum MontanaWakePush {
     static func stopChatPolling(_ conv: String) {
         sigQ.async { chatConvs.remove(conv) }
     }
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
     static func startBoardPolling(_ conv: String) {
         sigQ.async {
             boardConvs.insert(conv)
@@ -3963,6 +3985,7 @@ enum MontanaWakePush {
     static func stopBoardPolling(_ conv: String) {
         sigQ.async { boardConvs.remove(conv) }
     }
+    #endif
     /// Sealing and zlib run off the caller's thread: drafts call this at 4/s from the main actor
     /// while a person types, and the screen owes those milliseconds to the keyboard.
     static func postChatSignal(_ conv: String, text: String) {
@@ -3973,11 +3996,11 @@ enum MontanaWakePush {
     private static func ensureSigTimer(_ why: String) {
         // SILENT-OK: polling already runs — the conversation is added, no second timer needed.
         guard sigTimer == nil else { return }
-        MontanaTrace.mark("wakepush_sigpoll", "start \(why) n=\(sigConvs.count + chatConvs.count + boardConvs.count)")
+        MontanaTrace.mark("wakepush_sigpoll", "start \(why) n=\(heldConvs.count)")
         let tm = DispatchSource.makeTimerSource(queue: sigQ)
         tm.schedule(deadline: .now(), repeating: .milliseconds(300), leeway: .milliseconds(50))
         tm.setEventHandler {
-            for c in sigConvs.union(chatConvs).union(boardConvs).union(roomConvs) { fetchSignals(c) }
+            for c in heldConvs { fetchSignals(c) }
             // THE LANE LIVES WHILE THE PHONE RINGS (13.09). The counter read the machine's state
             // alone, and a ring raised by the push road stands with the machine still «idle»: nine
             // seconds later the lane retired, the caller's hang-up lay uncollected on the node, and
@@ -3986,7 +4009,7 @@ enum MontanaWakePush {
             let idle = MontanaCall.stateSnapshot == "idle" && !MontanaCall.ringPosted   // K-1: snapshots, not the machine's fields
             sigIdle = idle ? sigIdle + 1 : 0
             if sigIdle > 30 { sigConvs.removeAll() }        // the call lane retires on idle alone
-            if sigConvs.isEmpty && chatConvs.isEmpty && boardConvs.isEmpty && roomConvs.isEmpty {      // the lane dies only when NOBODY needs it
+            if heldConvs.isEmpty {      // the lane dies only when NOBODY needs it
                 sigTimer?.cancel(); sigTimer = nil
                 MontanaTrace.mark("wakepush_sigpoll", "stop")
             }
@@ -4306,7 +4329,7 @@ enum MontanaWakePush {
         }
         // The one route makes its failover decision only after the pending answer was applied.
         for route in callRoutes.values where route.conv == conv { driveCallRoute(route) }
-        if code == 200, sigConvs.contains(conv) || chatConvs.contains(conv) || boardConvs.contains(conv) || roomConvs.contains(conv) { fetchSignals(conv) }
+        if code == 200, heldConvs.contains(conv) { fetchSignals(conv) }
     }
 
     /// A CALL THIS PHONE DOES NOT HOLD IS SAID SO (24.09, iPhone 15 13:03 and 13:07). iOS ended the app when its person
@@ -4767,9 +4790,14 @@ enum MontanaDiagShip {
     /// leave through it, so the node address, the body shape and the request's politeness are decided in one place.
     private static func put(_ lines: [String], file name: String) async -> Bool {
         guard MontanaDiagConsent.on else { return false }   // no yes, nothing leaves: the lines wait on the phone (5.1.1(ii))
+        #if MONTANA_MESSENGER
+        let kind = name.hasPrefix("telemetry") ? "tele" : "trace"
+        #else
+        let kind = name.hasPrefix("telemetry") ? "tele" : (name.hasPrefix("vpn") ? "vpn" : "trace")
+        #endif
         let body: [String: Any] = [
             "dg": dgId,
-            "file": name.hasPrefix("telemetry") ? "tele" : (name.hasPrefix("vpn") ? "vpn" : "trace"),
+            "file": kind,
             // Stitching three clocks (sender, node, receiver) needs each device's offset from the
             // node's own clock — measured, not assumed, from the node's Date header on the last
             // shipment. tz and a two-letter language say how to read the person's screen, and
@@ -4955,8 +4983,11 @@ enum MontanaDiagShip {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Montana/Diagnostics")
         var gone = 0
-        for n in ["telemetry.log", "trace.log", "vpn.log",
-                  "telemetry.log.prev", "trace.log.prev", "vpn.log.prev"] {
+        var journals = ["telemetry.log", "trace.log"]
+        #if !MONTANA_MESSENGER
+        journals.append("vpn.log")   // the VPN's diary, the Protocol's alone (decision 651 = a)
+        #endif
+        for n in journals + journals.map({ $0 + ".prev" }) {
             let u = dir.appendingPathComponent(n)
             guard FileManager.default.fileExists(atPath: u.path) else { continue }
             try? Data().write(to: u); gone += 1
@@ -5072,8 +5103,11 @@ enum MontanaDiagShip {
         let fm = FileManager.default
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Montana/Diagnostics")
-        for (name, wmKey, genKey) in [("telemetry.log", "diagWmTele", "diagGenTele"), ("trace.log", "diagWmTrace", "diagGenTrace"),
-                                      ("vpn.log", "diagWmVpn", "diagGenVpn")] {
+        var journals = [("telemetry.log", "diagWmTele", "diagGenTele"), ("trace.log", "diagWmTrace", "diagGenTrace")]
+        #if !MONTANA_MESSENGER
+        journals.append(("vpn.log", "diagWmVpn", "diagGenVpn"))   // the VPN's diary, the Protocol's alone (decision 651 = a)
+        #endif
+        for (name, wmKey, genKey) in journals {
             let url = dir.appendingPathComponent(name)
             // ONE WATERMARK, BOUND TO THE FILE IT MEASURES (25.09). The offset alone could not tell a rotated file
             // from a grown one: when the fresh file outgrew the old offset before the next pass, the pass shipped
@@ -5232,9 +5266,9 @@ enum MontanaNetProbe {
     private static let modeKey = "mt.probe.mode"
     private static let confKey = "mt.probe.conf"
     private static let atKey = "mt.probe.at"
-    /// THE ONE OWNER OF "THIS LINE PASSES PERMITTED DESTINATIONS ONLY" (the author's word 30.09: the VPN wall must tell when it
+    /// THE ONE OWNER OF "THIS LINE PASSES PERMITTED DESTINATIONS ONLY" (the author's word 30.09: the VPN must tell when it
     /// stands under the white lists). Every road that asks reads this and nothing else: the call's refusal before a far phone is
-    /// rung, the VPN wall's road before it raises a node of the wall (MTVPNWhitelistRoad). The verdict and its hysteresis live in
+    /// rung, the VPN's road before it raises a node of the VPN (MTVPNWhitelistRoad). The verdict and its hysteresis live in
     /// MTNetLine; only a round no tunnel carried moves it.
     private static let lineKey = "mt.probe.line"
     static var line: MTNetLine {
@@ -5242,7 +5276,11 @@ enum MontanaNetProbe {
     }
     static var underWhitelist: Bool { line.holds(now: Date().timeIntervalSince1970) }
     /// A call has no road under the list unless a tunnel carries this app past the filter.
+    #if MONTANA_MESSENGER
+    static var filtersCalls: Bool { underWhitelist }
+    #else
     static var filtersCalls: Bool { underWhitelist && !MontanaNetWitness.tunnelPresent() }
+    #endif
     /// The mode and its confidence in one word for a summary line: «open/3», «whitelist/1», «-/0».
     static var verdictWord: String {
         (UserDefaults.standard.string(forKey: modeKey) ?? "-") + "/" + String(UserDefaults.standard.integer(forKey: confKey))
@@ -5258,8 +5296,12 @@ enum MontanaNetProbe {
         var carried: [String] = []
         if all.contains("pdp_ip") { carried.append("cell") }
         if all.contains("en0") || all.contains("en1") { carried.append("wifi") }
+        #if MONTANA_MESSENGER
+        return carried.isEmpty ? "none" : carried.joined(separator: "+")
+        #else
         let tunnels = all.split(separator: ",").filter { $0.hasPrefix("utun") || $0.hasPrefix("ipsec") }.count
         return (carried.isEmpty ? "none" : carried.joined(separator: "+")) + (tunnels > 0 ? "/tun\(tunnels)" : "")
+        #endif
     }
 
     /// The probe keeps its own clock: the door round runs far more often, and paying for beacons on
@@ -5295,7 +5337,9 @@ enum MontanaNetProbe {
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: atKey)
         let turn = UserDefaults.standard.integer(forKey: rotKey)
         UserDefaults.standard.set(turn &+ 1, forKey: rotKey)
+        #if !MONTANA_MESSENGER
         let tunnelAtStart = MontanaNetWitness.tunnelPresent()
+        #endif
         var wl = await ask(permitted[turn % permitted.count])
         var nw = await ask(ordinary[turn % ordinary.count])
         var pairs = 1
@@ -5322,7 +5366,13 @@ enum MontanaNetProbe {
         // THE LINE'S VERDICT MOVES ONLY ON A ROUND NO TUNNEL CARRIED (30.09): a tunnel walks around the filter, and its round is
         // the tunnel's word, not the line's (measured 15.09: the ordinary beacon timed out at 4001 ms beside the permitted one at
         // 69 ms under a standing tunnel). A tunnel at either end of the round counts; the fleet's reader drops such rounds too.
+        #if MONTANA_MESSENGER
+        let tunnel = false   // Montana Messenger reads no tunnel (decision 651 = a): every round is the line's word
+        let tunnelWord = ""
+        #else
         let tunnel = tunnelAtStart || MontanaNetWitness.tunnelPresent()
+        let tunnelWord = " utun=\(tunnel ? 1 : 0)"
+        #endif
         let now = Date().timeIntervalSince1970
         let before = line
         let after = tunnel ? before : before.step(mode: mode, ordinary: nw.ok, now: now)
@@ -5337,7 +5387,7 @@ enum MontanaNetProbe {
         let body = "wl=\(wl.host):\(wl.code)/\(wl.cls)/\(wl.ms)ms"
             + " nonwl=\(nw.host):\(nw.code)/\(nw.cls)/\(nw.ms)ms"
             + " doors_up=\(up.isEmpty ? "-" : up) doors_mute=\(down.isEmpty ? "-" : down)"
-            + " ifs=\(shortIfs()) utun=\(tunnel ? 1 : 0)"
+            + " ifs=\(shortIfs())\(tunnelWord)"
             + " mode=\(mode) conf=\(conf) pairs=\(pairs) line=\(held ? "whitelist" : "-")/\(after.run)"
         // Written when the mode CHANGES, and otherwise at most once a quarter of an hour: a diary
         // that grows two megabytes a day is a diary nobody reads to the end.
@@ -5349,10 +5399,14 @@ enum MontanaNetProbe {
     /// that decides the verdict afresh. Nil while any tunnel stands: its round would be the tunnel's word; a tunnel that has
     /// just fallen is given ten seconds to leave the system's table first.
     static func settle() async -> Bool? {
+        #if !MONTANA_MESSENGER
         for _ in 0..<5 where MontanaNetWitness.tunnelPresent() { try? await Task.sleep(nanoseconds: 2_000_000_000) }
+        #endif
         for turn in 0..<MTNetLine.enter {
             if 0 < turn { try? await Task.sleep(nanoseconds: 15_000_000_000) }
+            #if !MONTANA_MESSENGER
             guard !MontanaNetWitness.tunnelPresent() else { return nil }
+            #endif
             if await round(mute: [], alive: []) { break }
         }
         return underWhitelist
@@ -5569,7 +5623,9 @@ enum MontanaRelease {
     static var ownVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
     static func check(door: String) async {
         await MTReleaseState.shared.check(door: door)
+        #if !MONTANA_MESSENGER   // no levels in Messenger (decision 618 (b), cut C3a)
         await MTLevelDistribution.shared.refresh()
+        #endif
     }
 }
 

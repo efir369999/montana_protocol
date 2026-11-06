@@ -1,8 +1,7 @@
 import SwiftUI
 
 // THE SHARED PLATES (docs/APPS-API.md, section 4 and slice S4a): the glass every settings page, the chats, the calls and Messenger's
-// own pages stand on. They lived beside the wall's views (MontanaBoardViews) and belong to no application: every edition carries
-// them, and the wall's door is cut over them.
+// own pages stand on. They belong to no application: every edition carries them.
 
 /// THE GLASS OF A PLATE IS RENDERED IN ITS OWN CONTAINER (26.09, the author's word: «check and close at the root every doubt, so
 /// that the glass works one hundred percent right»). The platform's own words (SwiftUI, «Applying Liquid Glass to custom views»):

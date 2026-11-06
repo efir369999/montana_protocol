@@ -248,8 +248,8 @@ struct MTFaceHeader: View {
     var bio = ""
     var links: [URL] = []
     var note = ""
-    /// THE HEAD'S OWN WIDTH, MEASURED (the author's word 25.09: «in the landscape layout the page and the wall must stand
-    /// straight, now they are crooked»): the head drew itself at the window's width, and in landscape the window is wider
+    /// THE HEAD'S OWN WIDTH, MEASURED (the author's word 25.09: the page in the landscape layout must stand
+    /// straight, not crooked): the head drew itself at the window's width, and in landscape the window is wider
     /// than the page's rows by the safe area on both sides — the face ran past the rows. The width it stands in rules.
     @State private var measured: CGFloat = 0
 
@@ -351,8 +351,8 @@ struct MTFaceHeader: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { measured = $0 }
         .padding(.top, face.dock == 0 ? 8 : 0)
     }
-    /// A line of the head on its own bubble, ROUNDED AS THE WALL'S WRITE BUTTON (the author's word 26.09: «the name and bio bubbles on
-    /// the profile page rounded like the "write on the wall" bubble»): the button's own figure and glass -- a capsule of the system's
+    /// A line of the head on its own bubble, ROUNDED AS A WRITE BUTTON (the author's word 26.09: the name and bio bubbles on
+    /// the profile page rounded like the write bubble): the button's own figure and glass -- a capsule of the system's
     /// regular glass at one line; when the words wrap, the message field's round ends (MontanaFieldGlass, the field's growing
     /// figure), so a bio of several lines keeps its corners clear of the words.
     private func bubble<V: View>(_ v: V) -> some View {
@@ -532,7 +532,7 @@ struct MTPageMeter: UIViewRepresentable {
     func updateUIView(_ v: Probe, context: Context) {}
 }
 extension View {
-    /// A page or a sheet that measures its own rise and fall (MTPageMeter): the wall's pages and sheets, the editor, the
+    /// A page or a sheet that measures its own rise and fall (MTPageMeter): an application's pages and sheets, the editor, the
     /// scanner, the seed -- every page pushed or presented by the platform that wears no page ground of its own.
     func montanaMotionMeter() -> some View { background { MTPageMeter() } }
 }

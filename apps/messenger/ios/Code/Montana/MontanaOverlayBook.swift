@@ -70,7 +70,13 @@ enum MontanaSelfEndpoint {
             let fam = sa.pointee.sa_family
             guard fam == UInt8(AF_INET) || fam == UInt8(AF_INET6) else { continue }
             let name = String(cString: cur.pointee.ifa_name)
+            #if MONTANA_MESSENGER
+            // Montana Messenger publishes the addresses of the device's own links alone -- Wi-Fi or wire (en) and cellular
+            // (pdp_ip) -- and reads no other kind of interface (decision 651 = a).
+            guard name.hasPrefix("en") || name.hasPrefix("pdp_ip") else { continue }
+            #else
             guard !name.hasPrefix("utun"), !name.hasPrefix("lo") else { continue }
+            #endif
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             guard getnameinfo(sa, socklen_t(sa.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 else { continue }
             let ip = String(cString: host).split(separator: "%").first.map(String.init) ?? ""

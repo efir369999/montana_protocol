@@ -11,7 +11,6 @@ import UserNotifications
 // went to a chat the finger never chose -- the system's suggestion sent at once): a send is born by the send button alone.
 // The extension seals and files the content-addressed pieces itself and records the share in the sender's chat BEFORE any
 // network step; the app, when opened, sends whatever the sheet could not.
-// One's own wall is the first circle: it opens the post's page with all that is shared, and the app makes the post.
 
 final class ShareViewController: UIViewController {
     private var shown = false
@@ -60,19 +59,19 @@ struct ShareChat {
     let colorHex: String
     let thumb: UIImage?
 
+    #if !MONTANA_MESSENGER
     /// THE PERSON'S OWN WALL, THE FIRST CIRCLE (the author's word 29.09: "through the share menu I write on my own wall -- the
     /// first circle"). Not a chat and never a letter's address: its name is the sheet's own word; its face is the one the Saved
     /// Messages row wears -- one's own (the author's word 11.09).
     static let wallName = "montana.wall.mine"
-    /// THE CIRCLE ONLY WHERE THE WALL STANDS (link 16005): the sheet is an extension and walks no door of the app, so its target
-    /// says it -- MTShareWall in Info.plist is MONTANA_SHARE_WALL, YES for Montana's sheet alone; Montana Messenger's has no wall.
-    static let carried = Bundle.main.object(forInfoDictionaryKey: "MTShareWall") as? String == "YES"
+
     static func wall(from chats: [ShareChat]) -> ShareChat {
         let me = chats.first { $0.name == savedMessagesKey }
         let title = String(localized: "My wall", bundle: MTLanguage.bundle)
         return ShareChat(name: wallName, title: title, initial: me?.initial ?? MontanaAvatar.initial(title: title, name: ""),
                          colorHex: me?.colorHex ?? MontanaAvatar.colorHex(wallName), thumb: me?.thumb)
     }
+    #endif
 
     /// The chats the app mirrors for the sheet (MontanaChatStore.mirrorChatsToShare): the rendered list, its order.
     static func mirror() -> [ShareChat] {
@@ -168,7 +167,11 @@ final class SharePickerController: UIViewController, UICollectionViewDataSource,
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .close, target: self, action: #selector(cancelTap))
         navigationItem.backButtonDisplayMode = .minimal   // the post's page goes back by the chevron alone
         ShareGlass.clearBar(navigationItem)
-        all = (ShareChat.carried ? [ShareChat.wall(from: chats)] : []) + chats   // one's own wall is the first circle (the author's word 29.09)
+        #if MONTANA_MESSENGER
+        all = chats
+        #else
+        all = [ShareChat.wall(from: chats)] + chats   // one's own wall is the first circle (the author's word 29.09; the Protocol's alone, cut C6)
+        #endif
         ShareSend.diag("sheet ORDER n=\(chats.count) order=\(MTShareOrder.print(chats.map(\.name)))")
         shown = all
         buildUI()
@@ -330,8 +333,10 @@ final class SharePickerController: UIViewController, UICollectionViewDataSource,
     }
     func collectionView(_ cv: UICollectionView, didSelectItemAt ip: IndexPath) {
         let name = shown[ip.row].name
+        #if !MONTANA_MESSENGER
         // THE WALL IS WRITTEN ON, NEVER SENT TO (the author's word 30.09): its circle opens the post's page and chooses nothing.
         if name == ShareChat.wallName { openWall(); return }
+        #endif
         if selectedSet.contains(name) { selectedSet.remove(name); selected.removeAll { $0 == name } }
         else { selectedSet.insert(name); selected.append(name) }
         cv.reloadItems(at: [ip])
@@ -339,6 +344,7 @@ final class SharePickerController: UIViewController, UICollectionViewDataSource,
     }
     func numberOfSections(in cv: UICollectionView) -> Int { 1 }
 
+    #if !MONTANA_MESSENGER
     /// THE WALL'S CIRCLE HANDS THE SHARE TO THE APP'S ONE NEW-POST PAGE (the author's word 02.10 19:17: «sharing onto the wall
     /// through Share must open the same publishing function with all its capabilities»). The sheet's own post page was a
     /// reduced copy of the wall's -- no more pictures, no file picked, no frame, no draft kept. The sheet now reads what was
@@ -366,6 +372,7 @@ final class SharePickerController: UIViewController, UICollectionViewDataSource,
             self?.onClose?()
         }
     }
+    #endif
 
     // -- the search --
     @objc private func searchChanged() {
@@ -680,7 +687,7 @@ final class SharePickerController: UIViewController, UICollectionViewDataSource,
     }
 }
 
-/// WHAT THE SOURCE HANDED, READ -- one reader for the chats' road and the wall's.
+/// WHAT THE SOURCE HANDED, READ -- one reader for every road of the share.
 enum ShareRead {
     // ONE rule for the name a shared file wears ([C-1], the author's word 07.09: "the name must be strict"): the name the source
     // gave it -- the provider's suggested name, else the file's own -- never a made-up "file.ext".
@@ -752,6 +759,7 @@ enum ShareRead {
         }
     }
 
+    #if !MONTANA_MESSENGER
     enum WallPart { case words(String), file([String: String]) }
     /// One attachment as a part of a post, in the chats' own order: a video is a file; a web link and a text of bubble size are
     /// words; a picture, then any other file, is a file; a plain text is words.
@@ -774,7 +782,8 @@ enum ShareRead {
         if p.hasItemConformingToTypeIdentifier(plain), let s = await text(p, plain) { return .words(s) }
         return nil
     }
-    /// A file of the share laid on the handoff shelf as its source gave it -- the wall's own road, a post keeps its files as
+    #endif
+    /// A file of the share laid on the handoff shelf as its source gave it -- a post keeps its files as
     /// picked, never the chat's copy: copied inside the provider's callback, where its temporary file lives.
     static func shelve(_ p: NSItemProvider, _ t: String) async -> [String: String]? {
         await withCheckedContinuation { c in
@@ -788,6 +797,7 @@ enum ShareRead {
     }
 }
 
+#if !MONTANA_MESSENGER
 /// THE SHEET'S HALF OF A POST ON ONE'S OWN WALL (the author's words 29.09 and 02.10 19:17): everything shared, read once -- the
 /// words joined, every file laid on the handoff shelf as its source gave it, up to what a post takes (MTPostMeasure.files) --
 /// and ONE record under "pendingWall", laid whole. The page that writes the post is the app's own (MTBoardComposer, opened by
@@ -848,6 +858,7 @@ enum ShareWallHandoff {
         return true
     }
 }
+#endif
 
 // The width of a cell follows the width of the sheet: four to five columns.
 extension SharePickerController: UICollectionViewDelegateFlowLayout {
@@ -863,8 +874,7 @@ extension SharePickerController: UICollectionViewDelegateFlowLayout {
     }
 }
 
-// A cell: a round face -- a picture, or black with a white initial -- the name, and a tick when chosen. One's own wall wears the
-// platform's write glyph where a tick would stand: its circle opens the post's page and is never chosen.
+// A cell: a round face -- a picture, or black with a white initial -- the name, and a tick when chosen.
 // THE CIRCLE STANDS TRUE BY CONSTRUCTION (the author's word 17.10.2026 15:4x UTC: «on the share page the circle of the chosen one is
 // found crooked -- make all of it system and native»): the ring was a layer placed by hand in the cell's layout from the face's
 // centre, read before the content view had laid the face out -- on a first pass it stood where the face had been, not where it is.
@@ -883,7 +893,11 @@ final class ShareAvatarCell: UICollectionViewCell {
     private let stateLabel = UILabel()
     private let ring = ShareRing()
     private let check = ShareAvatarCell.badge("checkmark")
+    #if !MONTANA_MESSENGER
+    // ONE'S OWN WALL IS THE FIRST CIRCLE: it opens the post's page with all that is shared, and the app makes the post. It wears
+    // the platform's write glyph where a tick would stand and is never chosen.
     private let pen = ShareAvatarCell.badge("square.and.pencil")
+    #endif
 
     /// A round badge drawn whole: the platform's blue disc, a white rim, the white glyph in its middle.
     private static func badge(_ glyph: String) -> UIView {
@@ -935,10 +949,11 @@ final class ShareAvatarCell: UICollectionViewCell {
         contentView.addSubview(nameLabel)
         contentView.addSubview(stateLabel)
         contentView.addSubview(check)
+        #if !MONTANA_MESSENGER
         contentView.addSubview(pen)
-        // A badge's centre at 45 degrees: the tick on the ring's line, the pen on the face's rim -- the radius times the cosine of 45.
+        #endif
+        // A badge's centre at 45 degrees: the tick on the ring's line -- the radius times the cosine of 45.
         let onRing = (Self.ringSide / 2 - ShareRing.line / 2) * 0.7071
-        let onFace = (Self.side / 2) * 0.7071
         NSLayoutConstraint.activate([
             avatar.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6),
             avatar.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
@@ -958,9 +973,15 @@ final class ShareAvatarCell: UICollectionViewCell {
             stateLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -2),
             check.centerXAnchor.constraint(equalTo: avatar.centerXAnchor, constant: onRing),
             check.centerYAnchor.constraint(equalTo: avatar.centerYAnchor, constant: onRing),
+        ])
+        #if !MONTANA_MESSENGER
+        // The pen of the wall's circle on the face's rim (cut C6: the Protocol's alone).
+        let onFace = (Self.side / 2) * 0.7071
+        NSLayoutConstraint.activate([
             pen.centerXAnchor.constraint(equalTo: avatar.centerXAnchor, constant: onFace),
             pen.centerYAnchor.constraint(equalTo: avatar.centerYAnchor, constant: onFace),
         ])
+        #endif
     }
     required init?(coder: NSCoder) { fatalError() }
 
@@ -975,7 +996,9 @@ final class ShareAvatarCell: UICollectionViewCell {
             initialLabel.text = c.initial; initialLabel.isHidden = false
         }
         nameLabel.textColor = .label
+        #if !MONTANA_MESSENGER
         pen.isHidden = c.name != ShareChat.wallName
+        #endif
         show(selected: selected, send: send, animated: false)
     }
 
@@ -1013,7 +1036,10 @@ final class ShareAvatarCell: UICollectionViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
-        ring.isHidden = true; check.isHidden = true; pen.isHidden = true; stateLabel.isHidden = true
+        ring.isHidden = true; check.isHidden = true; stateLabel.isHidden = true
+        #if !MONTANA_MESSENGER
+        pen.isHidden = true
+        #endif
     }
 }
 

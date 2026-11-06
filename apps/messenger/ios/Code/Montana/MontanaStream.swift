@@ -142,11 +142,13 @@ actor MTCargoLane {
 /// A PIECE OF A FILE: its block's id and its own length -- a post's file, a chat's attachment and a track are read by them.
 struct MTPieceRef: Codable, Hashable { var bid: String; var cs: Int }
 
+#if !MONTANA_MESSENGER   // the Protocol's wall alone (cut C6)
 /// A wall post by its id and the wall it stands on -- nil, my own.
 struct MTStreamPost: Equatable {
     let id: String
     let wall: String?
 }
+#endif
 
 /// WHAT A PLAYER READS BEFORE THE FILE IS WHOLE: the file's pieces — their sizes in order, the key that opens them — and
 /// the folder the whole file stands in under its name. One shape for a post's file, a chat's attachment and a track.
@@ -157,9 +159,11 @@ struct MTStreamSource: Equatable {
     let key: Data
     let chunks: [MTPieceRef]  // bid and the piece's own length, in order
     let folder: URL
+    #if !MONTANA_MESSENGER   // the Protocol's wall alone (cut C6)
     /// The wall post the file is of, when it is one: a piece every door calls gone is said to the wall's owner, whose phone
     /// lays the post's files again (MTBoard.piecesGone) -- a player alone never said it, and the track stood at 0:00 for good.
     var post: MTStreamPost? = nil
+    #endif
 
     var url: URL {
         let safe = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
@@ -343,7 +347,9 @@ final class MTStreamLoader: NSObject, AVAssetResourceLoaderDelegate {
             }
             MontanaTrace.markFolded("stream_piece", "FAIL i=\(i) of \(source.chunks.count) name=\(String(source.name.prefix(20))) why=\(why)",
                                        window: 10, key: source.name)
+            #if !MONTANA_MESSENGER
             if case .gone = answer, let post = source.post { MTApps.wall?.piecesGone(post) }
+            #endif
             return nil
         }
         // The disk refusing the piece costs the player nothing: it gets its bytes; the piece is simply not kept.

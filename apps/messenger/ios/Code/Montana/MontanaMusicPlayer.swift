@@ -26,11 +26,13 @@ struct MusicTrack: Equatable {
     /// the file lies here). Two tracks are the same track by everything but these.
     var stream: MTStreamSource? = nil
     var whole: (() -> Void)? = nil
+    #if !MONTANA_MESSENGER
     /// A TRACK OF A POST (the feed's or a wall's, MTBoardPlaylist): it lies in a post, not in a letter -- no message to go to.
     /// WHERE A TRACK LIES IS NEVER SAID (the author's word 29.09 ~23:20: «take the addresses out of the tracks everywhere, and in
     /// the tracks' feed too»): the line under a track's name is the artist its own tags name (MTTrackMeta.byline), or nothing --
     /// never its chat, its folder's path, the feed or a wall. Not a part of the track's sameness.
     var inPost = false
+    #endif
     /// A track as a row of the pages' list (MTChatListView), named by its file -- the music page's rows and the big player's alike.
     var listRow: Chat { Chat(name: file, lastMessage: "", time: "", unread: 0, status: "", convId: "track:" + file) }
     static func == (a: MusicTrack, b: MusicTrack) -> Bool {
@@ -360,15 +362,21 @@ final class MontanaSliderView: UIControl, MTHorizontalOwning {
 }
 
 /// WHERE A TRACK CAME FROM, THE PLAYLIST'S ONE CHOICE (the author's word 30.09 ~00:55: «to the right of the search in the big music
-/// player put the native filter, so that one can choose where one listens from -- a chat, a wall, a folder and so on»): the places the
-/// line under a track's name no longer says (29.09 ~23:20) live here -- a letter's chat, a post of the feed or a wall, a folder lent
+/// player put the native filter, so that one can choose where one listens from -- a chat, ..., a folder and so on»): the places the
+/// line under a track's name no longer says (29.09 ~23:20) live here -- a letter's chat, a post of the feed, a folder lent
 /// from the phone. One owner of the choice: which tracks the playlist shows, and which it plays through.
 enum MTTrackSource: Hashable {
-    case all, chats, walls, folders
+    case all, chats, folders
+    #if !MONTANA_MESSENGER
+    case walls   // the feed's and my wall's posts (cut C6: the Protocol's alone)
+    #endif
     case chat(String)   // one chat, by its conversation's name
     static func of(_ t: MusicTrack) -> MTTrackSource {
         if MTMusicFolders.isLent(t.file) { return .folders }
-        return t.inPost ? .walls : .chat(t.chat)
+        #if !MONTANA_MESSENGER
+        if t.inPost { return .walls }
+        #endif
+        return .chat(t.chat)
     }
     func holds(_ t: MusicTrack) -> Bool {
         let from = Self.of(t)
@@ -381,16 +389,21 @@ enum MTTrackSource: Hashable {
 }
 extension MTTrackSource {
     /// A SOURCE CHOSEN, WHAT PLAYS IS THAT SOURCE (the author's word 30.09 ~00:55: «choose where one listens from»): its tracks
-    /// become the queue -- a chat's letters, the lent folders, the feed's and my wall's posts (MTBoardPlaylist) -- and the track
+    /// become the queue -- a chat's letters, the lent folders, the feed's posts -- and the track
     /// that plays keeps playing when the source holds it, else the source's first plays.
     @MainActor static func listen(_ s: MTTrackSource) {
         let list: [MusicTrack]
+        #if MONTANA_MESSENGER
+        let lib = ChatStore.one().musicLibrary()
+        list = s == .all ? lib : lib.filter { t in s.holds(t) }
+        #else
         if s == .walls {
             list = MTApps.wall?.tracks() ?? []   // the wall's door (slice S4c2)
         } else {
             let lib = ChatStore.one().musicLibrary()
             list = s == .all ? lib : lib.filter { t in s.holds(t) }
         }
+        #endif
         guard !list.isEmpty else { return }
         let p = VoicePlayer.shared
         let playing = p.currentTrack?.file
@@ -467,9 +480,13 @@ struct MTPlayerHead: View {
     private var track: MusicTrack? { player.currentTrack }
     // The file's name as it was sent, nothing else (the author's word 07.09).
     private var title: String { ((track?.title ?? "") as NSString).deletingPathExtension }
-    /// A lent folder's track (MTMusicFolders) lies in no chat: it has no message to go to; nor has a track of the feed or a wall
+    /// A lent folder's track (MTMusicFolders) lies in no chat: it has no message to go to; nor has a track of the feed
     /// (MusicTrack.inPost): it lies in a post, not in a letter.
+    #if MONTANA_MESSENGER
+    private var lentTrack: Bool { track.map { MTMusicFolders.isLent($0.file) } ?? false }
+    #else
     private var lentTrack: Bool { track.map { MTMusicFolders.isLent($0.file) || $0.inPost } ?? false }
+    #endif
     /// THE NAME ALONE, AND A HOLD COPIES IT (the author's words 29.09: «a long press copies the track's name»; ~23:10: «at the speed
     /// our menu opens in the chat»): MTNameCopy, the one act of both players.
     @State private var copied = 0
@@ -649,14 +666,16 @@ struct MTPlayerHead: View {
         }
     }
     /// THE SOURCE'S FILTER, TO THE RIGHT OF THE SEARCH (the author's word 30.09 ~00:55): the platform's own menu with its pickers --
-    /// every track, the chats', the walls', the folders', or one chat's -- on the round glass with the platform's filter glyph and no
+    /// every track, the chats', the folders', or one chat's -- on the round glass with the platform's filter glyph and no
     /// word, lit in the platform's blue while a source is chosen.
     private var filter: some View {
         Menu {
             Picker(selection: $source) {
                 Label("All", systemImage: "music.note.list").tag(MTTrackSource.all)
                 Label("Chats", systemImage: "bubble.left.and.bubble.right").tag(MTTrackSource.chats)
+                #if !MONTANA_MESSENGER
                 if MTApps.wall != nil { Label("Walls", systemImage: "text.below.photo").tag(MTTrackSource.walls) }   // a source only where the wall stands
+                #endif
                 Label("Folders", systemImage: "folder").tag(MTTrackSource.folders)
             } label: { EmptyView() }
             .pickerStyle(.inline)
@@ -791,7 +810,7 @@ final class MTVolumeLineView: UIView, MTHorizontalOwning {
 
 /// THE PLAYLIST THAT PLAYS AND WHERE IT PLAYS FROM (the author's word 16.10.2026 16:0x UTC: «a button that shows the current playlist,
 /// so it shows where it plays from, and one can manage it there»): the player's own queue (VoicePlayer.queue), its source named by
-/// what it holds -- one chat, the walls, the folders, the chats, or everything -- and the track that plays standing in the middle.
+/// what it holds -- one chat, the folders, the chats, or everything -- and the track that plays standing in the middle.
 /// A tap plays a track, a swipe takes it out, a drag in the reorder mode moves it: the queue's one owner is the player, the page
 /// asks it (play, dropFromQueue, moveInQueue). The mark at the top right opens the music page centred on the track (onPlace).
 struct MTQueuePage: View {
@@ -844,14 +863,16 @@ struct MTQueuePage: View {
         }
         .onChange(of: face.queueIndex) { _, _ in tracks = player.queue }
     }
-    /// Where the queue plays from, read off what it holds: the one chat's name, the walls, the folders, the chats, or all.
+    /// Where the queue plays from, read off what it holds: the one chat's name, the folders, the chats, or all.
     private var from: String {
         guard let first = tracks.first else { return "" }
         let kinds = Set(tracks.map { t in MTTrackSource.of(t) })
         if kinds.count == 1 {
             switch MTTrackSource.of(first) {
             case .chat: return first.chatTitle
+            #if !MONTANA_MESSENGER
             case .walls: return String(localized: "Walls", bundle: MTLanguage.bundle)
+            #endif
             case .folders: return String(localized: "Folders", bundle: MTLanguage.bundle)
             default: break
             }
@@ -2006,7 +2027,7 @@ struct MusicTabView: View {
     nonisolated(unsafe) private static var picks: [URL] = []
     nonisolated(unsafe) private static var broughtDuring = Set<String>()
     /// A track of the last walk as the phone keeps it between launches: its folder, its path there, what the walk read.
-    private struct Kept: Codable {
+    private struct Kept: Codable, Equatable {
         let folder: String; let rel: String; let title: String; let place: String; let at: Double
         let local: Bool; let size: Int; let icloud: Bool
         let art: String?   // absent in a list kept before the folders' pictures were read: none, until the walk
@@ -2040,6 +2061,14 @@ struct MusicTabView: View {
         guard isLent(file) else { return true }
         lock.lock(); let l = found[file]?.local ?? true; lock.unlock()
         return l
+    }
+    /// A lent track whose folder did not open this launch: the page holds none (walkAll), a queue made before may, and nothing reads it.
+    nonisolated static func closed(_ file: String) -> Bool { isLent(file) && url(file) == nil }
+    /// The person's play of such a track, told and not swallowed: the plus lends the folder again.
+    nonisolated static func refuseClosed() {
+        DispatchQueue.main.async { MainActor.assumeIsolated {
+            MTMusicFolders.shared.refusal = Refusal(words: "The folder of this track did not open. Lend it again with the plus.")
+        } }
     }
     /// The lent tracks in the library's order, with their revision; the first ask of a launch walks the folders.
     nonisolated static func tracks() -> (rev: Int, list: [MusicTrack]) {
@@ -2232,6 +2261,11 @@ struct MusicTabView: View {
         if let i = all.firstIndex(where: { opened[$0.id]?.standardizedFileURL.path == path }) {
             all[i].bookmark = bookmark
             picked.stopAccessingSecurityScopedResource()   // the access this launch already holds for it stays
+        } else if let i = all.firstIndex(where: { opened[$0.id] == nil && resolvedPath($0.bookmark) == path }) {
+            // A FOLDER THAT DID NOT OPEN, LENT AGAIN, takes the new permission in its own place: its tracks keep their names
+            // and their places, and it does not stand twice beside its closed self.
+            all[i].bookmark = bookmark
+            opened[all[i].id] = picked
         } else {
             let id = String(UUID().uuidString.prefix(8)).lowercased()
             all.append(Lent(id: id, bookmark: bookmark, at: Date().timeIntervalSince1970))
@@ -2246,11 +2280,32 @@ struct MusicTabView: View {
     nonisolated private static func open(_ l: inout Lent) -> URL? {
         if let u = opened[l.id] { return u }
         var stale = false
-        guard let u = try? URL(resolvingBookmarkData: l.bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale),
-              u.startAccessingSecurityScopedResource() else { return nil }
+        // A FOLDER THAT DID NOT OPEN SAYS WHY (T1 05.11.2026 15:00-16:43 UTC, the author's words 17206 and 17210: «the music does
+        // not play», «in the car over Bluetooth it did not play»): the lent folder of 784 tracks stood closed at every launch
+        // (music_walk closed=1 carried=784) and the diary had no word of the cause. The bookmark's refusal and the platform's
+        // are told apart; the diary names no folder.
+        let u: URL
+        do { u = try URL(resolvingBookmarkData: l.bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale) } catch {
+            let e = error as NSError
+            MontanaTrace.mark("music_open", "unresolved \(e.domain) \(e.code)")
+            return nil
+        }
+        // A FOLDER THAT NEEDS NO LEAVE: the platform answers false for a URL the app may read without a scope (its own
+        // container) -- such a folder is read as it is when it is readable, not stood closed.
+        let scoped = u.startAccessingSecurityScopedResource()
+        guard scoped || FileManager.default.isReadableFile(atPath: u.path) else {
+            MontanaTrace.mark("music_open", "refused scope=0 exists=\(FileManager.default.fileExists(atPath: u.path) ? 1 : 0) stale=\(stale ? 1 : 0)")
+            return nil
+        }
+        if !scoped { MontanaTrace.mark("music_open", "readable without scope") }
         opened[l.id] = u
         if stale, let b = try? u.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil) { l.bookmark = b }
         return u
+    }
+    /// Where a kept bookmark points, asked without opening it: the same folder lent again is known by it.
+    nonisolated private static func resolvedPath(_ bookmark: Data) -> String? {
+        var stale = false
+        return (try? URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale))?.standardizedFileURL.path
     }
     /// The last walk's list laid under the folders opened for this launch; a folder whose permission is gone lays none of
     /// its tracks. A walk that landed first stands: its word is the newer.
@@ -2314,26 +2369,15 @@ struct MusicTabView: View {
     nonisolated private static func walkAll(lend: Bool) {
         let t0 = ProcessInfo.processInfo.systemUptime
         enumSpent = 0; entries = 0; probed = 0
-        lock.lock(); broughtDuring = []; let old = found; lock.unlock()
+        lock.lock(); broughtDuring = []; lock.unlock()
         guard var all = folders() else { land(nil, note: "keychain silent", t0: t0, lend: lend); return }
         let before = all.map(\.bookmark)
         var list: [MusicTrack] = [], map: [String: Found] = [:], paths = Set<String>()
         var kept: [Kept] = []
-        var closed = 0, carried = 0, cloud = 0, pictures = 0, covered = 0
+        var closed = 0, carried = 0, twins = 0, cloud = 0, pictures = 0, covered = 0
+        var shut: [Int] = []
         for i in all.indices.sorted(by: { all[$0].at < all[$1].at }) {
-            guard let root = open(&all[i]) else {
-                closed += 1
-                // A FOLDER THAT DID NOT OPEN KEEPS ITS TRACKS (the critic 24.09): a drive away, a keeper not answering — one
-                // walk without it writes its tracks neither out of the kept list nor off the page.
-                for k in lastKept where k.folder == all[i].id {
-                    let key = keyOf(k.folder, k.rel)
-                    list.append(MusicTrack(file: key, title: k.title, msgId: "", chat: "", chatTitle: k.place, at: k.at))
-                    kept.append(k)
-                    if let f = old[key] { map[key] = f }
-                    carried += 1
-                }
-                continue
-            }
+            guard let root = open(&all[i]) else { closed += 1; shut.append(i); continue }
             var known: [String: Kept] = [:]
             for k in lastKept where k.folder == all[i].id { known[k.rel] = k }
             let met = walk(root, known: known)
@@ -2349,8 +2393,22 @@ struct MusicTabView: View {
                 if f.art != nil { covered += 1 }
             }
         }
+        // A FOLDER THAT DID NOT OPEN KEEPS ITS TRACKS AND SHOWS NONE (the critic 24.09; the author's word 17231, 05.11.2026
+        // 23:35 UTC: «if it shows, it must play, else it does not show»): a drive away, a keeper not answering -- one walk without
+        // it writes its tracks out of the kept list neither, and they come back the launch it opens or the plus lends it again
+        // (keep); the page and the queue hold only what sounds. T1 05.11.2026: 784 tracks of a closed folder stood on both
+        // pages, every touch and every turn of the shuffle fell on play_refused. A track an open folder holds by the same path
+        // and size is kept once, the open one: a folder lent again beside its closed self does not come back twice.
+        var held = Set(kept.map { "\($0.rel)#\($0.size)" })
+        for i in shut {
+            for k in lastKept where k.folder == all[i].id {
+                guard held.insert("\(k.rel)#\(k.size)").inserted else { twins += 1; continue }
+                kept.append(k)
+                carried += 1
+            }
+        }
         if all.map(\.bookmark) != before { saveRenewed(all) }
-        land((list, map, kept), note: "folders=\(all.count) closed=\(closed) carried=\(carried) files=\(list.count) cloud=\(cloud) pictures=\(pictures) covered=\(covered) entries=\(entries) probed=\(probed) enum_ms=\(Int(enumSpent * 1000))",
+        land((list, map, kept), note: "folders=\(all.count) closed=\(closed) carried=\(carried) twins=\(twins) files=\(list.count) cloud=\(cloud) pictures=\(pictures) covered=\(covered) entries=\(entries) probed=\(probed) enum_ms=\(Int(enumSpent * 1000))",
              t0: t0, lend: lend)
     }
     /// Every regular music file under the folder, at any depth, in the order of its path. The older iCloud stands a file
@@ -2462,7 +2520,9 @@ struct MusicTabView: View {
                     || $0.art?.standardizedFileURL.path != f.art?.standardizedFileURL.path } ?? true }
             if changed {
                 lock.lock(); found = map; shelf = (shelf.rev &+ 1, got.list); lock.unlock()
-                keepList(got.kept)
+                // THE SAME LIST IS NOT WRITTEN AGAIN (T1 05.11.2026, DISK HOUR music-shelf=239953): a launch whose folder did not
+                // open carried the kept list as it stood and wrote it whole at every launch -- the disk's work for nothing.
+                if got.kept != lastKept { keepList(got.kept) }
             }
             lastKept = got.kept
             laid = true

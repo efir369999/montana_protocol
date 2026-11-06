@@ -70,8 +70,8 @@ struct BubbleShape: Shape {
 }
 
 /// THE ONE BUBBLE STYLE ([C-1], 25.09): the fill and the rim a letter wears -- mine and a correspondent's -- read from the
-/// one stored style. The letter's bubble draws it, and so does anything that stands on a ground as a letter does: a post on
-/// a wall (the author's word 25.09: «the wall in our style -- liquid glass and transparent bubbles»).
+/// one stored style. The letter's bubble draws it, and so does anything that stands on a ground as a letter does: a post
+/// (the author's word 25.09: «... liquid glass and transparent bubbles»).
 enum MTBubbleStyle {
     static var style: String { UserDefaults.standard.string(forKey: "bubbleStyle") ?? "montana" }
     // theme readers (custom style stores hex colors + doubles in UserDefaults)
@@ -168,13 +168,13 @@ enum MTLetterSeal {
         guard mid.hasPrefix("mid:") else { return nil }
         return digest(domain + "\n" + mid)
     }
-    /// SHA-256 OF A BODY, lowercase hex: the letter's seal, and the wall's seals and signatures of its posts and comments (S4c1:
-    /// it lives with the seal, which every edition carries; the wall calls it).
+    /// SHA-256 OF A BODY, lowercase hex: the letter's seal, and the seals and signatures of posts and comments (S4c1:
+    /// it lives with the seal, which every edition carries).
     static func digest(_ body: String) -> String {
         SHA256.hash(data: Data(body.utf8)).map { String(format: "%02x", $0) }.joined()
     }
     /// THE PRIME SUM OF A SEAL (02.10): the hex read as a number in base 29, a prime for each digit, summed -- the one gematria
-    /// of a letter's stamp and of a wall comment's line.
+    /// of a letter's stamp and of a comment's line.
     static func gematria(_ hex: String) -> Int {
         let primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109]
         var chars = Array(hex.lowercased())
@@ -201,7 +201,7 @@ enum MTLetterSeal {
         return total
     }
     /// The letter's mark, or nil for a row with no wire name: the seal's first eight hex digits and its prime sum
-    /// (gematria, the one count, the wall's too).
+    /// (gematria, the one count).
     static func mark(_ m: Message) -> Mark? {
         let key = m.mid as NSString
         if let k = kept.object(forKey: key) { return k }
@@ -237,6 +237,7 @@ struct MessageBubble: View, Equatable {
     var onTapDoc: () -> Void = {}
     var onTapPlace: (MTPlaceLetter) -> Void = { _ in }   // a place a letter carries opens its own page over everything
     var onTapMusic: (String) -> Void = { _ in }   // music starts on the full page
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5): its letter is never read there (MTEditionLetters.game is nil)
     var onTapChess: (String) -> Void = { _ in }
     /// The invitation waits for this phone's answer (MTChessSend.awaitsMe): its two buttons stand under it.
     var chessOpen = false
@@ -245,7 +246,23 @@ struct MessageBubble: View, Equatable {
     var onChessAccept: (String) -> Void = { _ in }
     /// An invitation answered: the game's state in its words (accepted and played, declined, over); nil while it waits.
     var chessStatus: String? = nil
+    /// THE GAME'S LETTER, ITS HANDS (cut C5): the chat sets them in the Protocol alone.
+    func game(onTap: @escaping (String) -> Void, open: Bool, decline: @escaping (String) -> Void,
+              accept: @escaping (String) -> Void, status: String?) -> MessageBubble {
+        var b = self
+        b.onTapChess = onTap; b.chessOpen = open; b.onChessDecline = decline; b.onChessAccept = accept; b.chessStatus = status
+        return b
+    }
+    #endif
+    #if !MONTANA_MESSENGER   // a post's card is the Protocol's alone (cut C6)
     var onTapWallPost: (MTWallCard) -> Void = { _ in }   // a post's card opens the wall the post stands on (30.09)
+    /// THE POST'S CARD, ITS HAND (cut C6): the chat sets it in the Protocol alone.
+    func wallPost(onTap: @escaping (MTWallCard) -> Void) -> MessageBubble {
+        var b = self
+        b.onTapWallPost = onTap
+        return b
+    }
+    #endif
     var onTapCoin: () -> Void = {}   // a coin letter opens its own move (05.10)
     var onTapReply: (MID) -> Void = { _ in }
     var tail: Bool = true     // show the "tail" (on the last one in the group),
@@ -338,7 +355,10 @@ struct MessageBubble: View, Equatable {
     // Skip redrawing unchanged bubbles during typing/polling.
     // We compare only the visible fields; action closures and player don't affect the appearance.
     static func == (l: MessageBubble, r: MessageBubble) -> Bool {
-        l.message.id == r.message.id
+        #if !MONTANA_MESSENGER
+        guard l.chessOpen == r.chessOpen && l.chessStatus == r.chessStatus else { return false }
+        #endif
+        return l.message.id == r.message.id
             && l.message.text == r.message.text
             && l.message.deliveryStatus == r.message.deliveryStatus
             && l.ladder == r.ladder
@@ -352,7 +372,6 @@ struct MessageBubble: View, Equatable {
             && l.message.docFile == r.message.docFile
             && l.tail == r.tail
             && l.speaker == r.speaker && l.quoteAuthor == r.quoteAuthor
-            && l.chessOpen == r.chessOpen && l.chessStatus == r.chessStatus
             && l.members.map(\.id) == r.members.map(\.id)
             && l.members.map(\.text) == r.members.map(\.text)
             && l.members.map(\.deliveryStatus) == r.members.map(\.deliveryStatus)
@@ -509,9 +528,13 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
             return
         }
         // AN INVITATION THAT WAITS FOR MY ANSWER OPENS NOTHING (the author's word 06.10.2026 20:5x UTC): its two buttons decide.
+        #if !MONTANA_MESSENGER
         if let game = message.gameLetter?.game { if !chessOpen { onTapChess(game) }; return }
+        #endif
         if MTApps.coins?.isLetter(message) == true { onTapCoin(); return }   // a coin letter: its transaction (05.10)
+        #if !MONTANA_MESSENGER
         if let card = MTWallCard.of(message.text) { onTapWallPost(card); return }   // a post's card: its wall
+        #endif
         if message.imageFile != nil { onTapImage(imgFrameBox.rect == .zero ? nil : imgFrameBox.rect); return }
         if let v = message.videoFile, v.hasPrefix("vnote_") { onTapNote(v, noteFrameBox.rect == .zero ? nil : noteFrameBox.rect); return }   // the round note: its own window, never the player
         if message.videoFile != nil { onTapVideo(); return }
@@ -713,6 +736,7 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
 
     @ObservedObject private var fold = MTFilterFold.shared   // the filter's fold, opened for the letter by the person's tap
     private static let burgundy = Color(red: 0.50, green: 0.0, blue: 0.13)
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
     /// THE GAME'S LETTER IN THE CHAT (the author's words 06.10.2026 20:2x UTC: «below two buttons: the blue system Accept and the
     /// red burgundy Decline»): the invitation says who plays which colour with the clock (29.09); while it waits for this phone's
     /// answer the two buttons stand under it. No stake and no coins (the author's word 29.10.2026 19:31 UTC). A tap elsewhere opens
@@ -747,210 +771,216 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         .background(bubbleFill).foregroundColor(bubbleText)
         .clipShape(bubbleShape).overlay { bubbleOutline }
     }
+    #endif
     @ViewBuilder var bubble: some View {
         // The author's invariant (24.08): if anything en route left the receiver's chat
         // different from the sender's, the sender sees a resend button — on ANY bubble
         // kind. One attachment point at the bubble root ([C-1]), not per-kind copies.
         Group {
-            if filterFolds {
-                // THE FILTER (Guideline 1.2): a letter carrying an objectionable word stands
-                // folded — nothing of it is read by surprise; the person's own tap unfolds it.
-                // THE FOLD IS A BUTTON (the author's word 24.09: «it must always show on the tap»). It was a
-                // tap gesture of ours inside the letter -- the second tap node the gesture law above forbids
-                // (15.09: two nodes fired on one tap); a control inside a letter is a Button, and a Button
-                // wins over the letter's own tap. The opening is the letter's (MTFilterFold), not this drawing's.
-                Button {
-                    withAnimation(.easeOut(duration: 0.15)) { MTFilterFold.shared.open(message.id) }
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Hidden by the filter", systemImage: "eye.slash").font(.callout)
-                        Text("Tap to show").font(.caption).foregroundColor(bubbleText.opacity(0.7))
-                    }
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(bubbleFill).foregroundColor(bubbleText)
-                    .clipShape(bubbleShape).overlay { bubbleOutline }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            } else if isGroup {
-                groupBubble()
-            } else if let chess = message.gameLetter {
+            #if !MONTANA_MESSENGER
+            // A GAME'S LETTER: its own bubble; the order stands -- the filter's fold and a group's letters first.
+            if !filterFolds, !isGroup, let chess = message.gameLetter {
                 chessBubble(chess)
-            } else if let card = MTWallCard.of(message.text) {
-                wallCardBubble(card)
-            } else if MTMoneyFlowRow.of(message.text) {
-                // THE MONEY FLOW BEGAN (MTMoneyFlowRow): the chess invitation's card, our coin turning once as the row appears.
-                // NO LETTER MINTS (the author's word 02.11.2026 16:14 UTC, link 14629: «only 1 coin is 1 second, no other way named»):
-                // the card's second line said every letter mints a coin; the turn mints nothing, only the chain's second does.
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack(spacing: 10) {
-                        MTApps.coins?.coin(spinning: true, side: 40, turn: 0)
-                        Text("Money flow has begun").font(.headline)
-                    }
-                    metaLine(onMedia: false)
-                }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(bubbleFill).foregroundColor(bubbleText)
-                .clipShape(bubbleShape).overlay { bubbleOutline }
-            } else if MTRowLetter.isSecret(message.text) {
-                // A SECRET SHARED FROM PASSWORDS (the author's word 06.10.2026 14:4x UTC): its face is the Passwords' own where their
-                // door stands -- the key, the title, and the receiver's tap that saves it after the device owner's check; an edition
-                // without Passwords draws the key and «Shared password» alone -- no title, no content, nothing saves it (link 15962).
-                VStack(alignment: .trailing, spacing: 4) {
-                    if let face = MTApps.passwords?.letterFace(message.text, mine: message.isMine) {
-                        face
-                    } else {
-                        HStack(spacing: 12) {
-                            Image(systemName: "key.fill").font(.title2)
-                            Text("Shared password").font(.headline)
-                        }
-                    }
-                    metaLine(onMedia: false)
-                }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(bubbleFill).foregroundColor(bubbleText)
-                .clipShape(bubbleShape).overlay { bubbleOutline }
-                .contentShape(Rectangle())
-                .onTapGesture { if !message.isMine { MTApps.passwords?.take(message.text) } }
-            } else if let face = MTApps.coins?.letterFace(message, failed: message.isMine && stampStatus == .failed) {
-                // THE COIN LETTER'S BUBBLE (the author's word 03.10 13:52): the plate and the line are the bubble's, the face is the
-                // coins' own (MTCoinLetterFace, slice S2b b6).
-                VStack(alignment: .trailing, spacing: 4) {
-                    face
-                    metaLine(onMedia: false)
-                }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(bubbleFill).foregroundColor(bubbleText)
-                .clipShape(bubbleShape).overlay { bubbleOutline }
-            } else if let rel = releaseInfoOf(message.text) {
-                releaseBubble(rel)
-            } else if let ci = callInfoOf(message.text) {
-                callBubble(ci)
-            } else if message.imageFile == nil, message.videoFile == nil, message.audioFile == nil, message.docFile == nil,
-                      let em = bigEmojiText(message.text) {
-                // A ROW THAT OWNS A FILE IS A MEDIA ROW, WHATEVER ITS WORDS (29.09): a video shared from the gallery under a
-                // caption of one to three emoji was drawn as the big glyphs alone — the file lay whole on both phones, the
-                // letter was receipted, and neither person saw the video (T1 and its sender, 13:21). The glyph branch
-                // speaks only for a row without a file; a captioned picture or video keeps its plate, the caption under it.
-                VStack(alignment: .trailing, spacing: 2) {
-                    if quoted {
-                        replyQuote
-                            .padding(.horizontal, 10).padding(.vertical, 6)
-                            .background(bubbleFill).foregroundColor(bubbleText)
-                            .clipShape(bubbleShape).overlay { bubbleOutline }
-                    }
-                    Text(em).font(.system(size: MTStickerLook.glyph)).fixedSize()   // the one number a sticker is three of
-                    metaLine(onMedia: true)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Color.black.opacity(0.45), in: MontanaLongOctagon())
-                }
-            } else if let af = message.audioFile {
-                // The voice's look is the person's (Settings → Appearance → Voice message style, 17.09):
-                // the orb, or the histogram — the very plate a music track wears, in the text bubble's colours.
-                voiceCapsuleBubble(af)   // a capsule of our letters' glass, drawn once (the author's word 28.09)
-            } else if let f = message.imageFile {
-                // A PICTURE IS NOT DECODED IN A RENDER PASS (28.09) -- the law the video's poster has kept since 23.08,
-                // one line below. The whole photograph used to be decoded right here, on the main thread, in the body of
-                // the cell: measured on T1 under 1966, a chat opened with a single frame of 637 ms
-                // (motion what=chat:open late_cells=637ms/group1+photo1+text2+voice1). What is already decoded draws the
-                // first frame, the shape comes from the file's header (pictureAspect), and the picture itself is decoded
-                // off the main thread -- the bubble redraws when it lands.
-                let ready = docImageCached(f)
-                // The sender's manifest preview is already a small, trusted JPEG in posterURL.
-                // Reading it here gives a received picture its first honest frame before the
-                // full cargo lands; `ready` remains the only fact that says the full file exists.
-                let poster = ready == nil ? videoThumbCached(f) : nil
-                let picture = ready ?? poster
-                let _ = thumbTick                   // dependency: redraw when the decoded picture lands
-                if let picture {
-                    mediaBubble(picture: picture, aspect: picture.size, isVideo: false, file: f)
-                        // A PICTURE THE CACHE LET GO IS ASKED AGAIN (the author's word 03.10.2026 13:46 UTC: «photos on a black
-                        // ground sometimes -- fix it at the root»). T1 03.10: the photo landed whole at 13:40:56, the app left the
-                        // screen at 13:43:20 and every picture cache was emptied (MontanaCaches, caches=9); back at 13:45:30 the
-                        // bubble was drawn again without its picture, and the ask below never ran again -- its key, the file and its
-                        // presence, had not changed. The key now says whether the picture stands drawn: a bubble drawn without it
-                        // asks again, whatever emptied the cache.
-                        .task(id: "\(f)|\(fileOnDisk(f))|\(ready == nil)") {
-                            // THE PICTURE IS ASKED UNTIL IT COMES (29.09, the iPhone 17 at 13:16Z: a picture just sent stood as a
-                            // grey plate for the life of the process while the same file opened in the viewer). A refusal of the
-                            // decoder at the row's birth is a moment, not a verdict: the ask repeats at a growing pause while the
-                            // file lies here, and a plate still grey after six asks names itself in the diary.
-                            var pause: UInt64 = 300_000_000
-                            for turn in 0..<6 {
-                                guard docImageCached(f) == nil else { return }
-                                let got = await Task.detached(priority: .userInitiated) { docImage(f) }.value
-                                if Task.isCancelled { return }
-                                if got != nil { thumbTick += 1; return }
-                                guard fileOnDisk(f) else { MTHomeKeep.want(f); return }   // not here yet: its landing changes the key and asks anew; a file your node keeps is asked there
-                                if turn == 5 { MontanaTrace.mark("bubble_blank", "kind=img file=\(String(f.prefix(20))) -- the file lies here, six asks gave no picture"); return }
-                                try? await Task.sleep(nanoseconds: pause)
-                                pause = min(pause * 2, 5_000_000_000)
-                            }
-                        }
-                } else if message.docName == MontanaStickerBook.docName { stickerPlaceholder }
-                else {
-                    // A row may not impersonate a picture. This legacy/corrupt-manifest path
-                    // occupies no visual space and becomes visible only after real pixels decode.
-                    EmptyView()
-                        .task(id: "\(f)|\(fileOnDisk(f))") {
-                            guard fileOnDisk(f) else { return }
-                            var pause: UInt64 = 300_000_000
-                            for turn in 0..<6 {
-                                guard docImageCached(f) == nil else { thumbTick += 1; return }
-                                let got = await Task.detached(priority: .userInitiated) { docImage(f) }.value
-                                if Task.isCancelled { return }
-                                if got != nil { thumbTick += 1; return }
-                                if turn == 5 {
-                                    MontanaTrace.mark("image_absent", "file=\(String(f.prefix(20))) — no renderable image, no plate")
-                                    return
-                                }
-                                try? await Task.sleep(nanoseconds: pause)
-                                pause = min(pause * 2, 5_000_000_000)
-                            }
-                        }
-                }
-            } else if let vf = message.videoFile {
-                if vf.hasPrefix("vnote_") { videoNoteBubble(vf) } else {
-                    // The video's poster is fetched here and only here; the plate is the one every
-                    // picture stands on (mediaBubble) — the kind of data never chooses the plate.
-                    let thumb = videoThumbCached(vf)   // CACHE ONLY — no decoding in render (main)
-                    let _ = thumbTick                   // dependency: redraw when the async poster is ready
-                    mediaBubble(picture: thumb, aspect: thumb?.size ?? videoAspect(vf) ?? CGSize(width: 4, height: 3),
-                                isVideo: true, file: vf)
-                        // The key includes the fact of the file's presence: when the download finishes the
-                        // key changes and the poster recomputes; once, it stayed empty and the plate fell to 4:3.
-                        .task(id: "\(vf)|\(fileOnDisk(vf))") {
-                            for _ in 0..<5 {
-                                if await videoThumbAsync(vf) != nil { thumbTick += 1; return }
-                                try? await Task.sleep(nanoseconds: 3_000_000_000)
-                                if Task.isCancelled { return }
-                            }
-                        }
-                }
-            } else if let df = message.docFile {
-                if mtIsAudioName(message.docName ?? "") || mtIsAudioName(df) {
-                    audioBubble(df, voice: false)
-                } else if MontanaGif.isGif(message.docName ?? df) || MontanaGif.isGif(df) {
-                    gifBubble(df)
-                } else {
-                    docBubble(df)
-                }
-            } else if message.text.hasPrefix(MontanaWakePush.letterBlobMark) {
-                if message.lost {
-                    lostLetterBubble      // the words never came, and are asked for no more (25.09)
-                } else {
-                    pendingLetterBubble   // a reference, not words: the row is being healed
-                }
-            } else if let place = placeLetter {
-                placeBubble(place)    // the words of a place, drawn as the place (the author's word 23.09)
             } else {
-                textBubble
+                kinds
             }
+            #else
+            kinds
+            #endif
         }
         // The retry button stands BESIDE the bubble, not on top: overlaid, it covered the
         // letter's corner and read as part of the text. One's own letter hugs the right, so
         // the button lands to its left — on the feed's side, not past the screen edge.
         .modifier(MTResendBeside(badge: failedResendBadge))
+    }
+    /// THE LETTER'S KINDS in their one order: the filter's fold, a group's letters, a post's card, the coins', a release, a call,
+    /// the big glyphs, the media and the words.
+    @ViewBuilder private var kinds: some View {
+        if filterFolds {
+            // THE FILTER (Guideline 1.2): a letter carrying an objectionable word stands
+            // folded — nothing of it is read by surprise; the person's own tap unfolds it.
+            // THE FOLD IS A BUTTON (the author's word 24.09: «it must always show on the tap»). It was a
+            // tap gesture of ours inside the letter -- the second tap node the gesture law above forbids
+            // (15.09: two nodes fired on one tap); a control inside a letter is a Button, and a Button
+            // wins over the letter's own tap. The opening is the letter's (MTFilterFold), not this drawing's.
+            Button {
+                withAnimation(.easeOut(duration: 0.15)) { MTFilterFold.shared.open(message.id) }
+            } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Hidden by the filter", systemImage: "eye.slash").font(.callout)
+                    Text("Tap to show").font(.caption).foregroundColor(bubbleText.opacity(0.7))
+                }
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(bubbleFill).foregroundColor(bubbleText)
+                .clipShape(bubbleShape).overlay { bubbleOutline }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else if isGroup {
+            groupBubble()
+        } else {
+            #if MONTANA_MESSENGER
+            letterKinds
+            #else
+            // A POST'S CARD (MTWallCard): the Protocol's alone (cut C6).
+            if let card = MTWallCard.of(message.text) {
+                wallCardBubble(card)
+            } else {
+                letterKinds
+            }
+            #endif
+        }
+    }
+    /// The kinds after a group's letters: the coins', a release, a call, the big glyphs, the media and the words.
+    @ViewBuilder private var letterKinds: some View {
+        if MTMoneyFlowRow.of(message.text) {
+            // THE MONEY FLOW BEGAN (MTMoneyFlowRow): a card of the chat, our coin turning once as the row appears.
+            // NO LETTER MINTS (the author's word 02.11.2026 16:14 UTC, link 14629: «only 1 coin is 1 second, no other way named»):
+            // the card's second line said every letter mints a coin; the turn mints nothing, only the chain's second does.
+            VStack(alignment: .trailing, spacing: 4) {
+                HStack(spacing: 10) {
+                    MTApps.coins?.coin(spinning: true, side: 40, turn: 0)
+                    Text("Money flow has begun").font(.headline)
+                }
+                metaLine(onMedia: false)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(bubbleFill).foregroundColor(bubbleText)
+            .clipShape(bubbleShape).overlay { bubbleOutline }
+        } else if let face = MTApps.coins?.letterFace(message, failed: message.isMine && stampStatus == .failed) {
+            // THE COIN LETTER'S BUBBLE (the author's word 03.10 13:52): the plate and the line are the bubble's, the face is the
+            // coins' own (MTCoinLetterFace, slice S2b b6).
+            VStack(alignment: .trailing, spacing: 4) {
+                face
+                metaLine(onMedia: false)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(bubbleFill).foregroundColor(bubbleText)
+            .clipShape(bubbleShape).overlay { bubbleOutline }
+        } else if let rel = releaseInfoOf(message.text) {
+            releaseBubble(rel)
+        } else if let ci = callInfoOf(message.text) {
+            callBubble(ci)
+        } else if message.imageFile == nil, message.videoFile == nil, message.audioFile == nil, message.docFile == nil,
+                  let em = bigEmojiText(message.text) {
+            // A ROW THAT OWNS A FILE IS A MEDIA ROW, WHATEVER ITS WORDS (29.09): a video shared from the gallery under a
+            // caption of one to three emoji was drawn as the big glyphs alone — the file lay whole on both phones, the
+            // letter was receipted, and neither person saw the video (T1 and its sender, 13:21). The glyph branch
+            // speaks only for a row without a file; a captioned picture or video keeps its plate, the caption under it.
+            VStack(alignment: .trailing, spacing: 2) {
+                if quoted {
+                    replyQuote
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(bubbleFill).foregroundColor(bubbleText)
+                        .clipShape(bubbleShape).overlay { bubbleOutline }
+                }
+                Text(em).font(.system(size: MTStickerLook.glyph)).fixedSize()   // the one number a sticker is three of
+                metaLine(onMedia: true)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Color.black.opacity(0.45), in: MontanaLongOctagon())
+            }
+        } else if let af = message.audioFile {
+            // The voice's look is the person's (Settings → Appearance → Voice message style, 17.09):
+            // the orb, or the histogram — the very plate a music track wears, in the text bubble's colours.
+            voiceCapsuleBubble(af)   // a capsule of our letters' glass, drawn once (the author's word 28.09)
+        } else if let f = message.imageFile {
+            // A PICTURE IS NOT DECODED IN A RENDER PASS (28.09) -- the law the video's poster has kept since 23.08,
+            // one line below. The whole photograph used to be decoded right here, on the main thread, in the body of
+            // the cell: measured on T1 under 1966, a chat opened with a single frame of 637 ms
+            // (motion what=chat:open late_cells=637ms/group1+photo1+text2+voice1). What is already decoded draws the
+            // first frame, the shape comes from the file's header (pictureAspect), and the picture itself is decoded
+            // off the main thread -- the bubble redraws when it lands.
+            let ready = docImageCached(f)
+            // The sender's manifest preview is already a small, trusted JPEG in posterURL.
+            // Reading it here gives a received picture its first honest frame before the
+            // full cargo lands; `ready` remains the only fact that says the full file exists.
+            let poster = ready == nil ? videoThumbCached(f) : nil
+            let picture = ready ?? poster
+            let _ = thumbTick                   // dependency: redraw when the decoded picture lands
+            if let picture {
+                mediaBubble(picture: picture, aspect: picture.size, isVideo: false, file: f)
+                    // A PICTURE THE CACHE LET GO IS ASKED AGAIN (the author's word 03.10.2026 13:46 UTC: «photos on a black
+                    // ground sometimes -- fix it at the root»). T1 03.10: the photo landed whole at 13:40:56, the app left the
+                    // screen at 13:43:20 and every picture cache was emptied (MontanaCaches, caches=9); back at 13:45:30 the
+                    // bubble was drawn again without its picture, and the ask below never ran again -- its key, the file and its
+                    // presence, had not changed. The key now says whether the picture stands drawn: a bubble drawn without it
+                    // asks again, whatever emptied the cache.
+                    .task(id: "\(f)|\(fileOnDisk(f))|\(ready == nil)") {
+                        // THE PICTURE IS ASKED UNTIL IT COMES (29.09, the iPhone 17 at 13:16Z: a picture just sent stood as a
+                        // grey plate for the life of the process while the same file opened in the viewer). A refusal of the
+                        // decoder at the row's birth is a moment, not a verdict: the ask repeats at a growing pause while the
+                        // file lies here, and a plate still grey after six asks names itself in the diary.
+                        var pause: UInt64 = 300_000_000
+                        for turn in 0..<6 {
+                            guard docImageCached(f) == nil else { return }
+                            let got = await Task.detached(priority: .userInitiated) { docImage(f) }.value
+                            if Task.isCancelled { return }
+                            if got != nil { thumbTick += 1; return }
+                            guard fileOnDisk(f) else { MTHomeKeep.want(f); return }   // not here yet: its landing changes the key and asks anew; a file your node keeps is asked there
+                            if turn == 5 { MontanaTrace.mark("bubble_blank", "kind=img file=\(String(f.prefix(20))) -- the file lies here, six asks gave no picture"); return }
+                            try? await Task.sleep(nanoseconds: pause)
+                            pause = min(pause * 2, 5_000_000_000)
+                        }
+                    }
+            } else if message.docName == MontanaStickerBook.docName { stickerPlaceholder }
+            else {
+                // A row may not impersonate a picture. This legacy/corrupt-manifest path
+                // occupies no visual space and becomes visible only after real pixels decode.
+                EmptyView()
+                    .task(id: "\(f)|\(fileOnDisk(f))") {
+                        guard fileOnDisk(f) else { return }
+                        var pause: UInt64 = 300_000_000
+                        for turn in 0..<6 {
+                            guard docImageCached(f) == nil else { thumbTick += 1; return }
+                            let got = await Task.detached(priority: .userInitiated) { docImage(f) }.value
+                            if Task.isCancelled { return }
+                            if got != nil { thumbTick += 1; return }
+                            if turn == 5 {
+                                MontanaTrace.mark("image_absent", "file=\(String(f.prefix(20))) — no renderable image, no plate")
+                                return
+                            }
+                            try? await Task.sleep(nanoseconds: pause)
+                            pause = min(pause * 2, 5_000_000_000)
+                        }
+                    }
+            }
+        } else if let vf = message.videoFile {
+            if vf.hasPrefix("vnote_") { videoNoteBubble(vf) } else {
+                // The video's poster is fetched here and only here; the plate is the one every
+                // picture stands on (mediaBubble) — the kind of data never chooses the plate.
+                let thumb = videoThumbCached(vf)   // CACHE ONLY — no decoding in render (main)
+                let _ = thumbTick                   // dependency: redraw when the async poster is ready
+                mediaBubble(picture: thumb, aspect: thumb?.size ?? videoAspect(vf) ?? CGSize(width: 4, height: 3),
+                            isVideo: true, file: vf)
+                    // The key includes the fact of the file's presence: when the download finishes the
+                    // key changes and the poster recomputes; once, it stayed empty and the plate fell to 4:3.
+                    .task(id: "\(vf)|\(fileOnDisk(vf))") {
+                        for _ in 0..<5 {
+                            if await videoThumbAsync(vf) != nil { thumbTick += 1; return }
+                            try? await Task.sleep(nanoseconds: 3_000_000_000)
+                            if Task.isCancelled { return }
+                        }
+                    }
+            }
+        } else if let df = message.docFile {
+            if mtIsAudioName(message.docName ?? "") || mtIsAudioName(df) {
+                audioBubble(df, voice: false)
+            } else if MontanaGif.isGif(message.docName ?? df) || MontanaGif.isGif(df) {
+                gifBubble(df)
+            } else {
+                docBubble(df)
+            }
+        } else if message.text.hasPrefix(MontanaWakePush.letterBlobMark) {
+            if message.lost {
+                lostLetterBubble      // the words never came, and are asked for no more (25.09)
+            } else {
+                pendingLetterBubble   // a reference, not words: the row is being healed
+            }
+        } else if let place = placeLetter {
+            placeBubble(place)    // the words of a place, drawn as the place (the author's word 23.09)
+        } else {
+            textBubble
+        }
     }
     /// SAVE TO PHOTOS, BESIDE THE BUBBLE (the author's word 11.09): strictly to the right of the
     /// correspondent's photo or video, never on the picture, never on one's own letters. A PLATE
@@ -977,8 +1007,9 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         return MTReleaseScroll(title: title, notes: r.notes, url: r.url, build: r.build, shape: bubbleShape) { metaLine(onMedia: true) }
     }
 
+    #if !MONTANA_MESSENGER
     /// A POST ON A WALL OF THE PAIR (the author's word 30.09): the wall's glyph, the word for it and the post's first lines, in the
-    /// chess invitation's shape; the tap opens the wall the post stands on (primaryTap).
+    /// shape of a card of the chat; the tap opens the wall the post stands on (primaryTap).
     func wallCardBubble(_ c: MTWallCard) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             HStack(spacing: 10) {
@@ -995,6 +1026,7 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         .background(bubbleFill).foregroundColor(bubbleText)
         .clipShape(bubbleShape).overlay { bubbleOutline }
     }
+    #endif
 
     func callBubble(_ ci: MTCallInfo) -> some View {
         let title = String(localized: ci.video ? "Video call" : "Voice call", bundle: MTLanguage.bundle)
@@ -1809,7 +1841,13 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
     enum SpeakerPlace { case inside, above, none }
     static func speakerPlace(_ m: Message, plate: Bool) -> SpeakerPlace {
         if plate { return .none }
-        if m.gameLetter != nil || MTWallCard.of(m.text) != nil || MTMoneyFlowRow.of(m.text) || MTRowLetter.isSecret(m.text)
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+        if m.gameLetter != nil { return .above }
+        #endif
+        #if !MONTANA_MESSENGER
+        if MTWallCard.of(m.text) != nil { return .above }   // a post's card (cut C6)
+        #endif
+        if MTMoneyFlowRow.of(m.text)
             || MTApps.coins?.isLetter(m) == true || releaseInfoOf(m.text) != nil || callInfoOf(m.text) != nil { return .above }
         let files = m.imageFile != nil || m.videoFile != nil || m.audioFile != nil || m.docFile != nil
         if !files, bigEmojiText(m.text) != nil { return .above }
@@ -1907,8 +1945,13 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         // of the width so a single letter cannot take the whole screen.
         let ratio = max(0.75, min(3.0, CGFloat(card.w ?? 4) / CGFloat(max(card.h ?? 3, 1))))
         return Button {
-            // A YouTube card plays here, in YouTube's own player where its door stands (MTApps.youtube); any other page opens where it lives.
-            if let u = URL(string: card.u), MTApps.youtube?.play(u, title: card.t) != true { UIApplication.shared.open(u) }
+            // A YouTube card plays here, in YouTube's own player, in the Protocol alone (MTApps.youtube; Messenger compiles none, cut
+            // C4); any other page opens where it lives.
+            guard let u = URL(string: card.u) else { return }
+            #if !MONTANA_MESSENGER
+            if MTApps.youtube?.play(u, title: card.t) == true { return }
+            #endif
+            UIApplication.shared.open(u)
         } label: {
             HStack(alignment: .top, spacing: 6) {
                 RoundedRectangle(cornerRadius: 1.5)

@@ -322,8 +322,10 @@ final class MTGroup {
     static let peopleLimit = 200
     /// A copy outlives the queue's own term by a day and is let go with it.
     static let copyLife: Double = 8 * 24 * 3600
+    #if !MONTANA_MESSENGER
     /// A channel's post with its files' posters, at most (MTBoard.thumbLimit a poster, MTBoard.mediaLimit files, the words).
     static let wallPostLimit = 1_000_000
+    #endif
     /// [I-14]: the posts one word of a channel's views names, at most (MTChannelViews).
     static let viewsBatch = 200
     /// [I-14]: a letter's link card on the wire, at most -- the pair's leg (MTLinkPreviewBuilder.fitting), its picture cut to it.
@@ -877,6 +879,7 @@ final class MTGroup {
         MontanaTrace.mark("group_tx", mid: letter, "passport copies=\(n)")
     }
 
+    #if !MONTANA_MESSENGER
     /// A CHANNEL'S POST LEAVES TO EVERY SUBSCRIBER (the author's words 06.10.2026 11:2x-11:4x UTC: «in channels posts as on the Wall of Thoughts; everything the wall publishes is published in a channel», MTBoard.lay): the wall's own word «cpost» with the post as the channel's page
     /// shows it, carried as the channel's letter; no row of the feed is born of it (ChatStore.append hands a wall's word to MTBoard).
     @MainActor
@@ -888,6 +891,7 @@ final class MTGroup {
         let n = spread(w, in: g, except: nil, own: false)
         MontanaTrace.mark("group_tx", "wall post copies=\(n)")
     }
+    #endif
 
     /// A HAND ASKED AGAIN (the red mark's retry): every copy of the letter that has not been receipted rides again under its own
     /// name; a letter with no copy left leaves anew to everyone. The row goes back to the clock by the one road back.
@@ -1364,7 +1368,11 @@ final class MTGroup {
     static func rightsAsked(by words: String) -> [MTGroupRight] {
         if words.hasPrefix(reactionMark) { return [.reactions] }
         if words.hasPrefix(pinMark) { return [.pin] }
+        #if MONTANA_MESSENGER
+        if words.hasPrefix(deleteMark) { return [] }
+        #else
         if words.hasPrefix(deleteMark) || MTApps.wall?.isChannelPost(words) == true { return [] }
+        #endif
         if words.hasPrefix(stickerMark) { return [.stickers] }
         if words.hasPrefix(mediaMark) {
             let o = json(String(words.dropFirst(mediaMark.count))) ?? [:]
@@ -2153,7 +2161,9 @@ final class MTGroup {
         case "sig": return answered(w, from: pipe, store: store)
         case "bye": return parted(w, from: pipe, store: store)
         case "out": return dropped(w, by: pipe, store: store)
+        #if !MONTANA_MESSENGER
         case "wl": return wallWord(w, from: pipe, store: store)   // COMPAT-GATED: a channel's wall word (06.10)
+        #endif
         case "room": return roomed(w, from: pipe, copy: copy)   // COMPAT-GATED: a group room's word (07.10)
         case "ev": return evented(w, from: pipe, store: store)
         case "kk": return kicked(w, from: pipe, store: store)   // COMPAT-GATED: an administrator's «take out», to the owner
@@ -2377,8 +2387,10 @@ final class MTGroup {
         guard var g = groups[w.g] else { return .wait }
         guard g.left != true else { return .refused }   // out of the group: the word's road ends here
         guard let id = w.id, Self.isLetterName(id), let words = w.tx, Self.carries(words) else { return .refused }
+        #if !MONTANA_MESSENGER
         let post = MTApps.wall?.isChannelPost(words) == true
         if post, g.kind != .channel || g.mine { return .refused }   // a wall's post rides a channel alone, from its owner
+        #endif
         let from = MTSamePair.root(pipe)
         let seat: String
         if g.mine {
@@ -2424,13 +2436,17 @@ final class MTGroup {
         let row = Message(text: words, isFromMe: false, time: hhmm(at: born), replyText: quote, deliveryStatus: .delivered,
                           msgId: sid, senderRef: Self.speaker(g.id, seat), createdAt: born,
                           replyToId: store.localId(forMid: w.qm, chat: key))
-        let landed = store.append(key, row)   // a channel's post lands on its wall, never as a row (MTBoard.handle)
+        let landed = store.append(key, row)
         MTGroupTyping.shared.stopped(key, seat: seat)   // the letter came: its speaker types no more (the reference's head)
+        #if MONTANA_MESSENGER
+        MontanaTrace.mark("group_rx", mid: id, "letter landed=\(landed ? 1 : 0) owner=\(g.mine ? 1 : 0)")
+        #else
         MontanaTrace.mark("group_rx", mid: id, "letter landed=\(landed ? 1 : 0) owner=\(g.mine ? 1 : 0) post=\(post ? 1 : 0)")
         if post {
             if w.sl != 1 { MontanaNotify.presentGroup(title: g.title, body: String(localized: "New message", bundle: MTLanguage.bundle), chat: key, copy: copy) }
             return .held
         }
+        #endif
         if landed, w.sl != 1, w.hs != 1 {   // a channel's silent post, and a group's past handed to one just added (G.4), show no banner
             // The banner a running app owes its person: the group's title over who wrote and what (a channel speaks as itself).
             let shown = MontanaNotify.body(for: words) ?? String(localized: "New message", bundle: MTLanguage.bundle)
@@ -2595,6 +2611,7 @@ final class MTGroup {
         return .held
     }
 
+    #if !MONTANA_MESSENGER
     /// A WORD OF A CHANNEL'S WALL (the author's words 06.10.2026 11:2x-11:4x UTC: «in channels posts as on the Wall of Thoughts»): a subscriber's mark -- a like, the posts
     /// seen, a comment -- reaches the owner, who applies it by the subscriber's seat (MTBoard.applyChannel); the owner's counts and
     /// deletions reach a subscriber, who lays them on the channel's page (MTBoard.handle).
@@ -2622,6 +2639,7 @@ final class MTGroup {
         let w = MTGroupWord(t: "wl", g: g.id, id: ChatStore.mintMid().mid, s: g.me, tx: text)   // COMPAT-GATED: a channel's wall word
         return spread(w, in: g, except: nil, own: false) > 0
     }
+    #endif
 
     /// A ROOM'S WORD (MTGroupRoom): its seat is proven by the pipe it came by, as an answer's is; the room reads it once by its name,
     /// and the owner of the group passes it on to everyone else -- a targeted word to the seats it names alone.
@@ -2761,11 +2779,16 @@ final class MTGroup {
     /// phone's own -- a coin landing in a group would be credited from nobody. A GROUP'S COIN (18.10.2026) is no letter of the group:
     /// each person picked gets the pair's own transfer, and the group gets plain words of how many were paid (tellCoins).
     static func carries(_ text: String) -> Bool {
+        #if !MONTANA_MESSENGER
         // A CHANNEL'S POST (MTWallDoor.isChannelPost): the wall's own word; an edition with no wall carries none, its pictures' posters within the wall's own bounds.
         if MTApps.wall?.isChannelPost(text) == true { return text.utf8.count <= Self.wallPostLimit }
+        #endif
         guard !text.isEmpty, text.count <= ChatStore.sendPieceChars else { return false }
         if MontanaNotify.isService(text), !text.hasPrefix(stickerMark), !text.hasPrefix(mediaMark) { return false }
-        return MTApps.coins?.isLetter(text) != true && MTRowLetter.game(text) == nil && !MTRowLetter.ownRow(text)
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+        if MTRowLetter.game(text) != nil { return false }
+        #endif
+        return MTApps.coins?.isLetter(text) != true && !MTRowLetter.ownRow(text)
     }
     static func clean(_ s: String, _ limit: Int) -> String {
         String(MTCrown.plain(s.trimmingCharacters(in: .whitespacesAndNewlines)).prefix(limit))

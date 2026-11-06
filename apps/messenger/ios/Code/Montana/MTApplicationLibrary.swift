@@ -7,33 +7,43 @@ extension MTApplication {
         case .contacts: return 0
         case .calls: return 1
         case .chats, .groups, .channels: return 2   // the chats' tile, until the author gives the groups and the channels their own
+        #if !MONTANA_MESSENGER
         case .feed: return 4
+        #endif
         case .wallet: return -1   // the platform's wallet glyph in every style (the author's word 18.10.2026 07:3x UTC: «system, as the wallet, everywhere»)
         case .messenger: return 6   // the tile of the author's atlases the contact card wore until it left (decision 601)
         case .music: return 7
         case .gallery: return 8
+        #if !MONTANA_MESSENGER
         case .chess: return 9
-        case .vpnWall, .meshWall, .p2pWall: return 10   // the network's one tile of the author's atlases, until the author gives each wall its own
+        case .vpnWall, .meshWall: return 10
+        case .p2pWall: return 10   // the network's one tile of the author's atlases, until the author gives each wall its own
+        #endif
         case .settings: return 11
-        case .passwords: return -1   // no tile of the author's atlases: the white glyph in every style
         }
     }
     var glyph: String {
         switch self {
         case .contacts: return UIState.Glyph.contacts
         case .calls: return UIState.Glyph.calls
+        #if !MONTANA_MESSENGER
         case .feed: return "rectangle.stack.fill"
+        #endif
         case .wallet: return "wallet.pass.fill"
+        #if !MONTANA_MESSENGER
         case .chess: return ""
+        #endif
         case .chats: return UIState.Glyph.chats
         case .groups: return "person.3.fill"
         case .channels: return "megaphone.fill"
         case .music: return UIState.Glyph.music
         case .gallery: return UIState.Glyph.gallery
-        case .vpnWall, .meshWall, .p2pWall: return ""
+        #if !MONTANA_MESSENGER
+        case .vpnWall, .meshWall: return ""
+        case .p2pWall: return ""
+        #endif
         case .messenger: return "building.2.fill"   // an organisation, not a trade: the screen names no messenger (06.10)
         case .settings: return "gearshape.fill"
-        case .passwords: return "key.fill"
         }
     }
 }
@@ -52,6 +62,7 @@ enum MTLibraryIconStyle: String, CaseIterable, Identifiable {
     }
 }
 
+#if !MONTANA_MESSENGER
 /// THE FEED'S WHITE MARK (the author's word 25.09: «the time symbol in the side panel in the style of the others — a white
 /// circle, empty inside, and the time symbol: exactly the same logo, only white — not another drawing»): the logo itself drawn
 /// white by its own shape, inside the thin white ring the outlined glyphs wear.
@@ -66,6 +77,7 @@ struct MTFeedMark: View {
         .frame(width: side, height: side)
     }
 }
+#endif
 
 /// The author's original artwork is bundled unchanged. Each window shows one tile, without its poster caption.
 private struct MTLibraryGoldTile: View {
@@ -93,18 +105,20 @@ struct MTApplicationIcon: View {
     @AppStorage(MTLibraryIconStyle.key) private var savedStyle = MTLibraryIconStyle.initial.rawValue
     private var effectiveStyle: MTLibraryIconStyle { style ?? MTLibraryIconStyle(rawValue: savedStyle) ?? .initial }
     /// THE WHITE ICONS (the author's word 29.09, the drawer of 1990 as the pattern): the bar's own glyphs one to one, white and
-    /// outlined; the feed's is the logo in its ring, the chess's its icon. ONE STYLE FOR EVERY ROW (the author's word 29.09
+    /// outlined; the feed's is the logo in its ring, a door's application its own icon. ONE STYLE FOR EVERY ROW (the author's word 29.09
     /// evening: «white icons by default, the network included, in one style»): the network's globe is the platform's outlined
     /// glyph in the same white, no longer the coloured globe of the bar. Drawn for the 30-point row mark and scaled by it, so
     /// every window shows the same set.
     @ViewBuilder private var whiteMark: some View {
         let unit = side / 30
         switch app {
+        #if !MONTANA_MESSENGER
         case .feed: MTFeedMark(side: 26 * unit)
         case .chess: if let i = MTApps.chess?.icon(size: 26 * unit) { i }   // the game's own icon, through its door (slice S4b)
         case .vpnWall: if let g = MTApps.vpn?.glyph(color: .white, size: 24 * unit) { g }   // the globe on a stand, the VPN's own glyph
         case .meshWall: Image(systemName: "antenna.radiowaves.left.and.right").font(.system(size: 22 * unit, weight: .regular)).foregroundColor(.white)
         case .p2pWall: Image(systemName: "globe").font(.system(size: 22 * unit, weight: .regular)).foregroundColor(.white)
+        #endif
         default: Image(systemName: app.glyph).font(.system(size: 22 * unit, weight: .regular)).foregroundColor(.white)
         }
     }
@@ -123,7 +137,7 @@ struct MTApplicationIcon: View {
     var body: some View {
         ZStack {
             if app.artworkIndex == -1 {
-                // AN APP THE ATLASES DO NOT DRAW (Passwords, 06.10.2026): its white glyph, never another app's tile.
+                // AN APP THE ATLASES DO NOT DRAW (the wallet, 18.10.2026): its white glyph, never another app's tile.
                 whiteMark
             } else {
             switch effectiveStyle {
@@ -154,7 +168,7 @@ struct MTApplicationIcon: View {
 struct MTLibraryIconStyleView: View {
     @AppStorage(MTLibraryIconStyle.key) private var savedStyle = MTLibraryIconStyle.initial.rawValue
     @AppStorage("appLibraryIcons") private var icons = false   // the drawer's view: the 1949 list by default, the icons' grid by choice
-    private let preview: [MTApplication] = [.contacts, .calls, .chats, .feed, .wallet, .music, .gallery, .chess, .vpnWall, .meshWall, .p2pWall, .settings].filter(\.carried)   // only what this edition carries (MTApplication.carried)
+    private let preview: [MTApplication] = MTApplication.libraryPreview.filter(\.carried)   // only what this edition carries (MTApplication.carried)
     private var selected: MTLibraryIconStyle { MTLibraryIconStyle(rawValue: savedStyle) ?? .initial }
     private func card(_ style: MTLibraryIconStyle) -> some View {
         Button {

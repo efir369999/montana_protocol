@@ -2495,22 +2495,6 @@
         }
       }
     },
-    "Asking your node…": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Спрашиваем ваш узел…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在询问您的节点…"
-          }
-        }
-      }
-    },
     "Attachments": {
       "localizations": {
         "ru": {
@@ -2523,22 +2507,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "附件"
-          }
-        }
-      }
-    },
-    "Attachments in transit": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вложения в пути"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "传输中的附件"
           }
         }
       }
@@ -3503,22 +3471,6 @@
         }
       }
     },
-    "Call relay": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ретрансляция звонков"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通话中继"
-          }
-        }
-      }
-    },
     "Call sign": {
       "localizations": {
         "ru": {
@@ -3531,22 +3483,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "呼号"
-          }
-        }
-      }
-    },
-    "Call signalling": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сигналинг звонков"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通话信令"
           }
         }
       }
@@ -4553,38 +4489,6 @@
         }
       }
     },
-    "Copies of the whole phone": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Копии всего телефона"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整机副本"
-          }
-        }
-      }
-    },
-    "Copies to your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Копии на ваш узел"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "备份到您的节点"
-          }
-        }
-      }
-    },
     "Copy": {
       "localizations": {
         "ru": {
@@ -5134,22 +5038,6 @@
         }
       }
     },
-    "Diaries": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дневники"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日志"
-          }
-        }
-      }
-    },
     "Disconnected": {
       "extractionState": "manual",
       "localizations": {
@@ -5227,22 +5115,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在从 iCloud 下载"
-          }
-        }
-      }
-    },
-    "Downloading from your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Загружаем с вашего узла"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在从您的节点下载"
           }
         }
       }
@@ -5505,22 +5377,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "按正确顺序输入这 24 个单词，用空格分隔。"
-          }
-        }
-      }
-    },
-    "Enter the address of a machine you own, its login and password: Montana puts its door on it and keeps only the digest of the certificate the machine makes for itself. The password is used once and kept nowhere.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Введите адрес машины, которой владеете, логин и пароль: Montana поставит на неё свою дверь и сохранит только отпечаток сертификата, который машина сделает себе сама. Пароль используется один раз и не хранится."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "输入您拥有的机器地址、登录名和密码：Montana 会在其上安装自己的门，并只保留机器为自己生成的证书摘要。密码仅使用一次，不会被保存。"
           }
         }
       }
@@ -6263,22 +6119,6 @@
         }
       }
     },
-    "Held by your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Хранится на вашем узле"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点已保存"
-          }
-        }
-      }
-    },
     "Hello! This is the Montana style.": {
       "localizations": {
         "ru": {
@@ -6979,22 +6819,6 @@
         }
       }
     },
-    "Letters for sleeping phones": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Письма для спящих телефонов"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "给休眠手机的信件"
-          }
-        }
-      }
-    },
     "Level": {
       "localizations": {
         "ru": {
@@ -7267,22 +7091,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "位置"
-          }
-        }
-      }
-    },
-    "Login": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Логин"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录名"
           }
         }
       }
@@ -7982,22 +7790,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "回合：%lld"
-          }
-        }
-      }
-    },
-    "Moving pictures": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Движущиеся картинки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "动图"
           }
         }
       }
@@ -10304,22 +10096,6 @@
         }
       }
     },
-    "Reflector": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отражатель"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "反射器"
-          }
-        }
-      }
-    },
     "Refresh": {
       "localizations": {
         "ru": {
@@ -10876,22 +10652,6 @@
         }
       }
     },
-    "Restore from your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Восстановить с вашего узла"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从您的节点恢复"
-          }
-        }
-      }
-    },
     "Restore it": {
       "localizations": {
         "ru": {
@@ -10937,22 +10697,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在从备份恢复"
-          }
-        }
-      }
-    },
-    "Restoring from your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Восстанавливаем с вашего узла"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在从您的节点恢复"
           }
         }
       }
@@ -11269,22 +11013,6 @@
         }
       }
     },
-    "Sealing the copy for your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запечатываем копию для вашего узла"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在为您的节点封存副本"
-          }
-        }
-      }
-    },
     "Sealing the copy: %lld%%": {
       "localizations": {
         "ru": {
@@ -11515,22 +11243,6 @@
         }
       }
     },
-    "Send a copy now": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить копию сейчас"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即发送副本"
-          }
-        }
-      }
-    },
     "Send later": {
       "localizations": {
         "ru": {
@@ -11595,22 +11307,6 @@
         }
       }
     },
-    "Sending to your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправляем на ваш узел"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在发送到您的节点"
-          }
-        }
-      }
-    },
     "Sending…": {
       "localizations": {
         "ru": {
@@ -11671,38 +11367,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请在此设备上设置密码——否则无法保护助记词。"
-          }
-        }
-      }
-    },
-    "Set up your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Настроить ваш узел"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置您的节点"
-          }
-        }
-      }
-    },
-    "Setting up your node…": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Настраиваем ваш узел…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在设置您的节点…"
           }
         }
       }
@@ -12482,22 +12146,6 @@
         }
       }
     },
-    "Taken by your node: %lld conversations, %lld records, %lld attachments.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Принято вашим узлом: бесед — %lld, записей — %lld, вложений — %lld."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点已接收：对话 %lld 个，记录 %lld 条，附件 %lld 个。"
-          }
-        }
-      }
-    },
     "Taken into this device: %lld conversations, %lld records, %lld attachments.": {
       "localizations": {
         "ru": {
@@ -13066,22 +12714,6 @@
         }
       }
     },
-    "The set-up refused: %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Настройка отказала: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置被拒绝：%@"
-          }
-        }
-      }
-    },
     "The storage of this device did not open just now. Try again in a moment.": {
       "localizations": {
         "ru": {
@@ -13110,6 +12742,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法读取该曲目。"
+          }
+        }
+      }
+    },
+    "The folder of this track did not open. Lend it again with the plus.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Папка этого трека не открылась. Дайте к ней доступ снова плюсом."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此曲目所在的文件夹未能打开。请用加号重新授予访问权限。"
           }
         }
       }
@@ -15352,22 +15000,6 @@
         }
       }
     },
-    "WHAT YOUR NODE OFFERS": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ЧТО УМЕЕТ ВАШ УЗЕЛ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点提供什么"
-          }
-        }
-      }
-    },
     "Waiting for earlier moves": {
       "localizations": {
         "ru": {
@@ -15412,22 +15044,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "等待对方接受邀请"
-          }
-        }
-      }
-    },
-    "Wakes": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Побудки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "唤醒"
           }
         }
       }
@@ -16098,22 +15714,6 @@
         }
       }
     },
-    "YOUR NODE": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ВАШ УЗЕЛ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点"
-          }
-        }
-      }
-    },
     "Yesterday": {
       "localizations": {
         "ru": {
@@ -16432,22 +16032,6 @@
         }
       }
     },
-    "Your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш узел"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点"
-          }
-        }
-      }
-    },
     "Your node (optional)": {
       "localizations": {
         "ru": {
@@ -16460,22 +16044,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "您的节点（可选）"
-          }
-        }
-      }
-    },
-    "Your node did not answer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш узел не ответил"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点没有回应"
           }
         }
       }
@@ -16496,22 +16064,6 @@
         }
       }
     },
-    "Your node holds no copy": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "На вашем узле копии нет"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点没有副本"
-          }
-        }
-      }
-    },
     "Your node holds no copy yet.": {
       "localizations": {
         "ru": {
@@ -16524,54 +16076,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "您的节点还没有副本。"
-          }
-        }
-      }
-    },
-    "Your node is a machine you own: your backup, your space. Once a day over Wi-Fi, while Montana is open, a copy of the whole app goes there, sealed with the key your 24 words open; the words are not in it. On a new phone, enter the address and the words, and the copy comes back.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш узел — машина, которой владеете вы: ваша копия, ваше пространство. Раз в день по Wi-Fi, пока Montana открыта, туда уходит копия всего приложения, запечатанная ключом, который открывают ваши 24 слова; самих слов в ней нет. На новом телефоне введите адрес и слова — и копия вернётся."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点是您自己拥有的机器：您的备份，您的空间。当 Montana 打开时，每天通过 Wi-Fi 将整个应用的副本发送到那里，并用您的 24 个词打开的密钥封存；副本中不含这些词。在新手机上输入地址和这些词，副本就会回来。"
-          }
-        }
-      }
-    },
-    "Your node is set up: its door stands at %@ and its certificate is pinned.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш узел настроен: дверь стоит на %@, сертификат закреплён."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点已设置：门位于 %@，证书已固定。"
-          }
-        }
-      }
-    },
-    "Your node refused": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш узел отказал"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的节点拒绝了"
           }
         }
       }
@@ -18014,22 +17518,6 @@
         }
       }
     },
-    "Code": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Код"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证码"
-          }
-        }
-      }
-    },
     "Kind": {
       "localizations": {
         "ru": {
@@ -18042,22 +17530,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "类型"
-          }
-        }
-      }
-    },
-    "New": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Новый"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新建"
           }
         }
       }
@@ -20884,342 +20356,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "备用"
-          }
-        }
-      }
-    },
-    "Passwords": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароли"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码"
-          }
-        }
-      }
-    },
-    "One-time code": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одноразовый код"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性验证码"
-          }
-        }
-      }
-    },
-    "Unlock your passwords": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Откройте свои пароли"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "解锁你的密码"
-          }
-        }
-      }
-    },
-    "No passwords yet": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Паролей пока нет"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有密码"
-          }
-        }
-      }
-    },
-    "Your passwords unlock with Face ID or your passcode.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароли открываются по Face ID или коду устройства."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码通过面容 ID 或设备密码解锁。"
-          }
-        }
-      }
-    },
-    "Set a passcode on this device — without it the passwords cannot be protected.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Поставьте код на это устройство — без него пароли не защитить."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请为此设备设置密码——否则无法保护你的密码。"
-          }
-        }
-      }
-    },
-    "Hide password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скрыть пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐藏密码"
-          }
-        }
-      }
-    },
-    "Show password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показать пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示密码"
-          }
-        }
-      }
-    },
-    "A tap copies for this device alone; the copy is gone in ninety seconds.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Касание копирует только для этого устройства; копия исчезнет через девяносто секунд."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轻点即可仅在本设备上复制；副本将在九十秒后消失。"
-          }
-        }
-      }
-    },
-    "Delete this password?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить этот пароль?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除此密码？"
-          }
-        }
-      }
-    },
-    "Site": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сайт"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "网站"
-          }
-        }
-      }
-    },
-    "Generate password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Создать пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "生成密码"
-          }
-        }
-      }
-    },
-    "One-time code key": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ключ одноразового кода"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性验证码密钥"
-          }
-        }
-      }
-    },
-    "The key of a one-time code: the letters a site shows, or its otpauth:// link.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ключ одноразового кода: буквы, которые показывает сайт, или его ссылка otpauth://."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性验证码的密钥：网站显示的字母，或其 otpauth:// 链接。"
-          }
-        }
-      }
-    },
-    "Share with": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Поделиться с"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享给"
-          }
-        }
-      }
-    },
-    "Sent end to end as a letter of the chat; the person saves it to their own Passwords.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Уходит со сквозным шифрованием письмом чата; человек сохраняет его в свои Пароли."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以端到端加密的聊天消息发送；对方可将其保存到自己的密码中。"
-          }
-        }
-      }
-    },
-    "Save to Passwords": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранить в Пароли"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存到密码"
-          }
-        }
-      }
-    },
-    "Shared password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароль от собеседника"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享的密码"
-          }
-        }
-      }
-    },
-    "Shared from Passwords": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправлено из Паролей"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "来自密码的分享"
-          }
-        }
-      }
-    },
-    "Tap to save to Passwords": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Коснитесь, чтобы сохранить в Пароли"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轻点保存到密码"
-          }
-        }
-      }
-    },
-    "Sign-in": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录信息"
           }
         }
       }
@@ -27459,102 +26595,6 @@
         }
       }
     },
-    "Your files": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваши файлы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的文件"
-          }
-        }
-      }
-    },
-    "Files held by your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Файлы на вашем узле"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您节点上的文件"
-          }
-        }
-      }
-    },
-    "Laying your files on your node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Файлы уходят на ваш узел"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在将文件存入您的节点"
-          }
-        }
-      }
-    },
-    "Keep files on your node now": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отдать файлы узлу сейчас"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即将文件存入节点"
-          }
-        }
-      }
-    },
-    "FILES ON YOUR NODE": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ФАЙЛЫ НА ВАШЕМ УЗЛЕ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您节点上的文件"
-          }
-        }
-      }
-    },
-    "Every photo, video, voice and file of your chats goes to your node in sealed pieces, over Wi-Fi while Montana is open. Data and Storage clears from this phone what your node holds; each comes back when you open it.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Каждое фото, видео, голосовое и файл ваших чатов уходят на ваш узел запечатанными кусками — по Wi-Fi, пока Montana открыта. В «Данных и памяти» с телефона стирается то, что держит узел; каждый файл возвращается, когда вы его открываете."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您聊天中的每张照片、视频、语音和文件都会在 Montana 打开时通过 Wi-Fi 以加密分块存入您的节点。在「数据与存储」中可从本机清除节点已保存的内容；打开时即取回。"
-          }
-        }
-      }
-    },
     "Kept on your node": {
       "localizations": {
         "ru": {
@@ -27907,18 +26947,34 @@
         }
       }
     },
-    "Copies a viewer was handed when you opened a file. A file your node holds leaves; one it does not hold yet goes back to your chats for your node. Videos of other people's walls leave too: their walls keep them, not your node.": {
+    "Copies a viewer was handed when you opened a file. A file your node holds leaves; one it does not hold yet goes back to your chats for your node.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Копии, которые получал просмотр, когда вы открывали файл. Файл, который держит ваш узел, уходит; файл, которого на узле ещё нет, возвращается в ваши чаты для узла. Видео со стен других людей тоже уходят: их держат их стены, а не ваш узел."
+            "value": "Копии, которые получал просмотр, когда вы открывали файл. Файл, который держит ваш узел, уходит; файл, которого на узле ещё нет, возвращается в ваши чаты для узла."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开文件时查看器拿到的副本。您的节点已保存的文件会被移除；节点尚未保存的文件会回到您的聊天中，等待节点保存。他人墙上的视频也会移除：它们由各自的墙保存，而不是您的节点。"
+            "value": "打开文件时查看器拿到的副本。您的节点已保存的文件会被移除；节点尚未保存的文件会回到您的聊天中，等待节点保存。"
+          }
+        }
+      }
+    },
+    "%@ Videos of other people's walls leave too: their walls keep them, not your node.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Видео со стен других людей тоже уходят: их держат их стены, а не ваш узел."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@他人墙上的视频也会移除：它们由各自的墙保存，而不是您的节点。"
           }
         }
       }
@@ -28614,29 +27670,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "开启时，球体呈现自身的色彩。关闭时，它使用您在下方选择的单一颜色。"
-          }
-        }
-      }
-    },
-    "Once a day, while Montana is open and on Wi-Fi only, a sealed copy of the whole app goes to your node. Off, nothing is sent and nothing is removed from the node.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Once a day, while Montana is open and on Wi-Fi only, a sealed copy of the whole app goes to your node. Off, nothing is sent and nothing is removed from the node."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Раз в сутки, пока Montana открыта и только по Wi-Fi, запечатанная копия всего приложения уходит на ваш узел. Выключено: ничего не отправляется и ничего не удаляется с узла."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每天一次，在 Montana 打开且仅通过 Wi-Fi 时，整个应用的密封备份会发送到您的节点。关闭时，不发送任何内容，也不会从节点删除任何内容。"
           }
         }
       }

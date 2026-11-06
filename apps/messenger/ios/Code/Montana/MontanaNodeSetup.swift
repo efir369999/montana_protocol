@@ -1,8 +1,10 @@
 import Foundation
 import CryptoKit
+#if !MONTANA_MESSENGER   // the SSH set-up of one's own node is the Protocol's alone: Messenger carries no own node (word 16428) and no SSH
 import NIOCore
 import NIOPosix
 import NIOSSH
+#endif
 
 // A NODE PUT UP FROM THE PHONE, BY ADDRESS, LOGIN AND PASSWORD (the author's word 28.09: «a way into your own node by
 // the root login, the password and the IP address»). A machine the person rents stands bare; the phone reaches it the
@@ -14,6 +16,7 @@ import NIOSSH
 // before Montana stands on it. Apple's NIOSSH (swift-nio-ssh) carries it; the password rides once and is kept nowhere;
 // the first meeting takes the machine's host key as it is -- the person named the machine by address and password, and
 // the door of Montana is what the meeting leaves behind, exactly as the first `ssh` of every operator does.
+#if !MONTANA_MESSENGER   // the SSH set-up of one's own node is the Protocol's alone: Messenger carries no own node (word 16428) and no SSH
 enum MTSSHError: Error { case noPassword, channel, closed, timeout, refused(Int, String), notCarried }
 
 final class MTSSHRun {
@@ -111,10 +114,12 @@ final class MTSSHRun {
         }
     }
 }
+#endif
 
 /// THE SET-UP OF ONE'S OWN NODE: the door's source, the certificate, the unit -- and the digest the phone keeps.
 enum MontanaNodeSetup {
     static let tlsPort = 8463   // NOT-UI: the door's own TLS port, beside the plain one a front proxies to
+    #if !MONTANA_MESSENGER   // the SSH set-up of one's own node is the Protocol's alone: Messenger carries no own node (word 16428) and no SSH
     /// THE DOOR AND ITS SET-UP, ONE SOURCE (Code/Node, 18.10): the app carries the very two files a person runs by hand from the
     /// public tree -- the door (montana-home-node.py, byte for byte the one Lauterbourg runs) and install.sh, which makes the
     /// store's own user and folders, the unit, a certificate of the machine's own under a closed umask, the port, and answers with
@@ -144,6 +149,7 @@ enum MontanaNodeSetup {
         guard fp.count == 64 else { throw MTSSHError.refused(0, "bad fingerprint") }   // NOT-UI
         return fp
     }
+    #endif
 }
 
 /// THE NODE'S CERTIFICATE, TRUSTED BY ITS DIGEST ALONE (28.09): a node put up by address has no name and no authority; the

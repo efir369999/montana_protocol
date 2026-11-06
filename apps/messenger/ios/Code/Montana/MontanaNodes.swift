@@ -233,7 +233,11 @@ enum MontanaNodes {
         // A machine is not its own node. Its external address is in the list like anyone else's,
         // and a router that folds a connection back inside hands the node a channel to ITSELF:
         // the lamp goes green, the count of nodes grows, and there is nobody on the other side.
+        #if MONTANA_MESSENGER
+        let ownExternal = ""   // no router door without the mesh (15846)
+        #else
         let ownExternal = MTApps.mesh?.routerDoor.external ?? ""
+        #endif
         let ownLan = MontanaPhoneNode.lanIP() ?? ""
         return raw.filter { $0.host != ownExternal && $0.host != ownLan }
     }

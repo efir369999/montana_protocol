@@ -22,16 +22,19 @@ extension View {
 // SSOT transport identity ([I-10]/[C-1]): one place defines the transport categories, their display
 // symbol, and the classification. Priority order is internet > Wi-Fi LAN > Bluetooth (see sendP2P).
 enum MontanaTransport: String {
-    case internet, wifi, cellular, bluetooth
-    // Canonical priority order, left -> right: internet > Wi-Fi LAN > cellular > Bluetooth.
-    static let ordered: [MontanaTransport] = [.internet, .wifi, .cellular, .bluetooth]
+    case internet, wifi, cellular
+    #if !MONTANA_MESSENGER
+    case bluetooth   // the mesh door's radio, the Protocol's alone (15846)
+    #endif
     // SF Symbol name, or nil for the custom BluetoothGlyph shape. SINGLE source of the icon shape.
     var sfSymbol: String? {
         switch self {
         case .internet: return "globe"
         case .wifi: return "wifi"
         case .cellular: return "cellularbars"
+        #if !MONTANA_MESSENGER
         case .bluetooth: return nil
+        #endif
         }
     }
     /// Physical delivery medium of a message: cellular egress -> .cellular, else Wi-Fi -> .wifi.
@@ -73,9 +76,11 @@ struct MontanaTransportIcon: View {
             if let sf = transport.sfSymbol {
                 Image(systemName: sf).font(.system(size: size, weight: .semibold)).foregroundColor(color)
             } else {
+                #if !MONTANA_MESSENGER
                 BluetoothGlyph()
                     .stroke(color, style: StrokeStyle(lineWidth: max(1.5, size * 0.13), lineCap: .round, lineJoin: .round))
                     .frame(width: size * 0.72, height: size * 1.05)
+                #endif
             }
         }
     }
@@ -263,6 +268,7 @@ enum MontanaOverlayProof {
     }
 }
 
+#if !MONTANA_MESSENGER   // the mesh's radio is the Protocol's alone (15846)
 // Bluetooth logo (native look) — spine with two crossing wings, stroked blue.
 struct BluetoothGlyph: Shape {
     func path(in r: CGRect) -> Path {
@@ -277,6 +283,7 @@ struct BluetoothGlyph: Shape {
         return path
     }
 }
+#endif
 
 /// The sealing key of THIS machine: what a neighbour encapsulates to when it hands this device a
 /// frame. Device-local and drawn at random for the same reason the identity above is — a key

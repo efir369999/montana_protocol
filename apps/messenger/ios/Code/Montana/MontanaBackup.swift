@@ -913,7 +913,7 @@ enum MontanaBackup {
         let ud = UserDefaults.standard
         for (tagged, v) in map {
             let k = String(tagged.dropFirst(2))
-            let joins = SeedScope.unionKeys.contains(k)
+            let joins = SeedScope.joins(k)
             let fields = SeedScope.unionKnownBy[k] ?? SeedScope.unionKnownByDefault
             switch tagged.prefix(2) {
             case "d:":

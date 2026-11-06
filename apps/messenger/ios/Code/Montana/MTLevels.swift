@@ -25,7 +25,7 @@ enum MTPersonLevel {
 /// one's own node opens on every level, its row straight in Settings): a deletion for everyone always lands, a call is recorded by
 /// the person's own switch and the call screen's mark, and one's own node stands wherever the edition carries it (MTEdition.ownNode).
 /// The level is still said in a call's caps (MontanaCall.myCaps) for the builds that read it, where the edition carries levels
-/// (MTEdition.levels: Messenger carries none, decision 618 (b)); before this life has read it, the last one this phone knew stands.
+/// (the Protocol: Messenger compiles no levels, decision 618 (b)); before this life has read it, the last one this phone knew stands.
 enum MTLevelAccess {
     static let lastKey = "levelAccess.last"                    // NOT-UI: the last Global Level this phone knew of this person
     static var level: Int? {
@@ -36,6 +36,7 @@ enum MTLevelAccess {
     }
 }
 
+#if !MONTANA_MESSENGER   // the levels' table on the nodes: Messenger publishes and reads none (decision 618 (b))
 /// The public distribution contains counts of levels only. A separate, seed-derived
 /// owner token lets each person replace their own level without publishing a balance,
 /// name, address or contact list. Old clients can continue using every existing door.
@@ -81,11 +82,10 @@ enum MTLevelAccess {
         return (MontanaHomeNode.hex(token), MTPersonChain.global(person: person, wallet: wallet))
     }
     func changed() {
-        guard MTEdition.levels, let own = own(), published != own.token + ":" + String(own.level) else { return }
+        guard let own = own(), published != own.token + ":" + String(own.level) else { return }
         Task { await refresh() }
     }
     func refresh() async {
-        guard MTEdition.levels else { return }   // an edition without levels publishes and reads none (decision 618 (b))
         if asking { again = true; return }
         let own = own(), stamp = own.map { $0.token + ":" + String($0.level) }
         let needsPut = stamp != nil && (stamp != published || Date().timeIntervalSince(publishedAt) >= 300)
@@ -124,3 +124,4 @@ enum MTLevelAccess {
         return (try? JSONSerialization.jsonObject(with: reply)) as? [String: Any]
     }
 }
+#endif

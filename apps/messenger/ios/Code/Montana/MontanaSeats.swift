@@ -254,7 +254,9 @@ final class MTSeats: ObservableObject {
 
     /// The layer's store is empty: the values, the keychain items, the seed. Nothing here touches memory.
     private static func clearStore() {
+        #if !MONTANA_MESSENGER
         MTApps.wall?.drain()   // no wall write on its way lands on the emptied store (P-4)
+        #endif
         let ud = UserDefaults.standard
         for k in ud.dictionaryRepresentation().keys where layerHolds(k) { ud.removeObject(forKey: k) }
         for k in SeedScope.seatKeychain { MontanaKeychain.delete(k) }
@@ -289,7 +291,9 @@ final class MTSeats: ObservableObject {
             MontanaTrace.mark("seat_lift", "REFUSED id=" + id)
             return false
         }
+        #if !MONTANA_MESSENGER
         MTApps.wall?.drain()   // no wall write on its way lands over the lifted person's values (P-4)
+        #endif
         var moved = 0
         for f in SeedScope.seatFolders {
             let parked = shelf(of: f, in: id)
@@ -298,7 +302,7 @@ final class MTSeats: ObservableObject {
         }
         let ud = UserDefaults.standard
         for (k, v) in layer { ud.set(v, forKey: k) }
-        for (k, d) in rec.chain { MontanaKeychain.set(k, d) }
+        for (k, d) in rec.chain where !MTRetired.keychain(k) { MontanaKeychain.set(k, d) }   // what left never comes back with a seat (decision 673 (a))
         guard MontanaSeed.setActive(mnemonic: rec.words) else {
             MontanaTrace.mark("seat_lift", "REFUSED seed id=" + id)
             return false
@@ -318,7 +322,9 @@ final class MTSeats: ObservableObject {
         E2E.forgetDeviceTag()
         MTLetterBox.relook()   // the lifted person's box: its files are read afresh, its old item moved
         SeedScope.reread(restored: false)
+        #if !MONTANA_MESSENGER
         MTApps.wall?.reread()   // the wall loads on the forgotten seed's word, which is not spoken here: it reads the lifted wall
+        #endif
         Task { @MainActor in MTSeatTurn.seated() }   // the lifted person's own coins, never the book of the one who left (04.10)
         NotificationCenter.default.post(name: .montanaSeedOpened, object: nil)
         MontanaWakePush.registerConvs()
@@ -568,7 +574,9 @@ final class MTSeats: ObservableObject {
         weak var old: ChatStore?   // the store of the person leaving, watched without being held
         old = ChatStore.live
         old?.retire()
+        #if !MONTANA_MESSENGER
         MTApps.wall?.flush()
+        #endif
         MontanaLocalVault.commit()
         let earliest = Date().addingTimeInterval(from == nil ? 0 : 1.2)
         let latest = Date().addingTimeInterval(4)
@@ -585,7 +593,9 @@ final class MTSeats: ObservableObject {
     }
     private func parkThenLift(from: String?, to target: String?, t0: Date) {
         ChatStore.badgeLine.sync {}   // MAIN-SAFE-SYNC: two keychain writes at most, never a wait on main; the leaving count lands before the park reads it
+        #if !MONTANA_MESSENGER
         MTApps.wall?.flush()          // the wall of the person leaving, written while their store lived, lands before the park reads it (P-4)
+        #endif
         let ground = target == nil && from != nil ? MTWallpaper.carry() : nil   // a seat emptied for a new person keeps the cover (03.10)
         if let from {
             // The coins of the person leaving are on disk in their own folder before it moves (the coin door's seatLeaving).
@@ -818,7 +828,7 @@ enum MTShelfPost {
     /// with go to the notification extension (MTNodeWire.ShelfEar), which shows whose a letter is.
     /// A PIPE BETWEEN TWO PERSONS OF THIS PHONE RINGS NOBODY (07.10, the author's word «on T1 the second account duplicates the
     /// posts»): the seated person holds the same secret, so a ring for the shelf on it was a ring for the seated person's own letter
-    /// -- the extension opened it with the seated person's key and laid it as the other's (17:00:24Z: T1's own wall page came back
+    /// -- the extension opened it with the seated person's key and laid it as the other's (17:00:24Z: T1's own page came back
     /// as the second account's, every post twice in the feed). The phone holds both ends of such a pipe: the shelf's pickup and
     /// the lift carry it, no ring. seatedHolds answers from the seated person's own book, asked by its owner (registerRound).
     static func wakePairs(_ w0: UInt64, seatedHolds: (MTPipeKey) -> Bool) -> [[String: String]] {

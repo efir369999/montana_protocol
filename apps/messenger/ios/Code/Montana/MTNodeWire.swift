@@ -489,7 +489,7 @@ enum MTOutbox {
         case letter, picture, piece, profile, about, ground, page
         /// State is not a person's word but what the device declares about its owner: name,
         /// face, the owner's own words about themselves (the bio and the link, «about»), the
-        /// ground of their page («ground», 25.09) and the page of their wall as one visitor may
+        /// ground of their page («ground», 25.09) and their page as one visitor may
         /// see it («page», 16.10.2026 No.72).
         /// State has no history: the next value cancels the previous one wholly. A person's word
         /// behaves the other way — each stands on its own and may not be lost.
@@ -517,7 +517,7 @@ enum MTOutbox {
         var boxGraves: [String]? = nil
         var boxGravesHeld: [String]? = nil
         /// A state's tag, named at the letter's birth, for a state too large to open at every question: the version a
-        /// page of my wall carries. «On its way» is then read from the record, never from a megabyte of posts.
+        /// page of mine carries. «On its way» is then read from the record, never from a megabyte of posts.
         var tag: String? = nil
     }
     private static let keyName = "mt.outbox.key"

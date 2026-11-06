@@ -18,7 +18,11 @@ enum MontanaWake {
     /// Which rung stands right now. The choice is made here, by the machine holding the letter, and
     /// never travels on the wire.
     enum Rung: UInt8 {
+        #if MONTANA_MESSENGER
+        case liveChannel = 1    // a channel the device already holds (decision 651 = a: Montana Messenger's name)
+        #else
         case liveTunnel = 1     // a channel the device already holds
+        #endif
         case beaconHome = 2     // a machine standing where the device sleeps
         case unlockSync = 3     // the moment a person unlocks another device of their own
         case pushGateway = 4    // the vendor's notification service — an accelerator, not a step

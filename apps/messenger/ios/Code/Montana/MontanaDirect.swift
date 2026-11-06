@@ -16,6 +16,7 @@ extension Notification.Name {
     static let montanaPeerUp = Notification.Name("montanaPeerUp")
 }
 
+#if !MONTANA_MESSENGER   // the Wi-Fi conversation of the mesh's neighbours (15846)
 /// A P2P message in a Wi-Fi conversation (delivered directly). `peer` is the other
 /// party's Montana address; `mine` marks outgoing.
 struct P2PMsg: Identifiable, Hashable {
@@ -25,6 +26,7 @@ struct P2PMsg: Identifiable, Hashable {
     let mine: Bool
     let at: String
 }
+#endif
 
 struct MontanaPeer: Identifiable, Hashable {
     let name: String            // human name from the neighbor's Montana profile
@@ -166,10 +168,18 @@ final class MontanaPostman {
     // MARK: auto-discovery via native Apple Bonjour (iOS Local Network privacy
     // blocks raw multicast Rust-mdns; NetService/NetServiceBrowser is the standard path) -- behind the mesh door:
     // where none stands (Montana Messenger) nothing is announced and nobody is looked for (15863).
-    func advertiseMDNS(port: UInt16, directPort: UInt16) { MTApps.mesh?.advertise(port: port, directPort: directPort) }
+    func advertiseMDNS(port: UInt16, directPort: UInt16) {
+        #if !MONTANA_MESSENGER
+        MTApps.mesh?.advertise(port: port, directPort: directPort)
+        #endif
+    }
     /// Offer these correspondences on the local network — the same knock the radio makes.
     func browseMDNS(timeoutMs: UInt32 = 3000) -> [MontanaPeer] {
-        MTApps.mesh?.browse(timeout: Double(timeoutMs) / 1000.0) ?? []
+        #if MONTANA_MESSENGER
+        return []
+        #else
+        return MTApps.mesh?.browse(timeout: Double(timeoutMs) / 1000.0) ?? []
+        #endif
     }
 
     deinit { disconnect(); stopPostman() }
@@ -586,11 +596,17 @@ final class MontanaDirect {
         // two dials, which never happened.
         // A door is dialled above a standing tunnel, bound to the phone's own interface (MontanaNetWitness.physical): a dead
         // tunnel cannot take the nodes away. A dial that fails there turns the door's road to the tunnel (doorRoadAbove).
+        #if MONTANA_MESSENGER
+        let phys: NWInterface? = nil   // Montana Messenger reads no tunnel (decision 651 = a): every door is dialled on the system's path
+        MontanaTrace.mark("dial", mid: mid, "ip=\(ip):\(port)"
+            + { if case .websocket = MontanaNodes.dress(forHost: ip) { return " dress=wss" }; return "" }())
+        #else
         let above = MontanaNodes.isNode(ip) && MontanaNetWitness.tunnelPresent() && Self.doorRoadAbove(MontanaNodes.label(forHost: ip))
         let phys = above ? MontanaNetWitness.physical : nil
         MontanaTrace.mark("dial", mid: mid, "ip=\(ip):\(port)"
             + { if case .websocket = MontanaNodes.dress(forHost: ip) { return " dress=wss" }; return "" }()
             + (phys != nil ? " road=above" : (MontanaNodes.isNode(ip) && MontanaNetWitness.tunnelPresent() ? " road=tunnel" : "")))
+        #endif
         let tcpOpts = NWProtocolTCP.Options()
         tcpOpts.enableKeepalive = true; tcpOpts.keepaliveIdle = 10; tcpOpts.keepaliveInterval = 5; tcpOpts.keepaliveCount = 2
         // A node standing on 443 is reached inside an ordinary secure connection, marked from the
@@ -728,6 +744,7 @@ final class MontanaDirect {
                     // Direct route given up (redials exhausted / egress lost): hand the un-sent envelopes
                     // to the BLE mesh — same envelope format — so the failover chain completes without
                     // waiting for the 90s sweep. Delivered-over-BLE refines the glyph via .montanaSent.
+                    #if !MONTANA_MESSENGER
                     for (pl, m) in rescued where m != "blob" {
                         if MTApps.mesh?.send(to: toRef, envelope: pl) == true {
                             MontanaTrace.mark("bt_tx", mid: m, "fallback")
@@ -737,6 +754,7 @@ final class MontanaDirect {
                             }
                         }
                     }
+                    #endif
                 }
             default: break
             }
@@ -752,10 +770,15 @@ final class MontanaDirect {
             MontanaTrace.mark("handshake_timeout", mid: mid, "ip=\(ip):\(port) \(oc.nw.pathStory)")
             // A SYN OUR TUNNEL TOOK IS NOT A PEER (OZ 1, build 2342; T1 2340: tcp_ready ms=3 then eight silent seconds, thirty times in ten
             // minutes): a peer's address rests the walk's ceiling (MontanaPhoneNode.parkPath); the network's return asks it anew.
+            #if MONTANA_MESSENGER
+            if MontanaNodes.isNode(ip) { MontanaDirect.noteDoorFail(ip: ip, port: port, why: "handshake-timeout") }
+            if !toRef.hasPrefix("ep:") { MontanaOverlayBook.shared.fail(ref: toRef, ip: ip, port: port) }
+            #else
             if !MontanaNodes.isNode(ip), MontanaPhoneNode.tunnelUp() { MontanaPhoneNode.parkPath(ip: ip, port: UInt16(port)) }
             if MontanaNodes.isNode(ip) { MontanaDirect.noteDoorFail(ip: ip, port: port, why: "handshake-timeout") }
             // A failure while OUR tunnel holds the route is the tunnel's fact, not the address's (see below).
             if !toRef.hasPrefix("ep:"), !MontanaPhoneNode.tunnelUp() { MontanaOverlayBook.shared.fail(ref: toRef, ip: ip, port: port) }
+            #endif
             oc.closeWhy = "handshake-timeout"
             oc.nw.cancel()
         }
@@ -780,7 +803,12 @@ final class MontanaDirect {
             // leaves («Network is down», the path unsatisfied), and that death says nothing about the address --
             // yet it retired the peer's address for up to eight hours, and the direct road stayed poisoned long
             // after the VPN was off. Only a failure the address itself could have caused retires it.
-            if !toRef.hasPrefix("ep:"), !MontanaDirect.localFaultRecent(), !MontanaPhoneNode.tunnelUp(),
+            #if MONTANA_MESSENGER
+            let routeOwnFault = MontanaDirect.localFaultRecent()
+            #else
+            let routeOwnFault = MontanaDirect.localFaultRecent() || MontanaPhoneNode.tunnelUp()
+            #endif
+            if !toRef.hasPrefix("ep:"), !routeOwnFault,
                MontanaOverlayBook.shared.fail(ref: toRef, ip: ip, port: port) {
                 MontanaTrace.mark("endpoint_retired", mid: mid, "peer=\(String(toRef.prefix(10))) \(ip):\(port)")
                 DispatchQueue.main.async { MontanaPhoneNode.shared.forgetEndpoint(ref: toRef, ip: ip, port: port) }
@@ -1540,13 +1568,20 @@ final class MontanaDirect {
     static func noteDoorFail(ip: String, port: UInt16, why: String) {
         let dress: String = { if case .websocket = MontanaNodes.dress(forHost: ip) { return "wss" }; return "raw" }()
         let label = MontanaNodes.label(forHost: ip)
+        #if !MONTANA_MESSENGER
         let tunnel = MontanaNetWitness.tunnelPresent()
+        #endif
         ledgerLock.lock()
         var r = doorLedger[label] ?? (0, 0, nil)
         r.streak += 1
         doorLedger[label] = r
-        let road = !tunnel ? "plain" : (doorUnder.contains(label) ? "tunnel" : "above")
+        #if MONTANA_MESSENGER
+        let road = "", tunnelWord = ""   // Montana Messenger reads no tunnel (decision 651 = a): the line names no road under one
+        #else
+        let road = " road=" + (!tunnel ? "plain" : (doorUnder.contains(label) ? "tunnel" : "above"))
+        let tunnelWord = " utun=\(tunnel ? 1 : 0)"
         if tunnel { if doorUnder.contains(label) { doorUnder.remove(label) } else { doorUnder.insert(label) } }
+        #endif
         ledgerLock.unlock()
         let since = r.lastOK.map { Int(Date().timeIntervalSince($0)) }
         let verdict = (r.streak >= 3 && (since ?? .max) > 120) ? "down" : "blip"
@@ -1556,7 +1591,7 @@ final class MontanaDirect {
         let cls = MontanaNetProbe.failClass(why)
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
         MontanaTrace.markFolded("door_fail",
-            "host=\(label) dress=\(dress) why=\(cls) \(record) road=\(road) ifs=\(MontanaNetFacts.interfaces()) utun=\(tunnel ? 1 : 0) build=\(build)",
+            "host=\(label) dress=\(dress) why=\(cls) \(record)\(road) ifs=\(MontanaNetFacts.interfaces())\(tunnelWord) build=\(build)",
             window: 120, key: "\(ip):\(dress):\(cls)")
     }
 
@@ -1867,7 +1902,11 @@ final class MTWire {
             case .cellular: return "lte"
             case .wiredEthernet: return "wired"
             case .loopback: return "lo"
+            #if MONTANA_MESSENGER
+            case .other: return "other"
+            #else
             case .other: return "tunnel"
+            #endif
             @unknown default: return "?"
             }
         }

@@ -398,7 +398,11 @@ struct ChatsListView: View {
             // THE PAGE STAYS (the author's word 25.09, later: «if the time panel is folded, a tap unfolds it, keeping the page
             // you are on»).
             barSlot(Self.logoSlot) {
+                #if MONTANA_MESSENGER
+                if barOpen { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .chats } } else { turnPanel(open: true, by: "logo") }
+                #else
                 if barOpen { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = MTApps.wall == nil ? .chats : .feed } } else { turnPanel(open: true, by: "logo") }
+                #endif
             } label: {
                 MTFeedGlyph(side: 36)   // the feed's glyph is the logo, one drawing for the bar and the drawer
                     // THE BADGE ON THE TIME PANEL (the author's word 17.09): the unread chats and the
@@ -428,9 +432,11 @@ struct ChatsListView: View {
             // under the globe. The touch is stamped as before (22.09) when it changes the page: the page reports the milliseconds
             // from here to its opening; a tap on the globe of the standing page stamps nothing, there is no opening to measure.
             barSlot(Self.globeSlot) {
-                let wall = UIState.globeWall
-                if ui.pane != wall, wall == .vpn { MTApps.vpn?.opened() }
-                withAnimation(.easeInOut(duration: 0.2)) { ui.pane = wall }
+                let globe = UIState.globePane
+                #if !MONTANA_MESSENGER
+                if ui.pane != globe, globe == .vpn { MTApps.vpn?.opened() }
+                #endif
+                withAnimation(.easeInOut(duration: 0.2)) { ui.pane = globe }
             } label: {
                 MTBarGlobe()
             }
@@ -512,13 +518,25 @@ struct ChatsListView: View {
     private static let globeSlot = 6
     /// The pages whose search narrows their own rows (the music, 24.09; the feed and the network, 25.09): no results over
     /// them, no pin.
-    private static func searchesItself(_ p: UIState.Pane) -> Bool { p == .music || p == .feed || p == .vpn || p == .mesh || p == .p2p || p == .gallery }
+    private static func searchesItself(_ p: UIState.Pane) -> Bool {
+        switch p {
+        case .music, .p2p, .gallery: return true
+        #if !MONTANA_MESSENGER
+        case .feed, .vpn, .mesh: return true
+        #endif
+        default: return false
+        }
+    }
     /// The slot the pane stands under — the puck's home when the page is chosen elsewhere (the drawer, the logo).
     private static func slot(of pane: UIState.Pane) -> Int? {
         switch pane {
         case .chats, .groups, .channels: return chatsSlot; case .contacts: return contactsSlot; case .calls: return callsSlot
-        case .music, .gallery: return mediaSlot; case .feed: return logoSlot
-        case .vpn, .mesh, .p2p: return pane == UIState.globeWall ? globeSlot : nil
+        case .music, .gallery: return mediaSlot
+        case .p2p: return pane == UIState.globePane ? globeSlot : nil
+        #if !MONTANA_MESSENGER
+        case .feed: return logoSlot
+        case .vpn, .mesh: return pane == UIState.globePane ? globeSlot : nil
+        #endif
         }
     }
     /// One slot of the bar: the glyph, its action, and under it the puck when it is the chosen one.
@@ -827,7 +845,12 @@ struct ChatsListView: View {
                          headPrint: headPrint(listEmpty: listEmpty, pane: pane),
                          // THE COIN ON THE NETWORK PAGE LOADS THE PLANS AND MEASURES THE LIST (the author's word 29.09); on every other page
                          // it fetches what the network holds for us.
-                         onRefresh: { if pane == .vpn, let v = MTApps.vpn { await v.refresh() } else { await pullRefresh() } },
+                         onRefresh: {
+                             #if !MONTANA_MESSENGER
+                             if pane == .vpn, let v = MTApps.vpn { await v.refresh(); return }
+                             #endif
+                             await pullRefresh()
+                         },
                          onSettled: { turnPanel(open: !barOpen, by: "coin") },
                          pinTop: ownSearch ? false : searchActive,
                          overlay: { ownSearch ? AnyView(EmptyView()) : AnyView(searchOverlay) })
@@ -858,7 +881,9 @@ struct ChatsListView: View {
     }
     /// The page where the track plays, its row at the middle: a post's track on the feed, every other on the music page.
     private func showPlace(_ t: MusicTrack) {
+        #if !MONTANA_MESSENGER
         if t.inPost { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .feed }; return }
+        #endif
         showMusic()
         MTMusicFocus.shared.show(t)
     }
@@ -909,6 +934,7 @@ struct ChatsListView: View {
             ContactsTabView(panel: timePanel(.contacts))
         case .calls:
             CallsTabView(panel: timePanel(.calls))
+        #if !MONTANA_MESSENGER
         case .feed:
             // THE FEED SEARCHES ITSELF (the author's word 25.09), as the music does: the word at the head narrows its posts.
             // THE MINI PLAYER STANDS ON THE FEED (the author's word 26.09: «on the feed the mini player must appear if something
@@ -917,6 +943,7 @@ struct ChatsListView: View {
                 wall.feed(panel: timePanel(.feed, ownSearch: true), query: searchText, writes: !searchActive, reserve: playerReserve)
                     .overlay(alignment: .bottom) { playerBar }
             }
+        #endif
         case .music:
             // THE MINI PLAYER STANDS ON THE MUSIC PAGE TOO (the author's word 29.09: «the mini player there must come up, our
             // native one, and everything pinned at the bottom as on every page»; it replaces the word of 24.09 that kept the bar
@@ -940,6 +967,7 @@ struct ChatsListView: View {
                                ui.openChat(ch, jump: mid)
                            },
                            onDelete: { deleteStoryMedia(file: $0) })
+        #if !MONTANA_MESSENGER
         case .vpn:
             // THE VPN WALL IS THE VPN'S OWN PAGE (slice S3a): drawn through its door, and searching itself as the music and the feed
             // do (25.09); an edition without the VPN draws nothing here.
@@ -951,6 +979,7 @@ struct ChatsListView: View {
                 ui.openChat(Chat(name: ref, lastMessage: "", time: nowHHMM(), unread: 0,
                                  status: "Montana address", convId: ref))
             })
+        #endif
         case .p2p:
             NetworkTabView(panel: timePanel(p, ownSearch: true))
         case .chats, .groups, .channels:
@@ -2084,7 +2113,7 @@ extension ChatStore {
     /// from the store's own answers (rowPreview, rowTime, rowStatus, the name book).
     func rowModel(_ c: Chat) -> ChatRowModel {
         let montana = Self.isMontanaRoom(c.name)
-        let local = Self.isLocalRoom(c.name) && !montana && !Self.isMeshRoom(c.name)   // the Montana room wears the logo, the mesh wall its antenna, not one's own face
+        let local = c.name == savedMessagesKey   // Saved Messages alone wears one's own face: the Montana room the logo, the mesh room its antenna
         let media = rowMedia(c)
         let answer = rowReaction(c)
         let mine = answer?.mine == true
@@ -2314,8 +2343,8 @@ struct MTLibraryHairline: View {
 }
 
 /// A ROW IS A PLATE OF THE POSTS' GLASS (the author's words 26.09: «the chats', the contacts' and the calls' bubbles in system
-/// one-tone liquid glass, without dividing lines», then «rectangular, of the style of the posts on the wall, with no gaps between
-/// them»): the system's one-tone glass of a wall's post, in a rectangle -- the tree's row plate (MTGlassRowPlate) -- stood off the
+/// one-tone liquid glass, without dividing lines», then «rectangular, of the style of the posts ..., with no gaps between
+/// them»): the system's one-tone glass of a post, in a rectangle -- the tree's row plate (MTGlassRowPlate) -- stood off the
 /// screen's edges as the posts are (MTPageEdge.side), the words inside as a post's, and the rows adjoining: no gap, no line.
 /// ON THE CANVAS (the author's words 26.09: «as the canvas in the settings, natively»): the list lays the rows in the platform's
 /// inset grouped sections and wears the glass as the cell's own background (MTChatListView.canvasRow) -- the platform rounds it

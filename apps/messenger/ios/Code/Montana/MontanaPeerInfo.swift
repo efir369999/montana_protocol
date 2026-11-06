@@ -39,15 +39,20 @@ enum MTPeerKind {
 // One case per pane: the title, the empty-state icon and the selection of messages live together, so
 // adding a pane is one case and not four parallel switches.
 enum MTMediaTab: Int, CaseIterable, Identifiable {
-    // THE TRANSACTIONS AFTER THE WALL (the author's word 12.10.2026 12:2x UTC: «on the correspondent's page add after the wall a section
-    // of transactions, to see only what was sent to and received from the correspondent»).
-    case wall, transactions, media, video, files, links, music, voice   // the wall first (the author's word 24.09)
+    #if !MONTANA_MESSENGER   // the Protocol's alone (cut C6)
+    case wall   // the wall first (the author's word 24.09)
+    #endif
+    // THE TRANSACTIONS (the author's word 12.10.2026 12:2x UTC: «[...] a section of transactions, to see only what was sent to and
+    // received from the correspondent»).
+    case transactions, media, video, files, links, music, voice
 
     var id: Int { rawValue }
 
     var title: LocalizedStringKey {
         switch self {
+        #if !MONTANA_MESSENGER
         case .wall: return "Wall"
+        #endif
         case .transactions: return "Transactions"
         case .media: return "Media"
         case .video: return "Video"
@@ -61,7 +66,9 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
     /// The word for UIKit's own controls (the segmented strip), from the catalog.
     var name: String {
         switch self {
+        #if !MONTANA_MESSENGER
         case .wall: return String(localized: "Wall", bundle: MTLanguage.bundle)
+        #endif
         case .transactions: return String(localized: "Transactions", bundle: MTLanguage.bundle)
         case .media: return String(localized: "Media", bundle: MTLanguage.bundle)
         case .video: return String(localized: "Video", bundle: MTLanguage.bundle)
@@ -74,7 +81,9 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        #if !MONTANA_MESSENGER
         case .wall: return "text.below.photo"
+        #endif
         case .transactions: return "arrow.left.arrow.right"
         case .media: return "photo.on.rectangle"
         case .video: return "video.fill"
@@ -87,7 +96,9 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
 
     var emptyText: LocalizedStringKey {
         switch self {
+        #if !MONTANA_MESSENGER
         case .wall: return "No posts yet"
+        #endif
         case .transactions: return "No transactions yet"
         case .media: return "Shared media will appear here"
         case .video: return "Shared video will appear here"
@@ -105,7 +116,9 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
 
     func select(from messages: [Message]) -> [Message] {
         switch self {
+        #if !MONTANA_MESSENGER
         case .wall: return []   // the wall is its owner's posts, not the letters (MTBoardPane)
+        #endif
         case .transactions: return []   // the transfers are the coin book's, not the letters (MTCoinHistory.with)
         case .media: return messages.filter { $0.imageFile != nil }
         case .video: return messages.filter { $0.videoFile != nil }
@@ -122,9 +135,8 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
 /// EVERY LINK MONTANA BUILDS ANSWERS THE FINGER (the author's word 02.10 19:26: «share the chain from a post -- the link
 /// arrives crooked and cannot be tapped; every link built into Montana must be tappable»). A Montana link holds no dot, so
 /// the host gate below never showed it to the system's finder, and the finder's answer kept only the web's schemes: a post's
-/// link (montana://wall/post/...) rode a letter, a comment and a post as dead words. It is found here by its own
-/// scheme, up to the first space, the punctuation a sentence glues on left outside it. A game's letter is the board's card,
-/// not a link (MTGameLetters.link). This is the one finder: the letter's bubble, the letter's page, a post's words, a
+/// link rode a letter, a comment and a post as dead words. It is found here by its own
+/// scheme, up to the first space, the punctuation a sentence glues on left outside it. This is the one finder: the letter's bubble, the letter's page, a post's words, a
 /// comment, a person's words about themselves and the chat's list of links all read it.
 enum MTLinks {
     private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
@@ -177,7 +189,9 @@ enum MTLinks {
                 r.length -= 1
             }
             let s = ns.substring(with: r)
+            #if !MONTANA_MESSENGER   // no game in Messenger (cut C5): a game's letter is the board's card, not a link
             if let link = MTEditionLetters.game?.link, s.lowercased().hasPrefix(link) { continue }
+            #endif
             if let u = URL(string: s) { out.append(Hit(range: r, url: u)) }
         }
         for m in detector?.matches(in: text, range: all) ?? [] {
@@ -363,7 +377,11 @@ struct MTPeerInfoData {
 @MainActor
 final class MTPeerInfoState: ObservableObject {
     @Published var editing = false
+    #if MONTANA_MESSENGER
+    @Published var tab: MTMediaTab = .media
+    #else
     @Published var tab: MTMediaTab = MTApps.wall == nil ? .media : .wall   // a page opens on its wall (the author's word 24.09), where it stands
+    #endif
     /// THE CONVERSATION, READ ONCE PER CHANGE (the author's word 18.09: the profile must open at
     /// once): merging and sorting every letter under every key on every pass of the body made the
     /// push wait; the screen refreshes it when the store's counts change, and the data reads it.
@@ -404,7 +422,7 @@ final class MTPeerInfoState: ObservableObject {
         // A GROUP'S NOTE IS ITS DESCRIPTION, read above: the row's own note written over it opened the editor empty, and «Done» carried
         // the empty words to every phone of the group (MTGroup.renew) -- the checklist's E.1.
         if kind != .group { draftNote = chat.note ?? "" }
-        // A group's page opens on its media, as the reference's does: the wall and the transactions are a person's (the checklist's Zh.1).
+        // A group's page opens on its media, as the reference's does: the transactions are a person's (the checklist's Zh.1).
         if kind == .group, MTGroup.shared.kind(chat.name) == .group { tab = .media }
         draftPhoto = store.avatarFor(chat)
         draftMembers = chat.members

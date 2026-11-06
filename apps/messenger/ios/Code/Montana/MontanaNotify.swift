@@ -58,7 +58,9 @@ enum MontanaNotify {
         if text.hasPrefix("\u{200B}\u{200B}PA:") { return "address" }
         if text.hasPrefix("\u{200B}\u{200B}EX:") { return "exit-door" }
         if text.hasPrefix("\u{200B}\u{200B}SP:") { return "sticker-set" }
+        #if !MONTANA_MESSENGER   // the Protocol's own word (cut C6); Messenger buries it as a newer build's, read as service below
         if text.hasPrefix("\u{200B}\u{200B}WL:") { return "wall" }
+        #endif
         if text.hasPrefix("\u{200B}\u{200B}GR:") { return "group" }   // a group's invitation, letter or answer (MTGroup, 05.10)
         if text.hasPrefix("\u{200B}\u{200B}KP:") { return "keep" }    // the keeping of a copy (MTKeeping, 08.10): service, no banner
         if text.hasPrefix("\u{200B}\u{200B}SM:") { return "same-ask" }
@@ -74,7 +76,9 @@ enum MontanaNotify {
         if text.hasPrefix("\u{2063}mtdraft:") { return "live-draft" }
         if text.hasPrefix("\u{2063}LB:") { return "letter-blob" }
         if isService(text) { return "service" }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5): its reader is nil there
         if MTRowLetter.game(text) != nil { return "chess" }   // a letter of a game, by the edition's one reader (29.09, slice S4b)
+        #endif
         return "text"
     }
 
@@ -85,7 +89,9 @@ enum MontanaNotify {
     static func typeOnlyBody(_ t: String) -> String {
         if t.hasPrefix("\u{200B}\u{200B}VC:") { return "🎤 " + String(localized: "Voice message", bundle: MTLanguage.bundle) }
         if t.hasPrefix("\u{200B}\u{200B}MD:") { return MTRowLetter.mediaWords(letter: t, revealCaption: false) }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         if let games = MTEditionLetters.game, games.read(t) != nil { return games.preview }
+        #endif
         return String(localized: "New message", bundle: MTLanguage.bundle)
     }
 
@@ -460,12 +466,14 @@ enum MontanaNotify {
         decorate(content, from: from, chat: chat,
                  body: preview ? (raw ?? "") : typeOnlyBody(text), countUnread: false)
         if !showSender { content.title = "Montana" }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         // A GAME'S BANNER NAMES ITS GAME (29.09): the tap enters the game itself (MontanaOutsideOpen.pendingGame), and the
         // foreground judge tells a game's end -- which has no bubble in the chat -- from a letter the open chat shows.
         if let chess = MTRowLetter.game(text) {
             content.userInfo["game"] = chess.game
             if chess.ends { content.userInfo["game_end"] = 1 }
         }
+        #endif
         let comm = showSender ? withCommunication(content, from: from) : nil
         let final = comm ?? content
         // ONE LETTER, ONE PLACE ON THE SCREEN (16.10.2026, No.73, T1's diary over Wi-Fi: «empty notifications come as if doubled»):

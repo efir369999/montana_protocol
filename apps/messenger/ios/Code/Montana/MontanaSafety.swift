@@ -152,8 +152,8 @@ struct MontanaReport: Identifiable {
 struct MontanaReportSheet: View {
     let report: MontanaReport
     var onBlock: () -> Void
-    /// The block is offered for a person this phone knows (25.09): a post whose writer a wall never named is reported through
-    /// the wall that carried it, and nobody is blocked for another's words.
+    /// The block is offered for a person this phone knows (25.09): a post whose writer this phone never named is reported through
+    /// the place that carried it, and nobody is blocked for another's words.
     var offersBlock = true
     @Environment(\.dismiss) private var dismiss
     @State private var reason: LocalizedStringKey = "Spam"

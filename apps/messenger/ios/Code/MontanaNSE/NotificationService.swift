@@ -195,6 +195,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 contentHandler(Self.quietFace())
                 return
             }
+            #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
             // TWO LETTERS OF A GAME RING (29.09, MTGameLetter.rings): the invitation and the letter that ends the game wear
             // the chess words and name their game for the tap; a step an older build sent loud is stashed for the board
             // and swallowed here.
@@ -207,6 +208,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 content.userInfo["game"] = chess.game
                 if chess.ends { content.userInfo["game_end"] = 1 }
             }
+            #endif
             // A GROUP'S WORD (MTGroup in the app, 05.10): a letter and an invitation wear the group's own face, the tap opens the
             // group; an answer to a letter is stashed for the app without a face.
             let group = Self.groupFace(rawText, named: Self.prefOn("notifSender"))
@@ -301,6 +303,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 contentHandler(Self.quietFace())
                 return
             }
+            #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
             if let chess = MTRowLetter.game(sc.text) {
                 guard chess.rings else {
                     Self.diagLine("chess step from the box stashed silently mid=\(sc.mid.prefix(8))")
@@ -310,6 +313,7 @@ final class NotificationService: UNNotificationServiceExtension {
                 content.userInfo["game"] = chess.game
                 if chess.ends { content.userInfo["game_end"] = 1 }
             }
+            #endif
             Self.diagLine("banner from the box: mid=\(sc.mid.prefix(8))")
             ready = Self.nativeFace(content, from: convKey, glyph: senderGlyph)
         } else {
@@ -654,9 +658,9 @@ final class NotificationService: UNNotificationServiceExtension {
     // THE NOTIFICATION THAT SAYS NOTHING IS NEVER HANDED OVER (03.10, the author's word: empty notifications
     // on the lock screen). This extension holds no filtering entitlement (com.apple.developer.usernotifications
     // .filtering, granted by Apple on request), and without it an empty UNNotificationContent is not swallowed:
-    // iOS shows it as a blank plate under the app's name, no title and no text. Seven roads handed exactly that
-    // over: a ring letter the call screen serves, a game step, a blocked person at the envelope and at the end,
-    // a missed call this device already rang, and the same two from the node box. Each of them now hands over
+    // iOS shows it as a blank plate under the app's name, no title and no text. The roads that handed exactly that
+    // over -- a ring letter the call screen serves, a blocked person at the envelope and at the end,
+    // a missed call this device already rang, and the same two from the node box -- each now hands over
     // the push's own generic words, passive (no sound, no badge, the screen does not light), and writes the
     // request down, so the plate is taken off the list: by this process a moment later, by the next wake on
     // its first line, and by the app when it next comes to the foreground (MontanaWakePush.drainInbox).
@@ -954,8 +958,10 @@ final class NotificationService: UNNotificationServiceExtension {
                         }
                         stashLetter(conv: ck, mid: f[0], text: text, name: f[2], glyph: f[3],
                                     qt: f[4], qm: f[5], lp: f[6], sentAt: Double(Int(atS) - opened.back * 60), author: f[7])
+                        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
                         // A STEP OF A GAME IS NOT THE BANNER'S LETTER (29.09): stashed for the board, it never titles the banner.
                         if let g = MTRowLetter.game(text), g.step, !g.rings { got += 1; continue }
+                        #endif
                         last = (ck, f[0], text, f[2], f[3]); got += 1
                     }
                 }
@@ -1224,7 +1230,9 @@ final class NotificationService: UNNotificationServiceExtension {
     /// A quiet service letter (receipt, typing, draft, profile, deletion): the badge must not
     /// grow on it. New senders do not ring these at all; this guards against older builds.
     private static func isQuietText(_ t: String) -> Bool {
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         if MTRowLetter.game(t)?.step == true { return true }   // a step of a game turns no badge: the board is its reader (29.09)
+        #endif
         if MTRowLetter.retiredLetter(t) { return true }   // a transfer letter turns no badge: the app buries it unread (10.10.2026)
         if t.hasPrefix("\u{200B}\u{200B}VC:") || t.hasPrefix("\u{200B}\u{200B}MD:")
             || t.hasPrefix("\u{200B}\u{200B}RG:") || t.hasPrefix("\u{200B}\u{200B}MC:") { return false }   // voice, media, call, missed call — loud

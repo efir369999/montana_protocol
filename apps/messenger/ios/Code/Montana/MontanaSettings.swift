@@ -771,8 +771,8 @@ struct MTWallpaperCrop: UIViewRepresentable {
         handle.view = v
     }
 }
-/// The chat's background page, raised over everything (UIState.chatWall): the conversation it dresses.
-struct MTWallOpen: Identifiable { let id: String }
+/// The chat's background page, raised over everything (UIState.chatGround): the conversation it dresses.
+struct MTGroundOpen: Identifiable { let id: String }
 /// THE PREVIEW IS ONE PAGE ([C-1], the author's word 22.09: one owner, called for different tasks).
 /// The ground being tried stands full-screen — under the chat's own bubbles when a chat is being
 /// dressed, under nothing when the pages are — the picture is placed by the finger, and the two marks
@@ -831,8 +831,8 @@ struct MTWallpaperPreview: View {
                 // photo into the top head alone; show it on the whole page»): the page's ground is every page's and every
                 // chat's (rule 30), so the whole picture is what the person places -- nothing lit apart, nothing dimmed.
                 if task.isPage {
-                    // THE PAGE AS IT WILL STAND (the author's word 26.09: «the page ground's preview with the real face, name, bio,
-                    // link, the write-on-the-wall button and an example post»): my own head over the whole picture, the wall's write
+                    // THE PAGE AS IT WILL STAND (the author's word 26.09: the page ground's preview with the real face, name, bio,
+                    // link, a write button and an example post): my own head over the whole picture, a write
                     // button and one post -- the page's dress; the finger's is the picture's.
                     MTPagePreviewDress().allowsHitTesting(false)
                 } else {
@@ -914,10 +914,10 @@ struct MTWallpaperPreview: View {
     }
 }
 
-/// MY PAGE OVER ITS GROUND, FOR THE PREVIEW (the author's word 26.09: «the page ground's preview with the real face, name, bio,
-/// link, the write-on-the-wall button and an example post»): the head my page draws (MTFaceHeader at its circle) with my face, my
-/// name as it leaves this phone, my words and my link as they leave it -- MontanaMyProfileView's own sources -- then the wall's
-/// write button and one post of my wall saying what it is, drawn by the wall behind its door (slice S4c2). The dress
+/// MY PAGE OVER ITS GROUND, FOR THE PREVIEW (the author's word 26.09: the page ground's preview with the real face, name, bio,
+/// link, a write button and an example post): the head my page draws (MTFaceHeader at its circle) with my face, my
+/// name as it leaves this phone, my words and my link as they leave it -- MontanaMyProfileView's own sources -- then what an
+/// application behind its door draws under them (slice S4c2). The dress
 /// answers no finger: the picture under it is being placed.
 struct MTPagePreviewDress: View {
     @AppStorage("avatarData") private var avatarData: Data = Data()
@@ -929,7 +929,9 @@ struct MTPagePreviewDress: View {
             VStack(spacing: 12) {
                 MTFaceHeader(face: face, glyph: E2E.myFaceGlyph(), name: E2E.myDisplayName(), pageWidth: g.size.width,
                              bio: MTPeerAbout.said(bio), links: MTPeerAbout.links(link))
+                #if !MONTANA_MESSENGER
                 if let wall = MTApps.wall { wall.preview() }   // the wall's write button and an example post, the wall's own drawing
+                #endif
                 Spacer(minLength: 0)
             }
         }
@@ -963,7 +965,7 @@ struct AppearanceView: View {
     @AppStorage("cbBg1") private var cbBg1 = BT.bg1
     @AppStorage("cbBg2") private var cbBg2 = BT.bg2
     @State private var bgPhotoItem: PhotosPickerItem?
-    @ObservedObject private var wallBook = MTWallpaper.Book.shared
+    @ObservedObject private var wallpapers = MTWallpaper.Book.shared
     @State private var editor: ColEdit?
 
     enum CK { case mF1, mF2, mTx, mOl, pF1, pF2, pTx, pOl, bg1, bg2 }
@@ -1048,16 +1050,18 @@ struct AppearanceView: View {
                     }
                 }
             }.listRowBackground(MTGlassRowPlate())
-            // 14.10.2026: reputation is mandatory; only the owner's balance can be hidden in Privacy. An edition without levels
-            // draws no such section (MTEdition.levels, decision 618 (b)).
-            if MTEdition.levels { Section {
+            // 14.10.2026: reputation is mandatory; only the owner's balance can be hidden in Privacy. Messenger draws no such
+            // section: it carries no levels (decision 618 (b), cut C3a).
+            #if !MONTANA_MESSENGER
+            Section {
                 Text("Your level is your reputation and is always visible. You can hide your balance in Privacy.")
                 if let coins = MTApps.coins {
                     NavigationLink { PrivacyView() } label: { coins.showLine() }   // the coins' own line (slice S2b b7c)
                 }
             } header: { Text("Balance and level at avatars") } footer: {
                 Text("The level badge is red at the lowest reported level and green at the highest. Its color follows the current distribution of levels.")
-            }.listRowBackground(MTGlassRowPlate()) }
+            }.listRowBackground(MTGlassRowPlate())
+            #endif
             // The note's picture quality (the author's word 18.09): three steps, the platform's own
             // segmented picker — the source's height and the encoder's rate (MontanaNoteQuality).
             Section {
@@ -1336,9 +1340,11 @@ struct DataStorageView: View {
                     NavigationLink { CopyKindsPage(inventory: held(inventory ?? CopyInventory()), plan: $plan) } label: {
                         diskRow("Files no letter names", "doc.badge.ellipsis", .gray, u.unnamed)
                     }
+                    #if !MONTANA_MESSENGER
                     if MTApps.wall != nil {   // an edition with no wall keeps no wall pictures (link 15959)
                         diskRow("Pictures of walls", "square.grid.2x2.fill", .teal, u.walls)
                     }
+                    #endif
                     HStack {
                         diskRow("Copies waiting on this phone", "shippingbox.fill", .orange, u.shelf)
                         Button { clearingShelf = true } label: {
@@ -1399,7 +1405,12 @@ struct DataStorageView: View {
                     }
                 }
             } message: {
-                Text("Copies a viewer was handed when you opened a file. A file your node holds leaves; one it does not hold yet goes back to your chats for your node. Videos of other people's walls leave too: their walls keep them, not your node.")
+                let opened = Text("Copies a viewer was handed when you opened a file. A file your node holds leaves; one it does not hold yet goes back to your chats for your node.")
+                #if MONTANA_MESSENGER
+                opened
+                #else
+                Text("\(opened) Videos of other people's walls leave too: their walls keep them, not your node.")
+                #endif
             }
 
             Section {
@@ -1859,7 +1870,9 @@ struct PrivacyView: View {
     @AppStorage(MontanaDiagConsent.key) private var diagShare = MontanaDiagConsent.birth   // the diary leaves only by this yes (08.10)
     @AppStorage(MTLinkPreviewBuilder.switchKey) private var linkPreviews = true   // the card of a link I send — my device reads that page
     @State private var presenceShared = MontanaPresencePrivacy.sharing
+    #if !MONTANA_MESSENGER   // no mesh, no local network (15846, 15863)
     @State private var localNetwork = MontanaPhoneNode.meshDiscoverable   // the one mesh switch owns the concept
+    #endif
     @ObservedObject private var place = MTLocationAccess.shared   // the one owner of the location permission says the word
     @State private var photosAccess = MTSystemAccess.photosWord       // the system's own word for this app's photos
     // One decision, not two. Leaving and deleting were the same act under two names: both erase
@@ -1888,6 +1901,7 @@ struct PrivacyView: View {
             Section {
                 // The row is the mesh's switch read back: where no mesh door stands (Montana Messenger, link 15846) this phone
                 // announces itself on no network, and the row does not stand.
+                #if !MONTANA_MESSENGER
                 if MTApps.mesh != nil {
                     Button { MontanaSystemSettings.open() } label: {
                         HStack(spacing: 12) {
@@ -1900,6 +1914,7 @@ struct PrivacyView: View {
                         .contentShape(Rectangle())   // the whole row is the target, not only its words (22.09)
                     }
                 }
+                #endif
                 // WHERE THIS PHONE IS, ASKED AND CHANGED HERE TOO (the author's word 23.09). The
                 // permission a person never answered is asked by this very row; one already
                 // decided is changed where the system keeps it — the same tap the place page
@@ -1931,8 +1946,8 @@ struct PrivacyView: View {
 
             Section {
                 // A SETTING SAYS WHAT IT DOES (the author's word 25.09: «the settings must match the behaviour»): the switch governs
-                // the presence words alone; the wall, the pages, the faces and the names are carried and asked for regardless
-                // (MTBoard.ask no longer reads it). The line under it is the contract, in the person's language (SETTINGS.md).
+                // the presence words alone; the pages, the faces and the names are carried and asked for regardless
+                // (no ask of a page reads it). The line under it is the contract, in the person's language (SETTINGS.md).
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 12) {
                         icon("eye.fill", .teal)
@@ -1975,6 +1990,7 @@ struct PrivacyView: View {
                 }
             }
             .listRowBackground(MTGlassRowPlate())
+            #if !MONTANA_MESSENGER
             // THE WALL (the author's word 24.09): who may write on my wall, and who may see it — everyone, until the
             // person says otherwise.
             if let wall = MTApps.wall {   // an edition with no wall has no rules of it (slice S4c2)
@@ -1998,6 +2014,7 @@ struct PrivacyView: View {
                 }
                 .listRowBackground(MTGlassRowPlate())
             }
+            #endif
             Section {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 12) {
@@ -2071,7 +2088,9 @@ struct PrivacyView: View {
     }
 
     private func refreshAccess() {
+        #if !MONTANA_MESSENGER
         localNetwork = MTApps.mesh?.announceAccepted ?? false
+        #endif
         place.refresh()
         photosAccess = MTSystemAccess.photosWord
     }
@@ -2212,9 +2231,13 @@ struct MontanaOnboardingView: View {
     @State private var glow = false   // golden radial glow of the logo (Montana style)
     @State private var refusal: LocalizedStringKey? = nil // the word of a refusal on the way back, spoken, never walked past (28.09)
     @State private var retry: (() -> Void)? = nil         // what «Try again» does
+    #if !MONTANA_MESSENGER
     @State private var nodeHost = ""                      // the person's own node, named beside the words
+    #endif
     @State private var takingWord: LocalizedStringKey = "Opening your identity…"
+    #if !MONTANA_MESSENGER
     @ObservedObject private var homeNode = HomeNodeWatch.shared   // the node's copy on its way back, for the bar
+    #endif
     @ObservedObject private var keep = MTKeeping.shared           // the parts coming back from the people one wrote to (08.10)
     @State private var barSince = Date()                          // when the bar first stood on the page: the time left is measured from it
     @ObservedObject private var seats = MTSeats.shared            // a person being added: the page stands on the Montana road (06.10)
@@ -2391,6 +2414,7 @@ struct MontanaOnboardingView: View {
             TextEditor(text: $recoverInput).frame(height: 130).padding(8).scrollContentBackground(.hidden)
                 .background(MTGlassCardPlate(cornerRadius: 14))
                 .foregroundColor(.primary).autocorrectionDisabled().textInputAutocapitalization(.never)
+            #if !MONTANA_MESSENGER
             // THE PERSON'S OWN NODE, named beside the words (28.09): the copy it holds comes back before the first screen. No edition
             // draws it since the author's word 16428 (MTEdition.ownNode false in both): nodeHost stays empty and the words restore alone.
             if MTEdition.ownNode {
@@ -2398,6 +2422,7 @@ struct MontanaOnboardingView: View {
                     .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                     .padding(12).background(MTGlassCardPlate(cornerRadius: 14)).foregroundColor(.primary)
             }
+            #endif
             if !recoverError.isEmpty { Text(LocalizedStringKey(recoverError)).foregroundColor(.red).font(.caption).multilineTextAlignment(.center) }
             Button {
                 let words = recoverInput.lowercased().split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "," }).map(String.init)
@@ -2417,7 +2442,11 @@ struct MontanaOnboardingView: View {
                                 return
                             }
                             MontanaTrace.mark("seed_opened", "ms=\(ms)")
+                            #if MONTANA_MESSENGER
+                            takeFromKeepers()   // no own node in Messenger (word 16428)
+                            #else
                             takeFromNode()
+                            #endif
                         } else {
                             MontanaTrace.mark("seed_refused", "ms=\(ms)")
                             recoverError = "Invalid phrase. Check the words and their order."
@@ -2487,6 +2516,7 @@ struct MontanaOnboardingView: View {
     // to the person nowhere, and introductions go by a one-time card.
 
 
+    #if !MONTANA_MESSENGER   // one's own node is the Protocol's alone (word 16428)
     /// THE WORDS OPENED; THE PERSON'S OWN NODE, IF NAMED, HANDS THE COPY BACK (28.09) -- otherwise the first screen.
     /// A refusal is spoken (the critic, 28.09), with «Try again» and the person's own way on without the copy.
     func takeFromNode() {
@@ -2507,6 +2537,7 @@ struct MontanaOnboardingView: View {
             }
         }
     }
+    #endif
     /// EVERY REFUSAL IS SPOKEN (the critic, 28.09): the word stands in an alert with «Try again» and «Continue without the copy».
     func refuse(_ word: LocalizedStringKey, again: @escaping () -> Void) {
         retry = again
@@ -2515,7 +2546,11 @@ struct MontanaOnboardingView: View {
     /// The person may walk on while the opening of the words (their stretch) is not under way. The copy of the people one wrote to
     /// goes on by itself behind them (the author's word 09.10.2026: «Continue -- the restore goes on in the background»): its one
     /// owner is MTKeeping, not this page; a copy from the node is this page's and is waited for.
+    #if MONTANA_MESSENGER
+    private var canGoOn: Bool { !creating }   // no own node in Messenger (word 16428)
+    #else
     private var canGoOn: Bool { !creating && homeNode.restoring == nil }
+    #endif
     /// The copy the people one wrote to gave back, being laid: its share of frames, the engine's own count.
     private var keepLaying: Double? { if case .laying(let f) = keep.taking { return f } else { return nil } }
     /// THE ONE SHARE OF THE COPY'S ROAD (09.10.2026): the light copy coming down is the first half, its laying the second; the parts
@@ -2566,7 +2601,11 @@ struct MontanaOnboardingView: View {
             // THE BAR FROM THE FIRST FRAME (the author's word 09.10.2026 08:3x UTC: «the progress bar must show at once, now it spins
             // long before it comes; under it the approximate time of the restore»): nothing measured yet is a bar at zero, never a
             // spinner, and the time left is said once it can be measured.
+            #if MONTANA_MESSENGER
+            let f = keepShare ?? 0   // no own node in Messenger (word 16428)
+            #else
             let f = homeNode.fetching ?? homeNode.restoring ?? keepShare ?? 0
+            #endif
             ProgressView(value: f).padding(.horizontal, 24)
             Text(verbatim: String(Int(f * 100)) + "%").foregroundColor(.gray).font(.caption)   // USER-DATA: a share
             if let left = timeLeft(f) {

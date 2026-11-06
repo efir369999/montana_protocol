@@ -87,7 +87,7 @@ enum MontanaOctagon {
     /// field and the microphone all stand at the system field's height.
     static var composeHeight: CGFloat { MTInputField.tier }   // read from the one owner of the compose tier (20.09)
     /// The glyph inside a bar button. ONE STYLE FOR EVERY BUTTON (the author's word 07.10.2026 15:4x UTC: the style of the buttons
-    /// -- write on the wall, send and the rest -- one for each style chosen; with white icons, everything in that style): with the
+    /// -- write, send and the rest -- one for each style chosen; with white icons, everything in that style): with the
     /// white icons chosen (MTLibraryIconStyle, the one owner of the choice) every bar glyph is that white, as the send mark already
     /// is; with another style, the platform's grey.
     static var barGlyph: Color {
@@ -456,7 +456,7 @@ enum MontanaSelfFace {
         return (img, turns)
     }
     static var image: UIImage? { current().image }
-    /// The face's print, for a row's fingerprint and the small faces a wall keeps: it moves exactly when the picture does.
+    /// The face's print, for a row's fingerprint and the small faces a page keeps: it moves exactly when the picture does.
     static var tag: Int { current().turn }
 }
 
@@ -630,6 +630,9 @@ struct MTAvatarBadgeDecoration: ViewModifier {
     let who: String?
     let size: CGFloat
     @ViewBuilder func body(content: Content) -> some View {
+        #if MONTANA_MESSENGER
+        content   // no coins and no levels in Messenger: no badge at the avatar (decision 618 (b), word 16339)
+        #else
         if let who, MTAvatarBadges.least <= size {
             content.frame(width: size, height: size)
                 .overlay(alignment: .top) {
@@ -637,8 +640,10 @@ struct MTAvatarBadgeDecoration: ViewModifier {
                         .offset(y: -MTAvatarBadges.height(size) / 2)
                 }
         } else { content }
+        #endif
     }
 }
+#if !MONTANA_MESSENGER   // no coins and no levels in Messenger: no badge at the avatar (decision 618 (b), word 16339)
 struct MTAvatarBadgeRow: View {
     let who: String
     let size: CGFloat
@@ -692,7 +697,7 @@ struct MTAvatarBadgePair: View {
                 door.badge(coins, height: MTAvatarBadges.height(size)).layoutPriority(0)   // the coins' own pill (slice S2b b7b)
             }
             Spacer(minLength: 0)
-            if let level = shownLevel {
+            if let level {
                 Text(verbatim: String(level))   // USER-DATA: the reported reputation level
                     .foregroundStyle(.white)
                     .padding(.horizontal, 4).frame(minWidth: MTAvatarBadges.height(size), minHeight: MTAvatarBadges.height(size))
@@ -706,19 +711,18 @@ struct MTAvatarBadgePair: View {
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(spoken))
-        .accessibilityHidden(coins == nil && shownLevel == nil)
+        .accessibilityHidden(coins == nil && level == nil)
     }
-    /// The level as the edition draws it: none in an edition without levels (MTEdition.levels, decision 618 (b)).
-    private var shownLevel: Int? { MTEdition.levels ? level : nil }
     private func levelColor(_ level: Int) -> Color {
         guard let rank = distribution.rank(level) else { return Color(white: 0.35) }
         return Color(hue: rank / 3, saturation: 0.82, brightness: 0.58)
     }
     private var spoken: String {
         [coins.flatMap { MTApps.coins?.spokenBalance($0) },
-         shownLevel.map { String(localized: "Global level \($0)", bundle: MTLanguage.bundle) }].compactMap { $0 }.joined(separator: ", ")
+         level.map { String(localized: "Global level \($0)", bundle: MTLanguage.bundle) }].compactMap { $0 }.joined(separator: ", ")
     }
 }
+#endif
 
 
 /// THE SWOLLEN HOLD BUTTON (the author's word 14.09). The keyboard lives in a window of its own that

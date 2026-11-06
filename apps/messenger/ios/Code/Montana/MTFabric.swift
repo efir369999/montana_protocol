@@ -7,7 +7,7 @@ import MontanaBindings
 /// levels of the chats real with regular calls over the last 14 days -- t2 -- and it bears on the Global level by the rule of the
 /// minimum»; 19:41: «one's own is one's own global level»; 19:50: «a new level that sets the global one, named Fabric of Time»;
 /// 17.10.2026 21:4x: «not tied to the turns of t2 -- the current result of a sliding window of t2 over live activity: chats, calls,
-/// transfers, chess, games, video, audio, media, stickers, GIFs»; 07:2x: a correspondent weighed by their ceiling, «yes, do it»;
+/// transfers, [...], games, video, audio, media, stickers, GIFs»; 07:2x: a correspondent weighed by their ceiling, «yes, do it»;
 /// Canon, «The level of the wallet», «The level of the fabric of time», «The half of the fabric», «The level of a person», «The
 /// testimony of an exchange»). Byte for byte the core's mt-derive levels.rs -- the same functions and the same frozen vectors
 /// (selfCheck) -- so a phone and a node that read one testimony name it by one identifier.

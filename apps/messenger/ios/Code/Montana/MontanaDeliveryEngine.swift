@@ -562,7 +562,7 @@ final class MontanaDeliveryEngine {
         /// A PAGE RETIRED WITHOUT ITS RECEIPT (OZ 1, build 2342; T1 2340 cold launch 19:30 UTC: 34 profile_expired, then 23 pages of
         /// 30 posts carried again in the launch's first seconds -- at every launch since 16.10, to visitors who never came for the last
         /// one): the moment the queue let the page go unreceipted. The owner carries the page to that visitor again at the visitor's
-        /// sign of life after this moment (MTBoard.pushDue), not at every launch; the receipt (MTBoard.delivered) clears it.
+        /// sign of life after this moment, not at every launch; the page's receipt clears it.
         static func pageRetired(to ref: String) -> String { "pageRet1_" + mine + "_" + ref }
         static func markPageRetired(to ref: String) { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pageRetired(to: ref)) }
         static func pageRetiredAt(to ref: String) -> Double? { UserDefaults.standard.object(forKey: pageRetired(to: ref)) as? Double }
@@ -646,7 +646,7 @@ final class MontanaDeliveryEngine {
             case .about: forgetAbout(to: ref)
             case .ground: forgetGround(to: ref)
             case .letter, .piece: break
-            case .page: markPageRetired(to: ref)   // what a visitor holds of my wall is written by the page's receipt alone (MTBoard.delivered); the retirement is remembered for the owner's next carriage
+            case .page: markPageRetired(to: ref)   // what a visitor holds of my page is written by the page's receipt alone; the retirement is remembered for the owner's next carriage
             }
         }
     }
@@ -830,7 +830,11 @@ final class MontanaDeliveryEngine {
     private var shownCopy: (era: Int, items: [Item])?
     private func load() -> [Item] {
         if let held, heldEra == MTOutbox.era { return held }
-        let a = readItems().filter { !$0.text.hasPrefix(retiredWallMark) }
+        #if MONTANA_MESSENGER
+        let a = readItems()
+        #else
+        let a = readItems().filter { !$0.text.hasPrefix(retiredWallMark) }   // a retired word an older build queued
+        #endif
         hold(storeUnreadable ? nil : a)
         return a
     }
@@ -977,7 +981,9 @@ final class MontanaDeliveryEngine {
     func enqueue(to: String, chat: String, mid: String, text: String, silent: Bool,
                  kind: Kind = .letter, tag: String? = nil, headless: Bool = false,
                  quoteText: String? = nil, quoteMid: String? = nil, linkPreview: String? = nil) {
+        #if !MONTANA_MESSENGER
         guard !text.hasPrefix(retiredWallMark) else { return }   // retired automatic VPN sharing
+        #endif
         guard MontanaConv.holds(to) else {
             // A silent drop on the critical path is a phantom «sent»: the bubble looked fine
             // while the letter never entered the queue (the share-video manifest died exactly
@@ -1014,7 +1020,7 @@ final class MontanaDeliveryEngine {
             // same correspondence makes the queued one meaningless, and forty-three of them
             // waiting their turn burnt the pair's ring budget (08.09, T3→T1). The last word stands.
             if text.hasPrefix(readReceiptMark) { a.removeAll { $0.to == to && $0.text.hasPrefix(readReceiptMark) } }
-            // ONE PAGE OF A WALL ON ITS WAY TO ONE PERSON (the critic's N1) is law S-1 itself: a page is state (16.10.2026
+            // ONE PAGE ON ITS WAY TO ONE PERSON (the critic's N1) is law S-1 itself: a page is state (16.10.2026
             // No.72), and foldingState below lets a newer page take the queued one's place.
             // THE SAME STATE ALREADY ON ITS WAY IS NOT QUEUED AGAIN (25.09, the diary of T1: at one proof of a peer's build
             // four «about» letters and three 1.6 MB «ground» letters left within 60 ms). The senders ask the queue whether
@@ -1049,7 +1055,9 @@ final class MontanaDeliveryEngine {
             } else {
                 MontanaLog.event("DELIVERY +mid=\(mid.prefix(8)) queued=\(a.count)")
                 MontanaNotify.suggest(chat)   // the chat a person writes to is offered in the share sheet (once a day)
+                #if !MONTANA_MESSENGER
                 MTApps.wall?.introduce(to: to)     // behind a letter of the person's own, the wall says it is read here (N2)
+                #endif
             }
             attempt(mid)   // attempt = sending as an envelope through the node, at t=0
         }
@@ -1121,8 +1129,10 @@ final class MontanaDeliveryEngine {
                 if let conv = due { MTPipeBook.forgetFirst(conv); MTPipeBook.touch(conv) }
                 // A receipted name or face is now what the peer's screen shows — the mark is written here.
                 if let conv = due { Announced.recordDelivered(text: letterText, to: conv) }
+                #if !MONTANA_MESSENGER
                 // A receipted page of my wall is the version that visitor holds (the critic's N5).
                 if let conv = due { MTApps.wall?.delivered(text: letterText, to: conv) }
+                #endif
                 // The tombstone is delivered — now the pipe can be buried for real.
                 if wasTombstone, let conv = due { MTPipeBook.forget(conv) }
                 // The letter is delivered — its media's shipping crate is of no use to anyone:

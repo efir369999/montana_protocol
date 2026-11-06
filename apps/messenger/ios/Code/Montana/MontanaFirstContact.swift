@@ -1430,7 +1430,7 @@ enum MontanaMeeting {
     /// The last link handled and when (main thread only: every door of a link lands there).
     private static var lastLink: (raw: String, at: Date)?
     static func handleLink(_ given: URL) { handleLink(given, chosen: false) }
-    /// A Montana link (montana://r/, coin, wall, pack): the app's text views hand it to this one entrance themselves, never to
+    /// A Montana link (montana://r/, coin, pack): the app's text views hand it to this one entrance themselves, never to
     /// the system's round -- in the Protocol montana:// is the Messenger's scheme (the author's word 16667), and a tap there
     /// would leave the app.
     static func isMontana(_ url: URL) -> Bool { url.scheme?.lowercased() == "montana" }
@@ -1467,14 +1467,16 @@ enum MontanaMeeting {
             url = j.url
             DispatchQueue.main.async { MTGroup.shared.waitJoin(j.g, j.mark) }
         }
+        #if !MONTANA_MESSENGER
         if MTApps.wall?.openComments(url) == true { return }
-        // A WALL'S LINK IS NEVER AN INVITATION (02.10): a post this phone does not hold yet is said so -- the invitation road
+        // A POST'S LINK IS NEVER AN INVITATION (02.10): a post this phone does not hold yet is said so -- the invitation road
         // below answered it «the invitation could not be opened».
         if url.scheme?.lowercased() == "montana", url.host?.lowercased() == "wall" {
-            MontanaTrace.mark("link_done", "wall post not held")
+            MontanaTrace.mark("link_done", "post not held")
             verdict("This post is not on this phone yet. Open the writer's page, then tap the link again.")
             return
         }
+        #endif
         // A COIN'S LINK OPENS THE WALLET (the author's word 03.10: «every Montana link of the coins is tappable, not only the
         // others'»): the coin letter's machine line is no invitation -- the invitation road below answered it «could not be opened».
         // Only where the coins stand (guard 4 of docs/APPS-API.md): an edition without them answers such a link as any unknown one.

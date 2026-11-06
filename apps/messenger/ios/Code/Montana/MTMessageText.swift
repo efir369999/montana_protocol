@@ -353,19 +353,23 @@ struct MTLetterPageText: UIViewRepresentable {
 }
 
 /// A LINK IN A TEXT ANSWERS AS THE PLATFORM'S LINKS DO (06.10; slice S4c2: the one delegate of every text view that carries links,
-/// every edition's): a YouTube link plays here, in YouTube's own player where its door stands (MTApps.youtube, the author's word
-/// 17.10.2026 13:4x UTC); a post's
-/// link answers by the wall's door -- its page at a tap, its preview and menu on a hold (MTPostLinkPeek); a Montana link goes to
-/// the one entrance of a link (MontanaMeeting.isMontana); every other link keeps the platform's own tap and hold.
+/// every edition's): a YouTube link plays here, in YouTube's own player, in the Protocol alone (MTApps.youtube, the author's word
+/// 17.10.2026 13:4x UTC; Messenger compiles none, cut C4); in the Protocol a post's link answers by its door (cut C6); a Montana
+/// link goes to the one entrance of a link (MontanaMeeting.isMontana); every other link keeps the platform's own tap and hold.
 final class MTTextLinks: NSObject, UITextViewDelegate {
     static let shared = MTTextLinks()
     func textView(_ textView: UITextView, primaryActionFor textItem: UITextItem, defaultAction: UIAction) -> UIAction? {
         guard case .link(let url) = textItem.content else { return defaultAction }
+        #if !MONTANA_MESSENGER
         if MTLinkPreviewBuilder.youtube(url) != nil, let tube = MTApps.youtube { return UIAction { _ in _ = tube.play(url, title: nil) } }
+        #endif
+        #if !MONTANA_MESSENGER
         if let wall = MTApps.wall?.linkAction(url) { return wall }
+        #endif
         if MontanaMeeting.isMontana(url) { return UIAction { _ in MontanaMeeting.handleLink(url) } }
         return defaultAction
     }
+    #if !MONTANA_MESSENGER
     func textView(_ textView: UITextView, menuConfigurationFor textItem: UITextItem,
                   defaultMenu: UIMenu) -> UITextItem.MenuConfiguration? {
         guard case .link(let url) = textItem.content, let m = MTApps.wall?.linkMenu(url, in: textView) else {
@@ -373,4 +377,5 @@ final class MTTextLinks: NSObject, UITextViewDelegate {
         }
         return m
     }
+    #endif
 }

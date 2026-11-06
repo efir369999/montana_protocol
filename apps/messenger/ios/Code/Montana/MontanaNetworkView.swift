@@ -4,6 +4,7 @@ import Security
 import UniformTypeIdentifiers
 import MontanaBindings
 
+#if !MONTANA_MESSENGER   // the Wi-Fi neighbours are the mesh's scan: no picker of them in Messenger (15846)
 /// P2P network test (serverless self-host). The node comes up ITSELF when the app opens —
 /// the screen only reflects status and shows the card automatically. There is no manual "connect".
 /// Sending: paste the peer's card (still manual for now; mDNS auto-discovery is the next step).
@@ -59,6 +60,7 @@ struct MontanaP2PPeersSheet: View {
         a.count > 22 ? String(a.prefix(12)) + "…" + String(a.suffix(8)) : a
     }
 }
+#endif
 
 
 // THE NETWORK UNDER THE TIME PANEL (the author's word 25.09: «make the network page a full page under the time panel, with
@@ -73,9 +75,9 @@ struct MontanaP2PPeersSheet: View {
 // right pins or deletes it. The plus stands bottom right as the music's plus and the chats' write do; the page searches itself
 // as the music and the feed do. The page over the tabs it was (NavigationView, a toolbar, a close, a List) is gone with the
 // page's rebirth at every touch of the globe -- the class of 1938, closed for the pages under the bar on 25.09.
-/// THE P2P WALL (the author's word 29.09: «the network is disbanded -- the VPN wall, the mesh wall and the P2P wall are three
-/// applications»): the nodes this phone reaches. The VPN wall is the VPN's own page since slice S3a (MontanaVPNPage, MTApps.vpn);
-/// the mesh wall is the mesh's own page since link 15898 (MTMeshWallPage, MTApps.mesh), so no word of the mesh is drawn here.
+/// THE P2P NETWORK (the author's word 29.09: the network is disbanded into three applications): the nodes this phone reaches.
+/// The VPN is its own page since slice S3a (MontanaVPNPage, MTApps.vpn); the mesh is its own page since link 15898
+/// (MTApps.mesh), so no word of the mesh is drawn here.
 struct NetworkTabView: View {
     @EnvironmentObject private var store: ChatStore
     @Environment(UIState.self) private var ui
@@ -90,8 +92,15 @@ struct NetworkTabView: View {
     private var rows: [Chat] { [Self.chatRow(Self.headMark), Self.chatRow(Self.p2pMark)] }
 
     /// The print's fields by name, in its order -- the diary names a changed row's field by them; the VPN page's and the mesh
-    /// wall's prints have the same shape. A field a kind does not draw stays zero.
-    static let printNames = ["id", "tab", "tunnel", "line", "count", "fold", "pin", "moment", "word", "selected", "ping"]
+    /// page's prints have the same shape. A field a kind does not draw stays zero.
+    static let printNames = ["id", "tab", tunnelField, "line", "count", "fold", "pin", "moment", "word", "selected", "ping"]
+    /// The third place is the VPN page's tunnel; this page never draws it, and Montana Messenger compiles no word of a tunnel
+    /// (decision 651 = a) -- there the place keeps the shape under no name.
+    #if MONTANA_MESSENGER
+    private static let tunnelField = "-"
+    #else
+    private static let tunnelField = "tunnel"
+    #endif
     private func rowPrint(_ c: Chat) -> [Int] {
         func p<T: Hashable>(_ v: T) -> Int { var h = Hasher(); h.combine(v); return h.finalize() }
         var out = [p(c.id)] + Array(repeating: 0, count: Self.printNames.count - 1)
@@ -108,7 +117,7 @@ struct NetworkTabView: View {
     var body: some View {
         let _ = MTFrameMeter.shared.body("network")   // the page's passes while a motion is measured
         // THE ROWS RUN ON TO THE SCREEN'S EDGES, AS THE CHATS' (the author's word 25.09: «no border above or below»): the one
-        // construction of the chats (MTChatListFrame), the time panel list's own law; the ground is the page's one crest. A wall's
+        // construction of the chats (MTChatListFrame), the time panel list's own law; the ground is the page's one crest. These
         // rows answer their own buttons: no swipe, no hold, no selection of the list's own.
         MontanaTimePanelList(panel: panel, rows: rows, fingerprint: rowPrint,
                              swipeLeading: { _ in [] }, swipeTrailing: { _ in [] }, swipesEnabled: false,
@@ -120,11 +129,15 @@ struct NetworkTabView: View {
     /// Every row of the page, drawn by its name.
     @ViewBuilder private func cell(_ c: Chat) -> some View {
         if c.id == Self.headMark {
-            // A WALL ONLY WHERE THE DRAWER NAMES ONE (ContentView .p2pWall, the author's word 15844): in Montana Messenger the globe is
-            // the network in the time panel, so its head says the network and no wall (link 16003).
-            MTWallHead(glyph: "globe", count: MontanaNodes.liveNodes, on: node.nodeUp,
+            // THE HEAD SAYS WHAT THE DRAWER NAMES (the drawer's network row, the author's word 15844): in Montana Messenger the globe is
+            // the network in the time panel, so its head says the network (link 16003).
+            #if MONTANA_MESSENGER
+            MTPaneHead(glyph: "globe", count: MontanaNodes.liveNodes, on: node.nodeUp, line: LocalizedStringKey("P2P network"))
+            #else
+            MTPaneHead(glyph: "globe", count: MontanaNodes.liveNodes, on: node.nodeUp,
                        line: MTApps.vpn != nil ? LocalizedStringKey("P2P wall: the nodes this phone reaches, and the switch over them")
                                                : LocalizedStringKey("P2P network"))
+            #endif
         } else if c.id == Self.p2pMark {
             p2pTab.padding(.top, 12)
         }
@@ -222,11 +235,11 @@ struct NetworkTabView: View {
     }
 }
 
-/// A WALL'S OWN HEAD (the author's word 29.09): its glyph on the platform's plain glass, white, the number it counts on the badge
+/// A PANE'S OWN HEAD (the author's word 29.09): its glyph on the platform's plain glass, white, the number it counts on the badge
 /// -- the people reached on the mesh, the nodes reached -- green while this phone is in, red while it is not (the mesh: the moment
-/// findability is off), and one line saying what the wall is. One head for every wall's page: the P2P wall here, the mesh wall
-/// behind its door (MTMeshWallPage).
-struct MTWallHead: View {
+/// findability is off), and one line saying what the pane is. One head for every such page: the network here, the mesh's page
+/// behind its door.
+struct MTPaneHead: View {
     let glyph: String
     let count: Int
     let on: Bool

@@ -125,10 +125,10 @@ final class MTCallTimeline {
         }
         if stage == "call.end" { duration += " pending_operations=\(operations.count)" }
         let record = "CALL_STEP v=1 build=\(build) call=\(Self.diagnosticToken(uuid.uuidString)) link=\(link) seq=\(sequence) elapsed_ms=\(elapsed) delta_ms=\(elapsed - previous) stage=\(stage)\(duration)\(operation.map { " operation=" + Self.diagnosticToken($0) } ?? "") \(facts)"
-        let wall = Int64(Date().timeIntervalSince1970 * 1_000)
+        let clock = Int64(Date().timeIntervalSince1970 * 1_000)
         // Only enqueue immutable memory under the lock. Privacy filtering and file work run later,
         // in the same order, through the existing single writer.
-        Self.output.async { MontanaLog.event(record, numbers: ["wall_ms": wall]) }
+        Self.output.async { MontanaLog.event(record, numbers: ["wall_ms": clock]) }
         previous = elapsed
     }
     func error(_ stage: String, _ error: Error) {
@@ -792,7 +792,7 @@ final class MontanaCall: NSObject {
     // same fact (busyFlag), written on the main thread and read by the delivery and sound queues, is gone (the critic of No.69).
     static var isBusy: Bool { stateSnapshot != "idle" || MTGroupRoom.isLive }   // a group's room holds the sound as a call does (07.10)
     /// THE CARGO YIELDS TO A CALL BEING BORN, NOT TO A CALL THAT STANDS (the author's words 14448 and 14454, 02.11.2026: in a call
-    /// from T1 to the iPhone 11 the media and the gifs did not leave, the wall's post did not publish). The roads are the call's
+    /// from T1 to the iPhone 11 the media and the gifs did not leave, a post did not publish). The roads are the call's
     /// while it dials, rings, connects or reconnects; a standing call carries its sound on its own peer connection, and one chunk
     /// at a time beside it costs it nothing (the lanes narrow to one under isBusy). Read from the snapshot, as isBusy is.
     static var isConnecting: Bool { let s = stateSnapshot; return s != "idle" && s != "connected" && s != "active" }
@@ -1825,7 +1825,11 @@ final class MontanaCall: NSObject {
         let opts = RTCPeerConnectionFactoryOptions()
         opts.ignoreLoopbackNetworkAdapter = true
         factory.setOptions(opts)
+        #if MONTANA_MESSENGER
+        MontanaTrace.mark("call_ice", "every adapter")
+        #else
         MontanaTrace.mark("call_ice", MontanaPhoneNode.tunnelUp() ? "every adapter -- our own among them" : "every adapter")
+        #endif
         let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
         pc = factory.peerConnection(with: cfg, constraints: constraints, certificateVerifier: MTRelayTrust.shared, delegate: self)
         let audioConstraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
@@ -3967,7 +3971,11 @@ final class MontanaCall: NSObject {
             let setup = connectedAt != nil && startedAt != nil
                 ? Int(connectedAt!.timeIntervalSince(startedAt!) * 1000) : -1
             let relayShare = sumSamples > 0 ? sumRelaySamples * 100 / sumSamples : -1
-            let tunnelShare = sumSamples > 0 ? sumTunnelSamples * 100 / sumSamples : -1
+            #if MONTANA_MESSENGER
+            let tunnelShare = ""   // Montana Messenger reads no tunnel (decision 651 = a)
+            #else
+            let tunnelShare = " tun_pct=\(sumSamples > 0 ? sumTunnelSamples * 100 / sumSamples : -1)"
+            #endif
             let rtt = sumRttN > 0 ? sumRttSum / sumRttN : -1
             let paths = sumPaths.isEmpty ? "-" : sumPaths.sorted().joined(separator: "+")
             let crypto = frameCryptors.isEmpty ? "dtls-srtp" : "dtls-srtp+sframe-pq"
@@ -3988,7 +3996,7 @@ final class MontanaCall: NSObject {
             }()
             MontanaTrace.mark("call_summary",
                 "dir=\(isInitiator ? "out" : "in") video=\(isVideo ? 1 : 0) setup_ms=\(setup) connect_ms=\(connect) ring_s=\(ring) rang=\(peerRinging ? 1 : 0) talk_s=\(dur) "
-                + "paths=\(paths) relay_pct=\(relayShare) tun_pct=\(tunnelShare) rtt_avg=\(rtt) breaks=\(sumBreaks) "
+                + "paths=\(paths) relay_pct=\(relayShare)\(tunnelShare) rtt_avg=\(rtt) breaks=\(sumBreaks) "
                 + "restarts=\(sumRestarts) ladder_min_step=\(sumLadderMin) video_lost_pkts=\(sumLostVideo) video_dark_s=\(sumVideoDarkS) "
                 + "in_kb=\(sumInBytes / 1024) out_kb=\(sumOutBytes / 1024) crypto=\(crypto) end=\(endReason) "
                 + "batt=\(b0)->\(b1) drain_pct_h=\(drain) thermal=\(powerLast.map { MontanaPower.thermalWord($0.thermal) } ?? "-") power_floor_max=\(sumPowerFloorMax) cpu_pct=\(cpuPct) "
@@ -4011,7 +4019,10 @@ final class MontanaCall: NSObject {
         sumLadderMin = 0; sumRttSum = 0; sumRttN = 0; sumLostVideo = 0; sumInBytes = 0; sumOutBytes = 0
         sumVideoDarkS = 0; pictureSeen = [:]; answeredAt = nil
         powerFloor = 0; powerStart = nil; powerLast = nil; powerTicks = 0; sumPowerFloorMax = 0
-        pathFloor = Self.modestStep; ladderStep = Self.modestStep; sumTunnelSamples = 0   // the next call proves its own pair
+        pathFloor = Self.modestStep; ladderStep = Self.modestStep   // the next call proves its own pair
+        #if !MONTANA_MESSENGER
+        sumTunnelSamples = 0
+        #endif
         stopRingback(); stopDialTone(); stopWaitingTone()
         connectHardTimer?.invalidate(); connectHardTimer = nil
         ringLifeTimer?.invalidate(); ringLifeTimer = nil
@@ -4883,7 +4894,9 @@ final class MontanaCall: NSObject {
     // facts are gathered while the call lives and spoken once, at its end.
     private var sumSamples = 0            // measurement samples taken
     private var sumRelaySamples = 0       // of those, ones that rode a relay
+    #if !MONTANA_MESSENGER
     private var sumTunnelSamples = 0
+    #endif
     private var sumPaths: Set<String> = []
     private var sumBreaks = 0             // times the media or the machine declared a break
     private var sumRestarts = 0           // ICE restarts asked for
@@ -4957,7 +4970,10 @@ final class MontanaCall: NSObject {
             var outBytes = 0, outFrames = 0, outLimit = "-"
             var captureDurations: [Double] = [], playoutDurations: [Double] = []
             var voice: [(id: String, seconds: Double, energy: Double, received: Double, concealed: Double)] = []   // the far voice (MTWeave)
-            var outAudio = 0, tun = 0, net = "?"   // 24.09: what the voice sends, and whether the pair rides our tunnel
+            var outAudio = 0, net = "?"   // 24.09: what the voice sends
+            #if !MONTANA_MESSENGER
+            var tun = 0   // whether the pair rides our tunnel
+            #endif
             // THE PATH IS TAKEN FROM THE NOMINATED PAIR, not from a random candidate. Before, the
             // type was read off the last local candidate that turned up -- and there are always
             // several in the set -- so the "path" jumped from sample to sample on its own. From
@@ -5007,7 +5023,9 @@ final class MontanaCall: NSObject {
                 case "local-candidate":
                     if let want = nominatedLocalId, s.id == want {
                         kind = (s.values["candidateType"] as? String) ?? "?"
+                        #if !MONTANA_MESSENGER
                         tun = MontanaCall.ridesTunnel(s) ? 1 : 0
+                        #endif
                         net = (s.values["networkType"] as? String) ?? "?"
                     }
                 case "inbound-rtp":
@@ -5086,7 +5104,9 @@ final class MontanaCall: NSObject {
             // 12.11: the summary is fed by the same sample that feeds the journal and the ladder.
             self.sumSamples += 1
             if kind != "?" { self.sumPaths.insert(kind); if kind == "relay" { self.sumRelaySamples += 1 } }
+            #if !MONTANA_MESSENGER
             if tun == 1 { self.sumTunnelSamples += 1 }
+            #endif
             if rttMs >= 0 { self.sumRttSum += rttMs; self.sumRttN += 1 }
             self.sumInBytes = max(self.sumInBytes, aBytes + vBytes)
             // THE SUMMARY'S OUT BYTES COUNT THE VOICE (25.09): out_kb=0 stood on T1's 455-second voice call whose own
@@ -5125,7 +5145,11 @@ final class MontanaCall: NSObject {
             }
             guard Date().timeIntervalSince(self.lastJournalAt) >= 5 else { return }
             self.lastJournalAt = Date()
+            #if MONTANA_MESSENGER
+            let via = net
+            #else
             let via = tun == 1 ? "tunnel" : net
+            #endif
             MontanaTrace.mark("call_audio", "path=\(kind) pair=\(pair) rtt_ms=\(rttMs) bytes=\(aBytes) lost=\(aLost) jitter_ms=\(aJitMs) via=\(via) out_bytes=\(outAudio) mic=\(self.localAudio?.isEnabled == true ? 1 : 0)")
             if self.isVideo {
                 // OUTGOING VIDEO IS MEASURED TOO: without it "zero bytes" cannot be split into "we
@@ -5149,9 +5173,13 @@ final class MontanaCall: NSObject {
             self.pc?.statistics { [weak self] report in
                 guard let self else { return }
                 var localIds = Set<String>()
+                #if !MONTANA_MESSENGER
                 var tunnelIds = Set<String>()
+                #endif
                 for s in report.statistics.values where s.type == "local-candidate" {
+                    #if !MONTANA_MESSENGER
                     if MontanaCall.ridesTunnel(s) { tunnelIds.insert(s.id); continue }
+                    #endif
                     if (s.values["candidateType"] as? String) != "relay",
                        (s.values["protocol"] as? String)?.lowercased() == "udp" {
                         localIds.insert(s.id)
@@ -5164,8 +5192,12 @@ final class MontanaCall: NSObject {
                     return s.values["localCandidateId"] as? String
                 }
                 let direct = nominatedLocal.contains { localIds.contains($0) }
+                #if MONTANA_MESSENGER
+                let why = nominatedLocal.isEmpty ? "no pair nominated yet" : "the pair goes through a relay or over TCP"
+                #else
                 let why = nominatedLocal.contains { tunnelIds.contains($0) } ? "the pair rides our own adapter"
                     : (nominatedLocal.isEmpty ? "no pair nominated yet" : "the pair goes through a relay or over TCP")
+                #endif
                 DispatchQueue.main.async {
                     guard self.state == "connected" else { return }
                     // The proof moves the path floor BOTH ways: a pair re-formed after a restart (Wi-Fi to the
@@ -5188,6 +5220,7 @@ final class MontanaCall: NSObject {
         }
     }
 
+    #if !MONTANA_MESSENGER
     /// Through a packet tunnel a datagram may not be a datagram: a tunnel that carries UDP inside one TCP stream turns one loss
     /// on the radio into seconds of delay for every packet behind it, and no loss is ever seen (measured 23.09 20:30Z, T1 on LTE:
     /// round trip 371 ms at the median, 2.8 s at the ninetieth sample, 7.5 s at worst). The call does not know a tunnel's
@@ -5200,6 +5233,7 @@ final class MontanaCall: NSObject {
         }
         return false
     }
+    #endif
 
     /// A connection's name: the DTLS certificate's fingerprint its description carries. It holds through every
     /// fresh-checks ask and every media renegotiation of one connection, and a new connection has a new one.
@@ -7108,7 +7142,9 @@ enum MontanaCallWiring {
         MontanaCall.watchRoute()   // 15.28: the audio route is measured for the whole call
         MontanaLog.holdRotation = { ch in ch == .trace && MontanaCall.stateSnapshot != "idle" }   // 29.09: the call's trace outlives the call
         // The VPN recovery's hooks (29.09): the call's word and the diary, through the VPN's door (slice S3b b1).
+        #if !MONTANA_MESSENGER
         MTApps.vpn?.wire(callBusy: { MontanaCall.isBusy }, diary: { MontanaTrace.markChanged("vpn_ui", $0, every: 60) })
+        #endif
         c.onCallLog = { peer, video, incoming, dur, missed, declined, seed, rang, refused, call in
             E2E.shared.logCall(peer: peer, video: video, incoming: incoming, durationSec: dur, missed: missed, call: call)
             if !missed { E2E.shared.notePeerSeen(peer) }   // 15.7: a call that connected is the freshest proof

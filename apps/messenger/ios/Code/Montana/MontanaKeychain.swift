@@ -169,6 +169,22 @@ enum MontanaKeychain {
         MTColdMirror.wrote(key)
     }
 
+    /// WHAT LEFT LEAVES THE KEYCHAIN TOO (decision 673 (a), the author's word 17083: «no passwords anywhere»): every item of this
+    /// app's group whose name MTRetired knows by its print is erased at launch -- the vault of the Passwords that left both editions
+    /// among them, and what it held is gone for good. The count is the trace's.
+    @discardableResult static func forgetRetired() -> Int {
+        var q: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+                                kSecAttrAccessGroup as String: group,
+                                kSecReturnAttributes as String: true,
+                                kSecMatchLimit as String: kSecMatchLimitAll]
+        q.merge(sameEverywhere) { a, _ in a }
+        var out: AnyObject?
+        guard SecItemCopyMatching(q as CFDictionary, &out) == errSecSuccess, let items = out as? [[String: Any]] else { return 0 }
+        let gone = items.compactMap { $0[kSecAttrAccount as String] as? String }.filter { MTRetired.keychain($0) }
+        for k in gone { delete(k) }
+        return gone.count
+    }
+
     /// AN ITEM BORN ONCE (01.11.2026, MTLetterBox): an add and never an update -- the keychain admits exactly one creator, whichever
     /// process it is, and the other's add finds the item standing and changes nothing.
     @discardableResult static func addOnce(_ key: String, _ data: Data) -> Bool {
@@ -185,8 +201,8 @@ enum MontanaKeychain {
 
 /// THE MIRRORS ARE READ FROM THE KEYCHAIN ONCE A WRITE (the author's words 18.10.2026 11:3x-11:4x UTC: «the chats lag»; «as the
 /// critic, find the cause of all the lags and fix it in 2242»). Every «is this person refused», «is this chat pinned» asked the
-/// keychain afresh -- the system's keychain service, a decode, a set -- and the walk of the walls asked it once per correspondent
-/// on the main thread: T1 on 2241, 11:38:36Z, a frame of the chat list held 161 ms inside SecItemCopyMatching under MTBoard.send
+/// keychain afresh -- the system's keychain service, a decode, a set -- and a walk over the correspondents asked it once per correspondent
+/// on the main thread: T1 on 2241, 11:38:36Z, a frame of the chat list held 161 ms inside SecItemCopyMatching
 /// (ChatStore.refusesCold), and the same question stands in the groups' walks, the list's filter and the delivery queue. In the
 /// app every write of a key passes MontanaKeychain.set and delete, so the decoded set stands until that door writes the key; an
 /// extension reads afresh, for the app writes behind its back. A read that a write overtook is not kept (turn).
@@ -245,9 +261,11 @@ enum MTHeldLetters {
 /// the name the manifest computes, and the fill finds it on disk and asks nothing. No group, no file,
 /// an older sheet without «src» — the old road, the download. Both processes compile this file.
 enum MontanaHandoff {
+    #if !MONTANA_MESSENGER
     /// The name of the one notice the share sheet leaves when it hands a post to my wall (ShareWallHandoff.bell): its tap brings the
     /// app forward on the wall's new-post page, and the page takes it off the list as it rises (MTBoardComposer.present).
     static let wallNotice = "wall-new"   // NOT-UI: a notification's identifier
+    #endif
     static var dir: URL? {
         guard let base = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: MontanaContour.appGroup) else { return nil }
         let d = base.appendingPathComponent("handoff", isDirectory: true)
@@ -330,8 +348,9 @@ enum MontanaHandoff {
 /// WHAT LEFT THIS APP IS KNOWN BY ITS PRINT ALONE (the author's word 08.10.2026 12:1x UTC): a stored value or a letter of an older
 /// build is recognised by the first sixteen hex digits of the SHA-256 of its name, so this app names nothing it no longer has -- and
 /// still forgets every trace of it on the phone. WHAT CAME BACK IS NO LONGER RETIRED (the author's word 11.10.2026 09:1x UTC, No.60:
-/// the VPN, the coins, the mesh, the Passwords app and the P2P wall return to Montana): their values, letters, ops, rooms, diary and
-/// keychain item are this app's own again and leave this list; only the switch of the seed in the Apple Account stays retired.
+/// the VPN, the coins, the mesh, the Passwords app and the P2P network return to Montana): their values, letters, ops, rooms and diary
+/// are this app's own again and leave this list. The Passwords then left both editions for good (decisions 671 (a) and 673 (a)):
+/// their secret letter and their keychain item are retired anew, beside the switch of the seed in the Apple Account.
 enum MTRetired {
     static func print(_ s: String) -> String {
         SHA256.hash(data: Data(s.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
@@ -341,10 +360,15 @@ enum MTRetired {
         "7a8dfdc094b77ec2",   // the feed's springiness (02.11.2026, link 14680 (5): the feed's motion is no setting)
         "6fd5056ef1a7c49a",   // the feed's animation duration (the same word)
         "5da1d072bfa76c8b"]   // the balance's main sum of the builds before 2350 (link 14774: coins by default, the choice kept anew)
-    /// A letter's machine line, by its first seventeen or nineteen characters: no kind of letter is retired now.
-    private static let letterLines = Set<String>()
+    /// A letter's machine line, by its first seventeen or nineteen characters. The secret letter of the vault that left both editions
+    /// (decision 671 (a), the author's word 17083: «no passwords anywhere») is a retired kind: an older build's comes buried unread
+    /// and ringing nothing (decision 668 (a)).
+    private static let letterLines: Set<String> = ["81e52bba0644a78b"]
 
     static func value(_ key: String) -> Bool { values.contains(print(key)) }
+    /// A keychain item of what left, by its print: the vault of the Passwords (decision 673 (a)); MontanaKeychain.forgetRetired erases it.
+    private static let keychainItems: Set<String> = ["9a59fadd4343ec4b"]
+    static func keychain(_ key: String) -> Bool { keychainItems.contains(print(key)) }
     /// An older build's letter: its last line opens with a retired machine line. It is buried unread and rings nothing.
     static func letter(_ text: String) -> Bool {
         guard !letterLines.isEmpty, text.utf8.count <= 65_536,

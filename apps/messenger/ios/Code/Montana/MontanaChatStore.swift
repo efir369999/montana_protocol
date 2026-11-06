@@ -277,9 +277,22 @@ class ChatStore: ObservableObject {
     /// longer holds it, the letter is gone, and the record follows the feed at once. Judging by
     /// TIME instead kept a deleted photo's record immortal — newer than everything that remained —
     /// through every start (T1 18.09 20:54Z–21:01Z, list_audit: the record's photo against the feed's words).
+    /// AN UNREAD ROW: a correspondent's letter not yet read. A call letter is never one (the author's word 17.09): a missed call
+    /// counts on the calls page alone; in the chat it lies as a read row.
+    private func unreadRow(_ m: Message) -> Bool {
+        guard !m.isFromMe, !m.isRead, callInfoOf(m.text) == nil else { return false }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+        // Nor is a step of a game (29.09): the board reads it.
+        if m.isGameStep { return false }
+        #endif
+        return true
+    }
+
     func noteListState(_ chat: String, last m: Message?, force: Bool = false) {
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         // A step of a chess game never writes the row (29.09): the record follows the newest letter that is one.
         let m = m.flatMap { $0.isGameStep ? messages[chat]?.last(where: { !$0.isGameStep }) : $0 }
+        #endif
         guard let m else {
             if listState[chat] != nil { listState[chat] = nil; persistListState() }
             return
@@ -468,10 +481,14 @@ class ChatStore: ObservableObject {
     /// device writing to itself. Nothing there is sent, waits, or fails — the one predicate every
     /// road asks. Measured on T1 11.09 10:26:56: two share-sheet attachments to Saved were born
     /// at the clock, no road settled them, and the cold-start sweep painted them red with a retry.
+    #if MONTANA_MESSENGER
+    static func isLocalRoom(_ chat: String) -> Bool { chat == savedMessagesKey || chat == montanaRoomKey }
+    #else
     static func isLocalRoom(_ chat: String) -> Bool { chat == savedMessagesKey || chat == montanaRoomKey || chat == meshRoomKey }
     /// The room of everyone on the mesh (29.09): no pipe; its words ride the radio (MTMeshRoom), its row stands first while the
-    /// switch «Findable on the mesh» is on.
+    /// switch «Findable on the mesh» is on. The Protocol's alone: Montana Messenger carries no mesh, nor its room (15846).
     static func isMeshRoom(_ chat: String) -> Bool { chat == meshRoomKey }
+    #endif
     /// The room where Montana itself speaks (29.09): no wire, the logo for a face, the crown beside the name.
     static func isMontanaRoom(_ chat: String) -> Bool { chat == montanaRoomKey }
     /// THE STAGE THE ROW SHOWS (the author's word 11.09): the last letter's own stage when the
@@ -870,10 +887,7 @@ class ChatStore: ObservableObject {
             // and the icon stood at 13 all morning). A letter is read when it stands in the open chat (placeRow,
             // markRead); the count is the letters of theirs that are not — and no sealed map is opened for it.
             for (chat, list) in messages where !deletedChats.contains(chat) {
-                // A call letter is never unread (the author's word 17.09): a missed call counts on the
-                // calls page alone; in the chat it lies as a read row.
-                // A step of a chess game is never unread either (29.09): the board reads it, not the chat.
-                let n = list.reduce(0) { $0 + ((!$1.isFromMe && !$1.isRead && callInfoOf($1.text) == nil && !$1.isGameStep) ? 1 : 0) }
+                let n = list.reduce(0) { $0 + (unreadRow($1) ? 1 : 0) }
                 if n > 0 { counts[chat] = n }
             }
             for chat in forcedUnread where !deletedChats.contains(chat) && counts[chat] == nil {
@@ -1427,8 +1441,7 @@ class ChatStore: ObservableObject {
     /// and a settled one leaves room for the next ask.
     static func receiptMid(_ dmid: String) -> String { "rcpt-" + dmid }
     /// A person's state word, as the wire names it: their name, face, bio and link, page ground. Each is kept in the
-    /// defaults and each is receipted as held (the sender side's MTOutbox.Kind.isState, read here from the words; the page
-    /// of a wall waits for the wall's own write, MTBoard.receiptOnceWritten).
+    /// defaults and each is receipted as held (the sender side's MTOutbox.Kind.isState, read here from the words).
     static func isStateWord(_ text: String) -> Bool {
         text.hasPrefix(nameMark) || text.hasPrefix(avatarMark) || text.hasPrefix(aboutMark) || text.hasPrefix(groundMark)
     }
@@ -1484,10 +1497,12 @@ class ChatStore: ObservableObject {
             // rule — in words, while the door let it pass.
             // Reading what was never received is impossible; so is showing it.
             guard cur == .delivered else { return false }
+            #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
             // A STEP OF A GAME I SENT STOPS AT «DELIVERED» (29.09): the board reads it, not the person, and the moment of
             // its delivery is where the correspondent's clock begins on my screen (MTChessAnchor) -- a read word arriving
             // later must not move that moment.
             if list[i].isFromMe, list[i].isGameStep { return false }
+            #endif
         } else {
             guard Self.rank(next) > Self.rank(cur) else { return false }  // only forward
         }
@@ -1751,11 +1766,13 @@ class ChatStore: ObservableObject {
         guard let i = messages[chat]?.firstIndex(where: {
             $0.videoFile == file || $0.imageFile == file || $0.audioFile == file || $0.docFile == file
         }) else { return }
+        #if !MONTANA_MESSENGER
         // THE MESH WALL'S MEDIA RIDE THE RADIO (29.09): every media road of a room without a wire ends here, settled «sent»; the
         // mesh wall's own row is handed to the room's radio first, and a file past the radio's measure stands «not sent».
         if st == .sent, Self.isMeshRoom(chat), let row = messages[chat]?[i], row.isFromMe, MTApps.mesh?.share(row) != true {
             putOut(chat, i, because: .pastTheRadio); return
         }
+        #endif
         if st == .sending { restartSend(chat, i) } else { advance(chat, i, to: st) }
     }
     /// A media row of mine refused by a word (MTRefusal) -- the media roads' one road into red.
@@ -1814,7 +1831,7 @@ class ChatStore: ObservableObject {
             || text.hasPrefix(groundMark) || text.hasPrefix(cardMark) || text.hasPrefix(wakeHandleMark) || text.hasPrefix(cargoLostMark)
             || text.hasPrefix(playedMark) || text.hasPrefix(deleteKeptMark) || text.hasPrefix(fabricMark)
             || text.hasPrefix(punchEndpointMark) || text.hasPrefix(exitDoorMark) || text.hasPrefix(callSignalMark)
-            || text.hasPrefix(wallMark) || text.hasPrefix(retiredWallMark) || text.hasPrefix(sameAskMark) || text.hasPrefix(sameYesMark) || text.hasPrefix(pipeClosedMark) || text.hasPrefix(MTGroup.mark) || text.hasPrefix(keepMark) || mtUnknownServiceWord(text)
+            || isEditionMark(text) || text.hasPrefix(sameAskMark) || text.hasPrefix(sameYesMark) || text.hasPrefix(pipeClosedMark) || text.hasPrefix(MTGroup.mark) || text.hasPrefix(keepMark) || mtUnknownServiceWord(text)
     }
     /// «GONE» IS A STATE, NOT A STAMP (the author's word 15.09; measured 13:14–13:17: the lane
     /// forgot the word in sixty seconds, the sweep read it as a moment, and the next word of
@@ -1931,7 +1948,9 @@ class ChatStore: ObservableObject {
     /// the callsign's emoji stands first in the name, so the face follows the name at once.
     func initial(for chat: Chat) -> String {
         if ChatStore.isMontanaRoom(chat.name) { return "M" }   // under the logo, until it is decoded
+        #if !MONTANA_MESSENGER
         if ChatStore.isMeshRoom(chat.name) { return "📡" }   // the mesh wall: the antenna, never one's own face
+        #endif
         if ChatStore.isLocalRoom(chat.name) { return E2E.myFaceGlyph() }   // Saved Messages wears one's own face (the author's word 20.09)
         if chat.isGroup { return MontanaAvatar.initial(title: title(for: chat), name: chat.name) }
         return MTNameBook.face(chat.convId ?? chat.name, title: title(for: chat))
@@ -2999,6 +3018,7 @@ class ChatStore: ObservableObject {
         }
     }
 
+    #if !MONTANA_MESSENGER
     /// A POST ON A WALL OF THE PAIR, IN THEIR CHAT (the author's word 30.09): the one birth of its row (MTWallCard). The writer's
     /// phone lays it when the post leaves for the wall's owner, the owner's when the post is taken onto the wall; mine says whose
     /// hand wrote it. ONCE PER POST: the post's own name is the key, so a word carried twice lays nothing the second time. Theirs
@@ -3018,6 +3038,7 @@ class ChatStore: ObservableObject {
         if !mine { recalcBadge() }
         MontanaTrace.mark("wall_card", "laid mine=\(mine ? 1 : 0) peer=\(String(peer.prefix(10)))")
     }
+    #endif
     /// THE MONEY FLOW BEGAN IN THIS CHAT (MTMoneyFlowRow): the one birth of its row, this phone's own and read; the coin switched
     /// on again within a minute lays nothing more.
     func appendMoneyFlow(peer pipe: String) {
@@ -3041,6 +3062,7 @@ class ChatStore: ObservableObject {
         Task { @MainActor in self.noteListState(key, last: self.lastLetter(key)) }
         MontanaTrace.mark("group_event", "laid")
     }
+    #if !MONTANA_MESSENGER
     /// The wall's owner refused the post (their word of the wall, «no»): its row leaves the writer's chat -- the chat does not
     /// say a post stands where its owner said it does not.
     func dropWallPost(peer pipe: String, id: String) {
@@ -3050,7 +3072,9 @@ class ChatStore: ObservableObject {
         Task { @MainActor in self.noteListState(peer, last: self.lastLetter(peer)) }
         MontanaTrace.mark("wall_card", "refused -- the row leaves")
     }
+    #endif
 
+    #if !MONTANA_MESSENGER
     /// A WORD OF THE MESH WALL ARRIVED (29.09): laid in the room under the name its sender spoke under, once per word, while this
     /// phone is on the mesh; theirs and unread until the room is opened, as every letter is.
     func appendMeshRoom(mid: String, from ref: String, text: String, at: Double) {
@@ -3065,6 +3089,7 @@ class ChatStore: ObservableObject {
         recalcBadge()
         MontanaTrace.mark("mesh_room", "laid chars=\(text.count)")
     }
+    #endif
 
     /// THE CALL LOG, ONE BUILDER (the author's word 11.09): every call row of every conversation,
     /// newest first. The Calls tab and the settings page read this — never a copy of the walk.
@@ -3920,6 +3945,8 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
               let row = messages[chat]?[i], row.text != newText else { return }   // nothing changed — the wire says nothing
         // A coin letter is never edited, and no edit becomes one (06.10): its coins were taken once, under its words.
         if let coins = MTApps.coins, coins.isLetter(row) || coins.isLetter(newText) { return }
+        // A letter of a retired kind is never edited, and no edit becomes one (mtRetiredLetter; decision 668 (a)).
+        guard !mtRetiredLetter(row.text), !mtRetiredLetter(newText) else { return }
         messages[chat]?[i].text = newText
         messages[chat]?[i].edited = true
         if lastLetter(chat)?.id == id { noteListState(chat, last: lastLetter(chat)) }   // the list row follows the words
@@ -4184,7 +4211,9 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // which carries off whatever no letter names -- took them on the next launch and the panel
         // came back empty. Each book names its own files; nothing here knows their shape.
         live.formUnion(MontanaStickerBook.shared.allFiles)
+        #if !MONTANA_MESSENGER
         live.formUnion(MTApps.wall?.allFiles ?? [])   // the wall's kept files (24.09): named by no letter
+        #endif
         live.formUnion(MontanaGifBook.shared.allFiles)
         for (_, msgs) in messages {
             for m in msgs {
@@ -4631,9 +4660,9 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             if !m.isFromMe { MontanaStickerWire.handle(m.text, from: chat, chat: chat, store: self) }
             return false
         }
+        #if !MONTANA_MESSENGER   // the Messenger knows no word of it: the law of a newer build's word buries it (cut C6)
         // THE WALL'S WORD (the author's word 24.09): a post for my wall, a visitor's mark, a page of a wall I asked
         // for.
-        // An edition with no wall buries its word unread (slice S4c2): it is service by construction, never a row.
         if m.text.hasPrefix(wallMark) {
             if let wall = MTApps.wall, wall.handle(m.text, from: chat, isFromMe: m.isFromMe) {
                 // A PAGE OF A WALL IS RECEIPTED AS HELD (16.10.2026 No.72), as a face and a ground are: the receipt is the owner's
@@ -4643,14 +4672,17 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             }
             return false
         }
+        #endif
         // A GROUP'S WORD (the author's words 05.10.2026, MTGroup): an invitation or a letter of a group its owner carries over the
         // pipes. It lands in the group's own feed, never as a row of the pipe; a build that does not know the token buries it unread.
         if MTGroup.handle(m.text, from: chat, isFromMe: m.isFromMe, sid: m.msgId, store: self) { return false }
         // AN ORGANISATION'S WORD (Montana Messenger, its door): the chains one member carries to another, or an invitation's ask for
         // the roster. Never a row of the pipe; where no door stands it is buried unread as a newer build's word.
         if MTApps.messenger?.handle(m.text, from: chat, isFromMe: m.isFromMe, sid: m.msgId, store: self) == true { return false }
-        // THE RETIRED WALL'S WORD (29.09, retired 13.10): service by construction, buried unread in every edition ([P2P-COMPAT]).
+        #if !MONTANA_MESSENGER
+        // THE RETIRED WALL'S WORD (29.09, retired 13.10): service by construction, buried unread ([P2P-COMPAT]).
         if m.text.hasPrefix(retiredWallMark) { return false }
+        #endif
         // A LETTER CARRYING A SET'S LINK NAMES ITS GIVER (22.09): the link holds no address, so the
         // hand that passed it is remembered here -- that is whom the set is asked of.
         if !isControlMarker(m.text), m.text.contains("montana://pack/") {
@@ -4861,10 +4893,12 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             row.text = tx; row.edited = true
             MontanaTrace.mark("edit_rx", "applied at landing mid=\(String(sid.dropFirst(4).prefix(8)))")
         }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         // A STEP OF A CHESS GAME LANDS READ (29.09): the board is its reader; the chat's count, its order and the hand
         // mark are not moved by it.
         let step = row.isGameStep
         if step, !row.isFromMe { row.isRead = true }
+        #endif
         // A LETTER WHOSE NAME ALREADY STANDS IS A COPY (19.10.2026, T1 08:01 UTC): no second row, no banner, no count -- the
         // receipt alone, as the copy road answers it.
         if let sid = row.msgId, messages[chat]?.contains(where: { $0.msgId == sid }) == true {
@@ -4874,12 +4908,14 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         }
         var placed = row
         MontanaMainProbe.step("place") { placed = placeRow(chat, row) }
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         // ...AND ITS LANDING STARTS THE CLOCK OF THE ONE WHO RECEIVED IT (29.09): the rung «read» is written through the
         // ladder's one door, and its moment is the moment this phone could begin to think (MTChessAnchor) -- a letter on the
         // road is nobody's thinking.
         if step, !row.isFromMe, let i = messages[chat]?.lastIndex(where: { $0.mid == placed.mid }), advance(chat, i, to: .read) {
             placed = messages[chat]?[i] ?? placed
         }
+        #endif
         // A COIN LETTER IS CREDITED ON ITS LANDING (the author's word 03.10 13:52), once, by its wire name -- the same name on
         // both phones, so a letter the lane, the box and the extension each bring is one credit (MTCoinLedger.receive). The credit
         // is on disk before the row (04.10 23:57): a process ended between the two leaves a credit and no row, and the sender's
@@ -4895,8 +4931,13 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         if !isControlMarker(m.text) || m.text.hasPrefix(convDelMark) || m.text.hasPrefix(stickerMark) {
             MontanaMainProbe.step("receipt") { _ = sendDeliveryReceipt(chat, msgId: m.msgId, isFromMe: m.isFromMe, text: m.text) }
         }
+        #if MONTANA_MESSENGER
+        MontanaMainProbe.step("order") { bump(chat) }   // a chat with a fresh message moves to the top of the list
+        if !m.isFromMe && chat != openConv { handMarkYields(chat) }   // the letter itself is the unread one (23.09)
+        #else
         if !step { MontanaMainProbe.step("order") { bump(chat) } }   // a chat with a fresh message moves to the top of the list
         if !m.isFromMe && chat != openConv && !step { handMarkYields(chat) }   // the letter itself is the unread one (23.09)
+        #endif
         if !m.isFromMe { MontanaMainProbe.step("badge") { recalcBadge() } }   // both a NON-first message of the chat, and NSE rollback in an open chat
         MontanaMainProbe.step("list") { noteListState(chat, last: messages[chat]?.last) }   // the list record follows the landing (stage 9) — placeRow has just put the row in order, so the end is the newest (P-44)
         // The banner is NOT created here: MontanaNotify raises it from the single inbound funnel
@@ -6201,6 +6242,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                                status: conv == savedMessagesKey ? "saved messages" : (Self.isMontanaRoom(conv) ? "" : (Self.isTranscript(conv) ? "Recovered history" : "Montana address")),
                                convId: Self.isLocalRoom(conv) ? nil : conv))
         }
+        #if !MONTANA_MESSENGER
         // THE MESH WALL STANDS WHILE THIS PHONE IS ON THE MESH (the author's word 29.09): its row is there while the switch
         // «Findable on the mesh» is on, and gone while it is off -- its words stay on the phone; the order puts it first.
         result.removeAll { Self.isMeshRoom($0.name) }
@@ -6208,6 +6250,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             let last = lastLetter(meshRoomKey)
             result.insert(Chat(name: meshRoomKey, lastMessage: last?.text ?? "", time: last?.time ?? "", unread: 0, status: ""), at: 0)
         }
+        #endif
         // SAVED MESSAGES IS ALWAYS A ROW (the author's word 17.09): from the first launch, letters or
         // none, and no deletion mark of the past hides it — the room cannot be deleted (deleteChat).
         if !result.contains(where: { $0.name == savedMessagesKey }) {
@@ -6251,13 +6294,21 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     /// the share mirror writes by it — no second sort anywhere.
     static func listOrder(_ chats: [Chat], pinned: Set<String>) -> [Chat] {
         chats.sorted { a, b in
-            let ma = isMeshRoom(a.name), mb = isMeshRoom(b.name)   // the mesh wall stands above every row, pins too (29.09)
-            if ma != mb { return ma }
-            let pa = pinned.contains(a.name), pb = pinned.contains(b.name)
-            if pa != pb { return pa }
+            let ba = listBlock(a.name, pinned: pinned), bb = listBlock(b.name, pinned: pinned)
+            if ba != bb { return ba < bb }
             if a.order != b.order { return a.order > b.order }
             return a.name < b.name
         }
+    }
+
+    /// THE ROW'S BLOCK IN THE LIST'S ORDER, ONE OWNER: the order sorts by it and the share mirror writes it as the row's rank
+    /// (MTShareOrder.raise) -- 0 the mesh room, above every row and the pins too (29.09; the Protocol's alone, 15846), 1 a pinned
+    /// row, 2 every other.
+    static func listBlock(_ chat: String, pinned: Set<String>) -> Int {
+        #if !MONTANA_MESSENGER
+        if isMeshRoom(chat) { return 0 }
+        #endif
+        return pinned.contains(chat) ? 1 : 2
     }
 
     private var mirrorWork: DispatchWorkItem?
@@ -6292,7 +6343,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                     "initial": self.initial(for: c),   // Saved Messages: one's own glyph, as everywhere
                     "colorHex": MontanaAvatar.colorHex(c.name),
                     // the row's block in the list's order, for a letter read while the app sleeps (MTShareOrder.raise)
-                    "rank": Self.isMeshRoom(c.name) ? "0" : (pinnedChats.contains(c.name) ? "1" : "2")
+                    "rank": String(Self.listBlock(c.name, pinned: pinnedChats))
                 ]
                 return (d, self.avatarFor(c))
             }
@@ -6751,7 +6802,9 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                           createdAt: Double(minted.ms) / 1000.0, replyToId: replyToId,
                           transport: MontanaPhoneNode.shared.transport(to: convRef ?? chat)?.rawValue)
         append(chat, msg)
+        #if !MONTANA_MESSENGER
         if Self.isMeshRoom(chat) { MTApps.mesh?.say(text) }   // the mesh wall's words ride the radio to everyone on the mesh (29.09)
+        #endif
         // history backup — at the sendText E2E checkpoint (single for all types), not here
         if let sid = convRef {
             // Stage 2 (spec s.3 §13): ONE reachability-driven delivery engine owns the send lifecycle — first attempt, retry by
@@ -6885,7 +6938,7 @@ enum SeedScope {
         "savedToPhotos", "callHandleTokens", "controlMids", "peerRdvLinks", "peerRdvLinks.b", "pendingMediaJSON",
         "gifFirstRun", "pipeTouched", "pipeDying", "pipeFirstCiphertexts", "pipeFirstRoots", "pipeFirstMeta",
         "pipeNameRoots", "pipeFirstConfirms",
-        // THE WALL's own come through its door (MTApps.wall.dataKeys, slice S4c2)
+
         // WHERE A LONG LISTEN STOPPED (26.09): the moment a long track or voice of this identity's letters stopped (MTPlayPlaces).
         "playPlaces",
         // THE PERSON'S OWN CONTACT CARD (28.09), retired 04.11.2026 with the card (decision 601): an older build's card leaves with
@@ -6897,9 +6950,18 @@ enum SeedScope {
         MTChannelComments.storeKey,
         // THE NUMBER CONFIRMED (06.10), retired 20.10 with the number's door: an older build's confirmation leaves with the seed,
         // and the launch forgets it (ContentView).
-        "phoneProof"]
-        + (MTApps.chess?.dataKeys ?? [])   // THE TRAINING GAME WITH THE PHONE'S OWN ENGINE (29.09), named by its door (slice S4b)
-        + (MTApps.wall?.dataKeys ?? [])   // THE WALL (24.09): its posts, drafts, pages, rules' people, named by its door (slice S4c2)
+        "phoneProof"] + doorDataKeys
+    /// THE APPLICATIONS' OWN CONTENT, named by their doors (slices S4b, S4c2): each list is its application's alone.
+    private static let doorDataKeys: [String] = {
+        var lists: [[String]?] = []
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+        lists.append(MTApps.chess?.dataKeys)   // THE TRAINING GAME WITH THE PHONE'S OWN ENGINE (29.09)
+        #endif
+        #if !MONTANA_MESSENGER
+        lists.append(MTApps.wall?.dataKeys)   // THE WALL (24.09): its posts, drafts, pages, rules' people
+        #endif
+        return lists.compactMap { $0 }.flatMap { $0 }
+    }()
     /// A conversation's own choices — its ground and the ground's softness — and what this device knows of a
     /// correspondent by their own word: whether they hide the exact moment they were seen, whether their build
     /// speaks presence, the link already sent to them. The key ends in the conversation's reference.
@@ -6921,8 +6983,8 @@ enum SeedScope {
     /// THE SHARED KEYCHAIN'S OWN, never in a copy: the mirrors the app writes again from its own store for the
     /// extensions and the first frame (names, faces, sets, settings, pipes, the list's record and order), the
     /// counts it recounts, this device's secrets and keys, its tokens and wake registrations, the diary's own
-    /// identity and salt, what the extensions hand over in passing (an inbox drained at once, a share, a post
-    /// for one's own wall, a banner shown, a knock), and the folders lent to the music page — a permission of this device alone.
+    /// identity and salt, what the extensions hand over in passing (an inbox drained at once, a share,
+    /// a banner shown, a knock), and the folders lent to the music page — a permission of this device alone.
     static let keychainStays = ["barredPeers", "blockedChats", "mutedChats", "namesCold", "photosCold",
         "photosManualCold", "orderCold", "readChatsCold", "pinnedCold", "forcedUnreadCold",
         "archivedCold", "notifPreview", "notifSender", "notifSound", "objectionableFilterOn", "shareChats",
@@ -6931,13 +6993,19 @@ enum SeedScope {
         "wakeBase", "wakeBases", "wakeElected", "wakeMyAddr", "wakeMyAuthor", "wakeMyGlyph", "wakeMyName", "wakeOwnToken",
         "wakeVoipDigest", "wakeVoipToken", "diagId", "diagSalt", "nseDiag", "nseLog", "shareDiag",
         "cargoRepairMids",   // one device's sealed reservation: an automatic cargo reconstruction may happen once here
-        "nseInbox", "nseInboxKey", "nseKnocked", "nseShownMids", "nseQuietIds", "nseRoomRang", "heldMids", "pendingShare", "pendingWall", "missedCallSeeds",
+        "nseInbox", "nseInboxKey", "nseKnocked", "nseShownMids", "nseQuietIds", "nseRoomRang", "heldMids", "pendingShare", "missedCallSeeds",
         "callNoticeTokens", "mt.longblob.wait", "musicFolders",   // callNoticeTokens: the one-time names a call's notices wear for the system (MontanaMissedCall.noticeToken)
         "noticeAliases",   // the alias each conversation wears for the system on this phone (MTNoticeAlias, 12.10): this device's names, never a copy
         "AppLanguage", "screen.key", "screen.diary",   // the screen broadcast's call key and its diary box: this device's, for one call
         "mt.seats",   // the book of the persons seated on this phone (MTSeats): a copy carries the person seated, never the shelf (29.09)
         "nseShelf"]   // the keys the extension opens the shelf's letters with (MTShelfPost, 07.10): this device's view of its shelf, never a copy
-        + (MTApps.passwords?.keychainStays ?? [])   // the person's Passwords (06.10): this device's alone, named by their door (link 15962)
+        + doorKeychainStays
+    #if MONTANA_MESSENGER
+    private static let doorKeychainStays: [String] = []
+    #else
+    /// The keychain items of the Protocol's own applications that stay: the share sheet's post for my wall, waiting (cut C6).
+    private static let doorKeychainStays = ["pendingWall"]
+    #endif
     /// The records of the persons on this phone's shelf, one per seat (MTSeats): the seed and the keychain items of a parked person.
     static let keychainStayPrefixes = ["av_", "mt.seat."]
     /// THE PERSON'S SETTINGS belong to whoever holds this phone rather than to one identity: a change of seed
@@ -6961,18 +7029,26 @@ enum SeedScope {
         "voiceRate", "voiceOrb.look", "vnoteCorner", "miniTimeRemaining", "reactionUse",
         "cardKind", "lastMediaPane", "timePanelOpen",
         "mt.net.tab2", "exitReachability",   // the VPN's own settings come through its door (MTApps.vpn.settingKeys, slice S3b b3)
-        "mt.backup.icloud", "mt.backup.icloud.replace", "mt.backup.plan", "mt.mesh.discoverable",
+        "mt.backup.icloud", "mt.backup.icloud.replace", "mt.backup.plan",
         "mt.home.node", "mt.home.node.on", "mt.home.node.pin",   // the person's own node, its daily copies and the digest of its certificate (28.09)
         MTLevelShow.shownKey]   // retired switch, retained for old copies; reputation is always shown (14.10)
         + doorSettingKeys
     /// The settings of the applications behind a door, each list named by its door (mt-copy-scope-check reads them there); one
     /// expression of its own, so the compiler types the long list above and this one apart (link 15426).
-    private static let doorSettingKeys: [String] = [
-        MTApps.coins?.settingKeys,   // the coins' own settings (guard 4)
-        MTApps.vpn?.settingKeys,   // the VPN's own settings (slice S3b b3)
-        MTApps.chess?.settingKeys,   // the training game's level (slice S4b)
-        MTApps.wall?.settingKeys,   // the wall's two rules and the VPN wall's (slice S4c2)
-    ].compactMap { $0 }.flatMap { $0 }
+    private static let doorSettingKeys: [String] = {
+        var lists = [MTApps.coins?.settingKeys]   // the coins' own settings (guard 4)
+        #if !MONTANA_MESSENGER   // the VPN and the mesh are the Protocol's alone (decision 651 = a, link 15846)
+        lists.append(MTApps.vpn?.settingKeys)   // the VPN's own settings (slice S3b b3)
+        lists.append([MontanaPhoneNode.meshDiscoverableKey])   // the mesh's findability switch
+        #endif
+        #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+        lists.append(MTApps.chess?.settingKeys)   // the training game's level (slice S4b)
+        #endif
+        #if !MONTANA_MESSENGER
+        lists.append(MTApps.wall?.settingKeys)   // the wall's two rules and the VPN wall's (slice S4c2)
+        #endif
+        return lists.compactMap { $0 }.flatMap { $0 }
+    }()
     /// THE MARKS OF MIGRATIONS ALREADY RUN over the data they describe: a copy carries them with that data, so a
     /// one-time sweep never runs a second time over what it already swept; a change of seed keeps them.
     static let markKeys = ["profilePurge805", "pinsWiped1782", "cardNamesRestored1784",
@@ -6997,10 +7073,10 @@ enum SeedScope {
     static let deviceKeys: [String] = ["mt.keep.held",   // the parts this phone keeps for others (MTKeeping): never in this person's copy
                              "mt.birth.unfinished",   // the print of a making on this phone before its profile (MontanaBirth, link 14680): never a copy's
                              MTKeeping.askedBackKey,   // the correspondences this phone asked to give back (MTKeeping): this device's own
-                             "diagId", "diagHideRule", "diagWmTele", "diagWmTrace", "diagWmVpn", "diagGenTele", "diagGenTrace", "diagGenVpn",
+                             "diagId", "diagHideRule", "diagWmTele", "diagWmTrace", "diagGenTele", "diagGenTrace",
         "mt.probe.at", "mt.probe.conf", "mt.probe.mode", "mt.probe.rot",
         "mt.probe.line",   // the line under the permitted list, with its hysteresis (30.09): this network's word, never a copy's
-        MTReleaseState.cacheKey, MTLevelDistribution.cacheKey,   // public release/population caches, relearned on each device
+        MTReleaseState.cacheKey,   // the public release cache, relearned on each device
         "mt.release.told",   // the build the Montana room already told this phone of (29.09): this device's own
         "mt_device_key", "mt.install.marker", "mt_store_witness", "cargoRepairMids",
         "mt.doorbook", "mt.nodes", "mt.nodes.learned", "mt.nodes.machines", "mt.self.proven",
@@ -7009,13 +7085,23 @@ enum SeedScope {
         MontanaDiagConsent.askedKey,   // the build this device last asked that yes for (11.10.2026): each device is asked itself
         "top.unaskedWithdrawn",   // this device withdrew the top row of a person never asked (MTTopNet, 08.10.2026)
         "top.toldBeforeConsent",   // whether an earlier build of this device had published the top row (MTTopNet, 08.10.2026)
-        // the wall's record of this device comes through its door (MTApps.wall.deviceKeys, slice S4c2)
+
         // the VPN's keys of this device alone come through its door (MTApps.vpn.deviceKeys, slice S3b b3)
         MTGroupRoom.bookKey,   // the group rooms this phone knows and their people's room keys (07.10.2026): live minutes, never a copy's
         "filesPageFolder",   // the folder of the last file taken on this phone (MTFilesFolder, 27.10.2026): a path of this device's file system, never a copy's
         "pagesWall", "pagesWallRecent", "pagesWallBlur", MontanaWakePush.skewKey]
-        + (MTApps.vpn?.deviceKeys ?? [])   // the VPN's keys of this device alone, named by its door (slice S3b b3)
-        + (MTApps.wall?.deviceKeys ?? [])   // what this device laid on the nodes' table for everyone, named by the wall's door (slice S4c2)
+        + doorDeviceKeys
+    /// This device's keys of the applications behind a door, each list named by its door: the VPN's and the levels' table cache --
+    /// the Protocol's alone, decisions 651 = a and 618 (b) -- and what this device laid on the nodes' table for everyone.
+    private static let doorDeviceKeys: [String] = {
+        var keys: [String] = []
+        #if !MONTANA_MESSENGER
+        keys += MTApps.vpn?.deviceKeys ?? []   // the VPN's keys of this device alone, named by its door (slice S3b b3)
+        keys += [MTLevelDistribution.cacheKey]   // the public population cache of levels, relearned on each device (decision 618 (b))
+        keys += MTApps.wall?.deviceKeys ?? []   // the wall's, named by its door (slice S4c2)
+        #endif
+        return keys
+    }()
     /// What each node holds for this device's token -- the node's own word about this phone, whoever is seated on it: a person
     /// lifted into the seat finds the registration of the one before and registers what differs.
     /// And the life of this phone each node last heard whole (MontanaWakePush.lifePrefix, 12.10.2026): the door's, this device's.
@@ -7027,7 +7113,6 @@ enum SeedScope {
     /// the identity), the copies' clocks (a copy is named by its owner's proof, one per person).
     static let seatKeys = [
         MTLevelAccess.lastKey,   // the last Global Level this phone knew of this person (16.10.2026): this person's, read anew by a copy
-        "vpnwall.sent", "vpnwall.asked", "vpnwall.cap",
         "peerFaceOwned",   // the digests of the faces the correspondents themselves sent (ChatStore.faceOwned, 04.10): this person's
         "faceHealCards",   // the card link last read for each correspondent's face (ChatStore.healFacesFromCards, 18.10): this person's
         MontanaArchive.forgottenKey,   // the erased conversations' folders whose marks are gone (MontanaArchive.deleteChatFolder, 18.10)
@@ -7050,8 +7135,16 @@ enum SeedScope {
         "mt.apple.signin.id", "mt.restore.outbox", MTSamePair.mergedKey, MTSamePair.deferredKey,
         MTGroup.copiesKey,   // the copies of the groups' words on their way (05.10): the person's own ledger of the queue
         MTChannelViews.storeKey]   // which subscriber's seat saw which post of a channel (17.10, the critic's K-1): who saw what never rides a copy
-        + (MTApps.wall?.seatKeys ?? [])   // the walls' pages held here and the moments first seen, named by the wall's door (slice S4c2)
-        + (MTApps.coins?.seatKeys ?? [])   // the balances and levels the pairs told this person, named by the coins' door (guard 4)
+        + doorSeatKeys
+    /// The person's keys of the applications behind a door, each list named by its door.
+    private static let doorSeatKeys: [String] = {
+        var keys = MTApps.coins?.seatKeys ?? []   // the balances and levels the pairs told this person (guard 4)
+        #if !MONTANA_MESSENGER
+        keys += MTApps.wall?.seatKeys ?? []   // the walls' pages held here and the moments first seen (slice S4c2)
+        keys += MTApps.vpn?.seatKeys ?? []   // the VPN wall's retired asking, the Protocol's alone (decision 651 = a)
+        #endif
+        return keys
+    }()
     static let seatPrefixes = ["ckpt_", "mrefGone_", "rdvFaceUp:", "sentAv4_", "sentAvNone2_", "sentNm2_", "sentAb1_", "sentPg1_",
                                "pageRet1_"]   // the moment the queue retired my page to a visitor unreceipted (Announced.pageRetired, 2342): this seat's own
     /// THE PERSON'S OWN IN THE KEYCHAIN (the second identity checklist, 1.1): parked with the seat, lifted with it -- the two
@@ -7063,17 +7156,23 @@ enum SeedScope {
         "blockedChats", "mutedChats", "chatListState", "chatListOverlay", "missedUnseen", "unreadCounts", "nseUnread",
         "nsePipeAlias", "nsePipeSecrets", "shareChats", "wakeMyAddr", "wakeMyAuthor", "wakeMyGlyph", "wakeMyName",
         "nseInbox", "nseShownMids", "nseRoomRang", "heldMids", "missedCallSeeds", "callNoticeTokens", "mt.longblob.wait", "noticeAliases"]
-        + (MTApps.passwords?.seatKeychain ?? [])   // the person's Passwords (06.10): parked with the seat, named by their door (link 15962)
     /// THE PERSON'S FOLDERS: every folder a copy carries, each parked into the seat and lifted from it by one rename, and the
-    /// person's folders a copy leaves on the phone: the files of the posts being written (the wall's load lets go of every
-    /// file no draft of the person seated names, so a parked person's drafts would lose theirs), the person's coins
-    /// (MTCoinPlace: the book, the chats' tally, the lane's tip -- T2 19.10.2026: out of this list two persons read one book,
-    /// and the chain of the one seated minted the other's coins) and the person's TimeChain. The copy's guard
+    /// person's folders a copy leaves on the phone: the person's coins (MTCoinPlace: the book, the chats' tally, the lane's tip
+    /// -- T2 19.10.2026: out of this list two persons read one book, and the chain of the one seated minted the other's coins),
+    /// the person's TimeChain and the folders of the Protocol's own applications (doorSeatFolders). The copy's guard
     /// (tools/mt-copy-scope-check.py) holds every carried folder here and every staying one of the person (SEAT_STAYS).
     static let seatFolders = ["AS:Avatars", "AS:Wallpapers", "AS:Montana/Media", "AS:Montana/Pictures", "DOC:stories",
-        "DOC:Montana/Chats", "AS:MontanaHistory", "AS:MontanaJournal", "GROUP:delivery", "GROUP:inbox", "AS:Montana/WallDrafts",
+        "DOC:Montana/Chats", "AS:MontanaHistory", "AS:MontanaJournal", "GROUP:delivery", "GROUP:inbox",
         "DOC:Montana/TimeChain"]
+        + doorSeatFolders
         + (MTApps.coins?.seatFolders ?? [])   // the person's coin book, named by the coins' door (guard 4)
+    #if MONTANA_MESSENGER
+    private static let doorSeatFolders: [String] = []
+    #else
+    /// The files of the posts being written (cut C6d): the wall's load lets go of every file no draft of the person seated
+    /// names, so a parked person's drafts would lose theirs.
+    private static let doorSeatFolders = ["AS:Montana/WallDrafts"]
+    #endif
     // Per-chat keys of the era before the sealed maps (SC-05): collapsed once, forgotten with the person.
     static let legacyPrefixes = ["lastSeen_", "draft_", "mute_", "block_"]
     /// COLLECTIONS OF INDEPENDENT ENTRIES are laid back as a union: what this device holds stays, and the
@@ -7086,15 +7185,26 @@ enum SeedScope {
         "declaredAt", "blockedChats", "peerReadMap", "deletedMids", "graves", "funerals", "mtVerifiedConversations", "cardKeys", "rdvCards", "rdvTwin",
         "montana.stickers.mine", "montana.stickers.packs", "montana.stickers.passports", "montana.stickers.givers",
         "montana.stickers.ids", "montana.gifs.mine", "videoLikes", "barredPeers", "reactionUse",
-        "mt.vpn.servers", "mt.vpn.plans", "chatsJSON", "archivedJSON", "savedToPhotos", "callHandleTokens",
+        "chatsJSON", "archivedJSON", "savedToPhotos", "callHandleTokens",
         "controlMids", "peerRdvLinks", "peerRdvLinks.b", "peerAbout", "pendingMediaJSON", "gifFirstRun", "pipeTouched",
         "pipeDying", "pipeFirstCiphertexts", "pipeFirstRoots", "pipeFirstMeta", "pipeNameRoots", "pipeFirstConfirms"]
     /// WHAT A RECORD IS KNOWN BY inside a list of records: the first of these fields it carries. A row of the
     /// chat list is its conversation, a contact its reference, a server its own id, a plan its link; two
     /// records known by one value are one record, and the device's own stands.
     static let unionKnownBy: [String: [String]] = ["chatsJSON": ["convId", "name"], "archivedJSON": ["convId", "name"],
-        "mtContacts": ["address"], "mt.vpn.servers": ["uid"], "mt.vpn.plans": ["url"], "myStoryMedia": ["file"],
-        "scheduledMsgs": ["id"], "montana.stickers.packs": ["id"]]
+        "mtContacts": ["address"], "myStoryMedia": ["file"],
+        "scheduledMsgs": ["id"], "montana.stickers.packs": ["id"]].merging(doorUnionKnownBy) { own, _ in own }
+    /// The collections a door lays back as a union, each with what its record is known by: the VPN's servers and plans, the
+    /// Protocol's alone (decision 651 = a).
+    private static var doorUnionKnownBy: [String: [String]] {
+        #if MONTANA_MESSENGER
+        return [:]
+        #else
+        return MTApps.vpn?.unionKnownBy ?? [:]
+        #endif
+    }
+    /// Whether a copy's collection is laid back as a union: named above, or by its door with what its records are known by.
+    static func joins(_ key: String) -> Bool { unionKeys.contains(key) || doorUnionKnownBy[key] != nil }
     static let unionKnownByDefault = ["uid", "id", "mid", "ref", "url", "file"]
 
     /// WHAT A COPY TAKES FROM THE SETTINGS STORE: the account's content and the person's settings, by name
@@ -7114,7 +7224,9 @@ enum SeedScope {
         forgetRetired()
         MTNameBook.forgetStored()
         MTPipeBook.reread()
+        #if !MONTANA_MESSENGER
         MTApps.vpn?.storeReplaced()   // the VPN's servers and plans held in memory are let go (slice S3b b2)
+        #endif
         MontanaCard.forgetHeld()
         MontanaStickerBook.shared.reread()
         MontanaGifBook.shared.reread()
@@ -7139,7 +7251,9 @@ enum SeedScope {
         // language picker's word to the screens, and the switch's own setter (the system asks its question
         // once, as it asked on the device the copy came from).
         NotificationCenter.default.post(name: .appLanguageChanged, object: nil)
+        #if !MONTANA_MESSENGER
         if MontanaPhoneNode.meshDiscoverable { MontanaPhoneNode.meshDiscoverable = true }
+        #endif
     }
 
     /// THE FEED AS IT STANDS, for a copy (the critic, 23.09): the history file and the rows the journal holds
@@ -7207,7 +7321,9 @@ enum SeedScope {
     static func forgetContent() {
         let ud = UserDefaults.standard
         MontanaTelemetry.shared.event("PROFILE wiped by clearData (had a name: \((ud.string(forKey: "userName") ?? "").isEmpty ? "no" : "yes"))")
+        #if !MONTANA_MESSENGER
         MTApps.wall?.drain()   // no wall write on its way outlives the wipe (P-4)
+        #endif
         for k in dataKeys { ud.removeObject(forKey: k) }
         for k in ud.dictionaryRepresentation().keys where (legacyPrefixes + dataPrefixes).contains(where: k.hasPrefix) { ud.removeObject(forKey: k) }
         MontanaCard.wipe()   // the card's records leave by their owner's door, in order after every write on its way (25.09)
@@ -7219,6 +7335,8 @@ enum SeedScope {
     /// WHAT LEFT THIS APP LEAVES THE PHONE TOO (MTRetired): the values of an older build -- read by nothing here -- go at every
     /// launch, after a copy is laid and with the identity; they are known by their prints, never by a name.
     static func forgetRetired() {
+        let c = MontanaKeychain.forgetRetired()
+        if 0 < c { MontanaTrace.mark("retired_keychain", "forgot=\(c)") }
         let n = MTRetired.forgetValues()
         if n > 0 { MontanaTrace.mark("retired_values", "forgot=\(n)") }
     }
@@ -7230,7 +7348,9 @@ enum SeedScope {
         if !MTSeats.anyParked { MontanaWakePush.withdrawTokenRowsEverywhere() }
         let ud = UserDefaults.standard
         forgetRetired()
+        #if !MONTANA_MESSENGER
         MTApps.wall?.drain()   // no wall write on its way outlives the wipe (P-4)
+        #endif
         let present = (dataKeys + legacyKeys + legacyEntryKeys + boundaryKeys).filter { ud.object(forKey: $0) != nil }.count
         for k in dataKeys + legacyKeys + legacyEntryKeys + boundaryKeys { ud.removeObject(forKey: k) }
         for k in ud.dictionaryRepresentation().keys where (legacyPrefixes + dataPrefixes).contains(where: k.hasPrefix) { ud.removeObject(forKey: k) }

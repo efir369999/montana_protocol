@@ -377,7 +377,9 @@ final class VoicePlayer: NSObject, ObservableObject {
         // THE CALL HOLDS THE SOUND (24.09, T1 12:31:40): under a call the player never touches the phone's sound -- the
         // person is told so and nothing starts (MontanaAudioSession, the one door).
         guard !MontanaAudioSession.refusedUnderCall(voice ? "voice message" : "music") else { return }
-        MTApps.youtube?.rest()   // one sound: YouTube rests where it stands, its window stays (MTApps.youtube)
+        #if !MONTANA_MESSENGER
+        MTApps.youtube?.rest()   // one sound: YouTube rests where it stands, its window stays (the Protocol's alone, cut C4)
+        #endif
         // THE TRACK THAT STEPPED ASIDE IS THE ONE ASKED FOR (26.09): the voice over it ends and the track goes on from its place.
         if !voice, let pk = parked, pk.file == file {
             release()
@@ -494,7 +496,9 @@ final class VoicePlayer: NSObject, ObservableObject {
 
     func resume() {
         guard !MontanaAudioSession.refusedUnderCall(isVoice ? "voice message" : "music") else { return }
-        MTApps.youtube?.rest()   // one sound (MTApps.youtube)
+        #if !MONTANA_MESSENGER
+        MTApps.youtube?.rest()   // one sound (the Protocol's alone, cut C4)
+        #endif
         // THROUGH THE KIND'S OWN DOOR (26.09): a tape or a voice between the pause and this resume left the sound in their own mode.
         let external = isVoice && MontanaAudioRoute.read("voice-resume").isExternal
         playRequest += 1
@@ -619,8 +623,8 @@ final class VoicePlayer: NSObject, ObservableObject {
     }
 
     /// A STREAM THAT BROUGHT NOTHING RESTS, IT IS NOT SHOWN PLAYING (T2 18.10.2026 17:25:57Z, the author: «the seconds do not go»):
-    /// the wall's track waited on a piece every door called gone, and the bar stood on 0:00 as if it played. The bar rests where
-    /// the track stood; a touch plays it again once its owner has laid the pieces back (MTBoard.piecesGone).
+    /// a post's track waited on a piece every door called gone, and the bar stood on 0:00 as if it played. The bar rests where
+    /// the track stood; a touch plays it again once its owner has laid the pieces back.
     private func streamFailed(_ file: String, _ why: String) {
         MontanaTrace.mark("music_stream", "failed file=\(String(file.prefix(20))) \(why)")
         guard playingFile == file, !paused else { return }
@@ -657,10 +661,13 @@ final class VoicePlayer: NSObject, ObservableObject {
         stop()
     }
 
+    /// The next track, past the tracks of a folder that did not open: a track's end and the car's forward button go on to
+    /// one that sounds (the author's word 17210), never into a silent refusal.
     private func nextIndex() -> Int? {
         guard !queue.isEmpty else { return nil }
-        if shuffleOn { return queue.indices.filter { $0 != queueIndex }.randomElement() }
-        let nx = queueIndex + 1
+        if shuffleOn { return queue.indices.filter { $0 != queueIndex && !MTMusicFolders.closed(queue[$0].file) }.randomElement() }
+        var nx = queueIndex + 1
+        while nx < queue.count, MTMusicFolders.closed(queue[nx].file) { nx += 1 }
         return nx < queue.count ? nx : nil
     }
 
@@ -670,6 +677,13 @@ final class VoicePlayer: NSObject, ObservableObject {
     func play(index: Int) {
         guard index >= 0, index < queue.count else { return }
         let t = queue[index]
+        // A TRACK OF A FOLDER THAT DID NOT OPEN IS SAID, NOT SWALLOWED (T1 05.11.2026 15:00-16:43 UTC, the author's word 17206: «the
+        // music does not play»): sixteen touches fell silent on play_refused opened=0 -- the row stood, and nothing could read it.
+        if MTMusicFolders.closed(t.file) {
+            MontanaTrace.mark("play_refused", "voice=0 lent=1 closed=1")
+            MTMusicFolders.refuseClosed()
+            return
+        }
         // A TRACK WHOSE BYTES ITS KEEPER HOLDS is brought first: opening it here would fetch it whole on the main thread.
         if MTMusicFolders.needsFetch(t.file) {
             // The track in hand is the one being brought: what played stops, as at any change of track, and the queue
@@ -751,7 +765,8 @@ final class VoicePlayer: NSObject, ObservableObject {
 
     func prev() {
         if (player?.currentTime ?? elapsed) > 3 { seek(to: 0); return }   // the sound's own clock: the published one rests in the background
-        let pv = queueIndex - 1
+        var pv = queueIndex - 1
+        while pv >= 0, MTMusicFolders.closed(queue[pv].file) { pv -= 1 }   // past a folder that did not open, as forward
         if pv >= 0 { play(index: pv) } else { seek(to: 0) }
     }
 

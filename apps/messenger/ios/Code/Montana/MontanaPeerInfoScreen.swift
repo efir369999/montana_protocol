@@ -32,8 +32,8 @@ struct MontanaPeerInfoScreen: View {
     @State private var roomAskVideo = false
     @State private var originalNameShown = false     // the edit page: their own name revealed under the fields (20.09)
     @State private var aboutTick = 0                 // their bio or link arrived (24.09): the face's lines are asked again
-    @State private var wallSheet: MTAppSheet? = nil   // what the wall shows over the page (MTPagePresenting, 25.09)
-    @State private var wallPage: MTPageRoute? = nil    // a writer's page, opened from the wall or from a group's people
+    @State private var pageSheet: MTAppSheet? = nil   // what an application shows over the page (MTPagePresenting, 25.09)
+    @State private var personPage: MTPageRoute? = nil    // a writer's page, opened from a post or from a group's people
     @State private var explorer: MTWebLink? = nil   // a transfer's record in the Explorer inside the app (the transactions' tab)
     @State private var coinMove: MTMoveRoute? = nil  // a coin letter's transaction page (the transactions' tab)
     @ObservedObject private var transfersWatch = MTApps.transfersWatch   // the transfers with this person, from the one fold of the coins
@@ -232,14 +232,14 @@ struct MontanaPeerInfoScreen: View {
         .listStyle(.insetGrouped)
         // ONE EDGE FOR THE PAGE, WHEREVER IT OPENS (24.09, the author's word: «from the chat the tab strip stands further
         // right than on an ordinary opening — the posts' width and margins as on the page from the settings»). The list's
-        // side margin is said here, the settings' own (MTPageEdge.side), so the chat's host, the list's stack and the
-        // wall's own push lay the page out alike; the panes below take that margin as their edge — the strip, the posts
+        // side margin is said here, the settings' own (MTPageEdge.side), so the chat's host, the list's stack and an
+        // application's own push lay the page out alike; the panes below take that margin as their edge — the strip, the posts
         // and the rows stand where My page's posts stand.
         .contentMargins(.horizontal, MTPageEdge.side, for: .scrollContent)
         .scrollContentBackground(.hidden)
-        // THE WALL'S SHEETS AND PAGES RISE FROM THE LIST, never from one of its rows (the critic 25.09): a row the list lets
+        // THE SHEETS AND PAGES RISE FROM THE LIST, never from one of its rows (the critic 25.09): a row the list lets
         // go takes its sheet and its destination with it.
-        .modifier(MTPagePresenting(sheet: $wallSheet, page: $wallPage))
+        .modifier(MTPagePresenting(sheet: $pageSheet, page: $personPage))
         .modifier(MTGroupPageAsks(chat: chat, confirmLeave: $confirmLeave, removingSeat: $removingSeat, addingPeople: $addingPeople,
                                   confirmDissolve: $confirmDissolve, onGone: { dismiss(); ui.closeChat() }))
         .modifier(MTGroupClearAsk(chat: chat, asked: $confirmClear))
@@ -428,7 +428,7 @@ struct MontanaPeerInfoScreen: View {
                                                                    action: { addingPeople = true })))
         }
         let lines = MTGroupPage.lines(chat.name, store: store, remove: { seat in removingSeat = seat },
-                                      open: { c in wallPage = .person(c) },
+                                      open: { c in personPage = .person(c) },
                                       write: { c in dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { ui.openChat(c) } },
                                       promote: { seat in adminSeat = seat })
         for line in lines { rows.append(MTInfoRow(id: "members." + line.seat, kind: .groupMember(line))) }
@@ -566,7 +566,7 @@ struct MontanaPeerInfoScreen: View {
                                 Label("Report", systemImage: "exclamationmark.bubble")
                             }
                         } else {
-                            Button { ui.chatWall = MTWallOpen(id: chat.convId ?? chat.name) } label: { Label("Chat background", systemImage: "photo") }   // a page over everything, closed by the swipe from the left (23.09)
+                            Button { ui.chatGround = MTGroundOpen(id: chat.convId ?? chat.name) } label: { Label("Chat background", systemImage: "photo") }   // a page over everything, closed by the swipe from the left (23.09)
                         }
                     } label: {
                         actionFace(action)
@@ -870,22 +870,34 @@ struct MontanaPeerInfoScreen: View {
         MTTabStrip(tab: $state.tab, tabs: paneTabs).frame(height: 52).padding(.top, 4)   // UIKit's own strip, 44 pt tall — the finger lands first time (18.09)
             .background(MTSwipePanes(onNext: { turnPane(+1) }, onBack: { turnPane(-1) }))
             .background(MTEdgeMark("tab-strip"))   // where the strip stands across the screen, said to the diary (24.09)
+            #if !MONTANA_MESSENGER
             // THE LOOK ASKS (the author's word 25.09: «entering the page must show the wall to everyone, at once»): the page asks
             // for the person's wall as it opens — the held page is drawn at once, the owner's fresh one takes its place (MTBoard.look).
             .onAppear { if data.kind == .person { MTApps.wall?.look(data.conv) } }
+            #endif
             .onChange(of: state.tab) { _, t in if t == .transactions { MTApps.coins?.moment(.transfersAsked) } }   // the coins' fold, once, at the tab's opening
 
         // A GROUP'S «MEDIA» HOLDS ITS PHOTOS AND ITS VIDEOS TOGETHER, as the reference's pane does (the checklist's V.7)
         let items = isGroupPage && state.tab == .media
             ? data.messages.filter { m in m.imageFile != nil || (m.videoFile != nil && !(m.videoFile ?? "").hasPrefix("vnote_")) }
             : data.pane(state.tab)
+        #if MONTANA_MESSENGER
+        letters(data, items)
+        #else
         // THE WALL (the author's word 24.09): a person's page shows their wall; Saved Messages is my own page, so its
         // wall is mine; a group has none.
         if state.tab == .wall, ChatStore.isLocalRoom(chat.name) || data.kind == .person {
             // THE WALL'S POSTS ARE THE LIST'S OWN ROWS (the critic 25.09, the author's screenshot: a hole between the tabs and
             // «Write on the wall»): one cell per post, each measured by itself; the list's margin is the wall's edge (24.09).
-            MTApps.wall?.rows(owner: ChatStore.isLocalRoom(chat.name) ? nil : data.conv, edge: 0, sheet: $wallSheet, page: $wallPage)
-        } else if state.tab == .transactions {
+            MTApps.wall?.rows(owner: ChatStore.isLocalRoom(chat.name) ? nil : data.conv, edge: 0, sheet: $pageSheet, page: $personPage)
+        } else {
+            letters(data, items)
+        }
+        #endif
+    }
+    /// The panes of the letters: the transfers, the empty word, or the letters cut by day.
+    @ViewBuilder private func letters(_ data: MTPeerInfoData, _ items: [Message]) -> some View {
+        if state.tab == .transactions {
             transactions(data)
         } else if items.isEmpty {
             VStack(spacing: 10) {
@@ -902,7 +914,10 @@ struct MontanaPeerInfoScreen: View {
             ForEach(byDay(items)) { sec in
                 dayHeader(sec.id)
                 switch state.tab {
-                case .wall, .transactions: EmptyView()
+                #if !MONTANA_MESSENGER
+                case .wall: EmptyView()
+                #endif
+                case .transactions: EmptyView()
                 case .media:
                     if isGroupPage { mediaGrid(sec.items, data) } else { grid(sec.items, data) { $0.imageFile } }
                 case .video: videoGrid(sec.items, data)
@@ -915,7 +930,7 @@ struct MontanaPeerInfoScreen: View {
         }
     }
 
-    /// THE TRANSFERS WITH THIS PERSON (the author's word 12.10.2026 12:2x UTC: «on the correspondent's page add after the wall a section of
+    /// THE TRANSFERS WITH THIS PERSON (the author's word 12.10.2026 12:2x UTC: «on the correspondent's page add ... a section of
     /// transactions, to see only what was sent to and received from the correspondent»): the coins sent to them and received from them,
     /// newest first, cut by day as every pane is, each on the bar's own glass; a transfer opens its record in the Explorer inside the app,
     /// a coin letter its transaction's page. Read from the one fold of the coins (MTCoinHistory), never from the book here.
@@ -956,7 +971,7 @@ struct MontanaPeerInfoScreen: View {
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.top, 8)   // the list's margin is the rows' edge, as the wall's (24.09)
+                .padding(.top, 8)   // the list's margin is the rows' edge (24.09)
             }
         }
     }
@@ -992,12 +1007,21 @@ struct MontanaPeerInfoScreen: View {
                 .montanaOctagonFace(bar: true, height: Self.rowHeight)
         }
     }
-    /// The panes a page offers: a group's are the reference's -- its media, files, links, music and voices; the wall and the
+    /// The panes a page offers: a group's are the reference's -- its media, files, links, music and voices; the
     /// transactions are a person's (the checklist's Zh.1). Every other page keeps them all.
     private var paneTabs: [MTMediaTab] {
         // a group's videos stand in its «Media», as the reference's panes have them (V.7)
         isGroupPage ? [.media, .files, .links, .music, .voice] : (isChannelPage ? [.media, .video, .files, .links, .music, .voice] : MTMediaTab.allCases)
-            .filter { t in (t != .wall || MTApps.wall != nil) && (t != .transactions || MTApps.coins != nil) }   // a pane only where its application stands
+            .filter { t in Self.carried(t) }   // a pane only where its application stands
+    }
+    private static func carried(_ t: MTMediaTab) -> Bool {
+        switch t {
+        #if !MONTANA_MESSENGER
+        case .wall: return MTApps.wall != nil
+        #endif
+        case .transactions: return MTApps.coins != nil
+        default: return true
+        }
     }
     /// One step along the strip, stopping at its ends — the strip itself follows the tab.
     private func turnPane(_ step: Int) {
@@ -1093,7 +1117,7 @@ struct MontanaPeerInfoScreen: View {
                 }
             }
         }
-        .padding(.top, 8)   // the list's margin is the rows' edge, as the wall's (24.09)
+        .padding(.top, 8)   // the list's margin is the rows' edge (24.09)
     }
 
     // Every link of every letter; a tap opens it in the system's default browser (the author's
@@ -1111,11 +1135,16 @@ struct MontanaPeerInfoScreen: View {
                         Spacer(minLength: 0)
                         Text(m.time).font(.caption2).foregroundColor(.gray)
                     }
-                    .modifier(itemLaw(m, open: { if MTApps.youtube?.play(u, title: nil) != true { UIApplication.shared.open(u) } }))
+                    .modifier(itemLaw(m, open: {
+                        #if !MONTANA_MESSENGER
+                        if MTApps.youtube?.play(u, title: nil) == true { return }   // YouTube's player, the Protocol's alone (cut C4)
+                        #endif
+                        UIApplication.shared.open(u)
+                    }))
                 }
             }
         }
-        .padding(.top, 8)   // the list's margin is the rows' edge, as the wall's (24.09)
+        .padding(.top, 8)   // the list's margin is the rows' edge (24.09)
     }
 
     // The chat's music: a tap plays it through the one player, the chat's music as the queue.
@@ -1141,7 +1170,7 @@ struct MontanaPeerInfoScreen: View {
                 }
             }
         }
-        .padding(.top, 8)   // the list's margin is the rows' edge, as the wall's (24.09)
+        .padding(.top, 8)   // the list's margin is the rows' edge (24.09)
     }
 
     /// The profile's voices play as the chat's do ([C-1], the author's word 18.09): the one player,
@@ -1171,7 +1200,7 @@ struct MontanaPeerInfoScreen: View {
                 }
             }
         }
-        .padding(.top, 8)   // the list's margin is the rows' edge, as the wall's (24.09)
+        .padding(.top, 8)   // the list's margin is the rows' edge (24.09)
     }
 }
 
@@ -1233,7 +1262,7 @@ struct MTProfileItem: ViewModifier {
 /// view with a hundred points of lookahead.
 struct MTTabStrip: UIViewRepresentable {
     @Binding var tab: MTMediaTab
-    /// The panes the strip offers, in their order (a group's page leaves the wall and the transactions out).
+    /// The panes the strip offers, in their order (a group's page leaves the transactions out).
     var tabs: [MTMediaTab] = MTMediaTab.allCases
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     final class Track: UIScrollView {

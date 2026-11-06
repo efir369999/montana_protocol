@@ -17,7 +17,7 @@ import ImageIO
 // post is sent to them, its counts are kept by them, and a visitor asks them for the page. A visitor never learns
 // who the other visitors are — only how many.
 //
-// «Board» in the code, «Wall» on the screen: a chat's ground is already called its wall (MTWallpaper, chatWall.*).
+// «Board» in the code, «Wall» on the screen: a chat's ground is called its wallpaper (MTWallpaper; its keys chatWall.* on the disk).
 
 /// What a rule of my wall is about (the author's word 24.09): who may write on it, and who may see it -- and who may see my
 /// VPN wall (the author's word 29.09: «the privacy settings as for my own feed and wall, so for the VPN wall»).

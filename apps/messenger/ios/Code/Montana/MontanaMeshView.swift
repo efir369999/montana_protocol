@@ -216,7 +216,7 @@ struct MTMeshWallPage: View {
 
     @ViewBuilder private func cell(_ c: Chat) -> some View {
         if c.id == Self.headMark {
-            MTWallHead(glyph: "antenna.radiowaves.left.and.right", count: near, on: node.nodeUp && meshDiscoverable,
+            MTPaneHead(glyph: "antenna.radiowaves.left.and.right", count: near, on: node.nodeUp && meshDiscoverable,
                        line: LocalizedStringKey("Mesh wall: the people around you, phone to phone, with no server between"))
         } else if c.id == Self.meMark {
             meCard.padding(.horizontal, MTLibraryRow.side).padding(.top, 12)   // off the edges as the posts (26.09)

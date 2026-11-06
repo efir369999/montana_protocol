@@ -1,56 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Earlier builds": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Прежние сборки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "早期版本"
-          }
-        }
-      }
-    },
-    "The chain of your wall's posts.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Цепочка постов вашей стены."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的墙上帖子的链。"
-          }
-        }
-      }
-    },
-    "Full Screen": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Во весь экран"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全屏"
-          }
-        }
-      }
-    },
     "Waiting…": {
       "extractionState": "manual",
       "localizations": {
@@ -847,40 +797,6 @@
         }
       }
     },
-    "Post": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пост"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "帖子"
-          }
-        }
-      }
-    },
-    "Post your reply": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Опубликуйте свой ответ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发布你的回复"
-          }
-        }
-      }
-    },
     "Current playlist": {
       "localizations": {
         "en": {
@@ -1013,98 +929,6 @@
         }
       }
     },
-    "Tap to finish the post": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap to finish the post"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нажмите, чтобы закончить запись"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轻点以完成帖子"
-          }
-        }
-      }
-    },
-    "Views: %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Views: %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Просмотров: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浏览量：%@"
-          }
-        }
-      }
-    },
-    "Available": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Доступно"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可用"
-          }
-        }
-      }
-    },
-    "Accept the game": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Принять"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "接受对局"
-          }
-        }
-      }
-    },
-    "Decline the game": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отклонить"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拒绝对局"
-          }
-        }
-      }
-    },
     "Next": {
       "localizations": {
         "ru": {
@@ -1137,28 +961,6 @@
         }
       }
     },
-    "No name": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No name"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Без имени"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无名"
-          }
-        }
-      }
-    },
     "k": {
       "extractionState": "manual",
       "localizations": {
@@ -1172,108 +974,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "k"
-          }
-        }
-      }
-    },
-    "Timer": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Таймер"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "计时器"
-          }
-        }
-      }
-    },
-    "Offline chess on one phone": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Шахматы офлайн на одном телефоне"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在一部手机上离线下棋"
-          }
-        }
-      }
-    },
-    "Tap to start": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нажмите, чтобы начать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "点击开始"
-          }
-        }
-      }
-    },
-    "1 second": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 секунда"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 秒"
-          }
-        }
-      }
-    },
-    "Day": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "День"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "天"
-          }
-        }
-      }
-    },
-    "Period": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Период"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时间段"
           }
         }
       }
@@ -1308,22 +1008,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出"
-          }
-        }
-      }
-    },
-    "Total": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Итого"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "合计"
           }
         }
       }
@@ -1522,29 +1206,6 @@
         }
       }
     },
-    "75-move rule": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "75-move rule"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Правило 75 ходов"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "75回合规则"
-          }
-        }
-      }
-    },
     "A backup holds every conversation and attachment this device keeps, sealed with the key your 24 words open. Keep the words: without them nobody can read it, and neither can you.": {
       "localizations": {
         "ru": {
@@ -1593,22 +1254,6 @@
         }
       }
     },
-    "Next-generation communication. Your identity comes from your secret phrase, and everything you send is encrypted on your device.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Связь нового поколения. Личность — из вашей секретной фразы, всё, что вы отправляете, зашифровано на вашем устройстве."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新一代通信。您的身份源自您的助记词，您发送的一切都在您的设备上加密。"
-          }
-        }
-      }
-    },
     "A swipe from the left leaves a file out of the copy; a swipe from the right deletes it from the chat.": {
       "localizations": {
         "ru": {
@@ -1653,38 +1298,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "接听"
-          }
-        }
-      }
-    },
-    "Accept draw": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Согласиться на ничью"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同意和棋"
-          }
-        }
-      }
-    },
-    "Accept invitation": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Принять приглашение"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "接受邀请"
           }
         }
       }
@@ -1806,22 +1419,6 @@
         }
       }
     },
-    "Address": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Адрес"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "地址"
-          }
-        }
-      }
-    },
     "All": {
       "localizations": {
         "ru": {
@@ -1906,22 +1503,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "始终替换"
-          }
-        }
-      }
-    },
-    "An example of a post on your page": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пример поста на вашей странице"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您页面上的帖子示例"
           }
         }
       }
@@ -2040,159 +1621,6 @@
         }
       }
     },
-    "Your words and devices": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваши слова и устройства"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的 24 个词与设备"
-          }
-        }
-      }
-    },
-    "Documents": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Документы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "文档"
-          }
-        }
-      }
-    },
-    "Questions and answers": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вопросы и ответы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "问题与解答"
-          }
-        }
-      }
-    },
-    "Specification and code": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Спецификация и код"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "规范与代码"
-          }
-        }
-      }
-    },
-    "The site holds the answers about Montana in English, Russian and Chinese, also as files AI assistants read. The Montana specification and the code of this app are open on GitHub.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "На сайте — ответы о Монтане на английском, русском и китайском, в том числе в виде файлов, которые читают ИИ-ассистенты. Спецификация Монтаны и код этого приложения открыты на GitHub."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "网站提供关于 Montana 的英文、俄文和中文解答，也提供 AI 助手可读取的文件。Montana 规范和本应用的代码在 GitHub 上公开。"
-          }
-        }
-      }
-    },
-    "How does the chain of the person count my time?": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Как цепь Личности считает моё время?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "个人链如何计算我的时间？"
-          }
-        }
-      }
-    },
-    "What if I use Montana on several devices?": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Что, если я пользуюсь Монтаной на нескольких устройствах?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果我在多台设备上使用 Montana 呢？"
-          }
-        }
-      }
-    },
-    "The same 24 words on several devices are one person. Their seconds join: two devices open in the same second add one second, and once the devices have read each other's count, they show one chain of the person.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одни и те же 24 слова на нескольких устройствах — это один человек. Их секунды объединяются: два устройства, открытые в одну и ту же секунду, добавляют одну секунду, и когда устройства прочитают счёт друг друга, они показывают одну цепь Личности."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "多台设备上的同一组 24 个词是同一个人。它们的秒数会合并：两台设备在同一秒打开只增加一秒；各设备读取彼此的计数后，会显示同一条个人链。"
-          }
-        }
-      }
-    },
-    "What if I have several sets of 24 words?": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Что, если у меня несколько наборов из 24 слов?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果我有多组 24 个词呢？"
-          }
-        }
-      }
-    },
     "Ask the person who sent this set for it.": {
       "localizations": {
         "ru": {
@@ -2237,22 +1665,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "附件"
-          }
-        }
-      }
-    },
-    "Attachments in transit": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вложения в пути"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "传输中的附件"
           }
         }
       }
@@ -2318,22 +1730,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "收起"
-          }
-        }
-      }
-    },
-    "History": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "История"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "历史"
           }
         }
       }
@@ -2496,22 +1892,6 @@
         }
       }
     },
-    "Start a new game?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Начать новую партию?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要开始新对局吗？"
-          }
-        }
-      }
-    },
     "System backgrounds": {
       "localizations": {
         "ru": {
@@ -2640,22 +2020,6 @@
         }
       }
     },
-    "Black bishop": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрный слон"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑象"
-          }
-        }
-      }
-    },
     "WHAT CAN THIS ADMIN DO?": {
       "localizations": {
         "ru": {
@@ -2720,22 +2084,6 @@
         }
       }
     },
-    "Black clock": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Время чёрных"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑方用时"
-          }
-        }
-      }
-    },
     "Black ground": {
       "localizations": {
         "en": {
@@ -2754,118 +2102,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "黑色"
-          }
-        }
-      }
-    },
-    "Black king": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрный король"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑王"
-          }
-        }
-      }
-    },
-    "Black knight": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрный конь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑马"
-          }
-        }
-      }
-    },
-    "Black pawn": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрная пешка"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑兵"
-          }
-        }
-      }
-    },
-    "Black pieces": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрные фигуры"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑棋"
-          }
-        }
-      }
-    },
-    "Black queen": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрный ферзь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑后"
-          }
-        }
-      }
-    },
-    "Black rook": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрная ладья"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑车"
-          }
-        }
-      }
-    },
-    "Black wins": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чёрные победили"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "黑方获胜"
           }
         }
       }
@@ -3052,52 +2288,6 @@
         }
       }
     },
-    "By agreement": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "By agreement"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "По соглашению"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "双方同意"
-          }
-        }
-      }
-    },
-    "By claim": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "By claim"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "По требованию"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提出和棋"
-          }
-        }
-      }
-    },
     "By continuing, you agree to the [Terms of Use](montana://terms) and [Privacy Policy](montana://privacy).": {
       "extractionState": "manual",
       "localizations": {
@@ -3217,22 +2407,6 @@
         }
       }
     },
-    "Call relay": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ретрансляция звонков"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通话中继"
-          }
-        }
-      }
-    },
     "Call sign": {
       "localizations": {
         "ru": {
@@ -3245,22 +2419,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "呼号"
-          }
-        }
-      }
-    },
-    "Call signalling": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сигналинг звонков"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通话信令"
           }
         }
       }
@@ -3556,84 +2714,6 @@
         }
       }
     },
-    "Check!": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check!"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Шах!"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将军！"
-          }
-        }
-      }
-    },
-    "Checkmate": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checkmate"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Мат"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将死"
-          }
-        }
-      }
-    },
-    "Chess": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Шахматы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "国际象棋"
-          }
-        }
-      }
-    },
-    "Chess invitation": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приглашение в шахматы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "国际象棋邀请"
-          }
-        }
-      }
-    },
     "Chinese": {
       "localizations": {
         "ru": {
@@ -3705,28 +2785,6 @@
         }
       }
     },
-    "Choose people": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose people"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выбрать людей"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择联系人"
-          }
-        }
-      }
-    },
     "Choose photo": {
       "localizations": {
         "ru": {
@@ -3739,54 +2797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择照片"
-          }
-        }
-      }
-    },
-    "Choose the move for your draw claim": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите ход для заявления ничьей"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择用于申请和棋的预定着法"
-          }
-        }
-      }
-    },
-    "Claim draw": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заявить ничью"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "申请和棋"
-          }
-        }
-      }
-    },
-    "Claim draw with intended move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заявить ничью намеченным ходом"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以预定着法申请和棋"
           }
         }
       }
@@ -3958,22 +2968,6 @@
         }
       }
     },
-    "Computer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Компьютер"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电脑"
-          }
-        }
-      }
-    },
     "Confirm": {
       "localizations": {
         "ru": {
@@ -4002,22 +2996,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请使用设备密码或生物识别确认以查看助记词。"
-          }
-        }
-      }
-    },
-    "Conflicting moves — start a new game": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ходы расходятся — начните новую партию"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "走棋记录冲突，请开始新对局"
           }
         }
       }
@@ -4251,22 +3229,6 @@
         }
       }
     },
-    "Copies of the whole phone": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Копии всего телефона"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "整机副本"
-          }
-        }
-      }
-    },
     "Copy": {
       "localizations": {
         "ru": {
@@ -4360,28 +3322,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法打开曲目"
-          }
-        }
-      }
-    },
-    "Could not post": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Could not post"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось опубликовать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发布失败"
           }
         }
       }
@@ -4564,22 +3504,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "拒绝"
-          }
-        }
-      }
-    },
-    "Decline invitation": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отклонить приглашение"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拒绝邀请"
           }
         }
       }
@@ -4816,22 +3740,6 @@
         }
       }
     },
-    "Diaries": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дневники"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日志"
-          }
-        }
-      }
-    },
     "Disconnected": {
       "extractionState": "manual",
       "localizations": {
@@ -4913,28 +3821,6 @@
         }
       }
     },
-    "Draft": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Draft"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Черновик"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "草稿"
-          }
-        }
-      }
-    },
     "Draft:": {
       "localizations": {
         "en": {
@@ -4953,22 +3839,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "草稿："
-          }
-        }
-      }
-    },
-    "Draw": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ничья"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "和棋"
           }
         }
       }
@@ -5008,22 +3878,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "编辑"
-          }
-        }
-      }
-    },
-    "Edit post": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Изменить запись"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "编辑帖子"
           }
         }
       }
@@ -5092,22 +3946,6 @@
         }
       }
     },
-    "End game": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Завершить партию"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "结束对局"
-          }
-        }
-      }
-    },
     "End the call?": {
       "localizations": {
         "ru": {
@@ -5120,22 +3958,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "结束通话？"
-          }
-        }
-      }
-    },
-    "End this game?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Завершить эту партию?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要结束这局对局吗？"
           }
         }
       }
@@ -5175,22 +3997,6 @@
         }
       }
     },
-    "Enter the address of a machine you own, its login and password: Montana puts its door on it and keeps only the digest of the certificate the machine makes for itself. The password is used once and kept nowhere.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Введите адрес машины, которой владеете, логин и пароль: Montana поставит на неё свою дверь и сохранит только отпечаток сертификата, который машина сделает себе сама. Пароль используется один раз и не хранится."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "输入您拥有的机器地址、登录名和密码：Montana 会在其上安装自己的门，并只保留机器为自己生成的证书摘要。密码仅使用一次，不会被保存。"
-          }
-        }
-      }
-    },
     "Every attachment the letters name is on this device.": {
       "localizations": {
         "ru": {
@@ -5225,50 +4031,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有人"
-          }
-        }
-      }
-    },
-    "Everyone except": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Everyone except"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Все, кроме"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "除以下人外所有人"
-          }
-        }
-      }
-    },
-    "Everyone means every person you have a conversation with. A wall reaches a person's page the moment they open it.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Everyone means every person you have a conversation with. A wall reaches a person's page the moment they open it."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "«Все» — это каждый, с кем у вас есть переписка. Стена приходит на страницу человека в тот момент, когда он её открывает."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“所有人”指与你有对话的每一个人。留言墙会在对方打开你的页面时立即到达。"
           }
         }
       }
@@ -5515,22 +4277,6 @@
         }
       }
     },
-    "Flip board": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перевернуть доску"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "翻转棋盘"
-          }
-        }
-      }
-    },
     "Folders": {
       "localizations": {
         "ru": {
@@ -5742,77 +4488,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "相册"
-          }
-        }
-      }
-    },
-    "Game actions": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Действия в партии"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对局操作"
-          }
-        }
-      }
-    },
-    "Game ended": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Партия завершена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对局已结束"
-          }
-        }
-      }
-    },
-    "Game history unavailable": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "История партии недоступна"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对局记录不可用"
-          }
-        }
-      }
-    },
-    "Game over": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Game over"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Партия завершена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对局结束"
           }
         }
       }
@@ -6305,29 +4980,6 @@
         }
       }
     },
-    "Insufficient material": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Insufficient material"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Недостаточно материала"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "子力不足"
-          }
-        }
-      }
-    },
     "Invalid phrase. Check the words and their order.": {
       "localizations": {
         "ru": {
@@ -6340,38 +4992,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "助记词无效。请检查词语及顺序。"
-          }
-        }
-      }
-    },
-    "Invitation could not be sent": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось отправить приглашение"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法发送邀请"
-          }
-        }
-      }
-    },
-    "Invitation declined": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приглашение отклонено"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "邀请已拒绝"
           }
         }
       }
@@ -6392,29 +5012,6 @@
         }
       }
     },
-    "Invitation withdrawn": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invitation withdrawn"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приглашение отозвано"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "邀请已撤回"
-          }
-        }
-      }
-    },
     "Invite": {
       "localizations": {
         "ru": {
@@ -6427,76 +5024,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请"
-          }
-        }
-      }
-    },
-    "Invite a correspondent": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пригласить собеседника"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "邀请联系人"
-          }
-        }
-      }
-    },
-    "Invite a correspondent or play the computer.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пригласите собеседника или сыграйте с компьютером."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "邀请联系人对弈，或与电脑下棋。"
-          }
-        }
-      }
-    },
-    "Keep the invitation and moves in the conversation to continue this game.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для продолжения партии сохраните приглашение и ходы в переписке."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请保留聊天中的邀请和走棋记录，以便继续对局。"
-          }
-        }
-      }
-    },
-    "Keepers": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keepers"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Хранители"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存者"
           }
         }
       }
@@ -6629,22 +5156,6 @@
         }
       }
     },
-    "Letters for sleeping phones": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Письма для спящих телефонов"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "给休眠手机的信件"
-          }
-        }
-      }
-    },
     "Light": {
       "localizations": {
         "ru": {
@@ -6657,28 +5168,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "浅色"
-          }
-        }
-      }
-    },
-    "Like": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Like"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нравится"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "赞"
           }
         }
       }
@@ -6841,22 +5330,6 @@
         }
       }
     },
-    "Live position": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Текущая позиция"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当前局面"
-          }
-        }
-      }
-    },
     "Locating…": {
       "localizations": {
         "ru": {
@@ -6885,22 +5358,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "位置"
-          }
-        }
-      }
-    },
-    "Login": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Логин"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录名"
           }
         }
       }
@@ -7549,77 +6006,6 @@
         }
       }
     },
-    "Move could not be sent": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось отправить ход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法发送走棋"
-          }
-        }
-      }
-    },
-    "Moves": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ходы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "走棋记录"
-          }
-        }
-      }
-    },
-    "Moves: %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Moves: %lld"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ходов: %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "回合：%lld"
-          }
-        }
-      }
-    },
-    "Moving pictures": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Движущиеся картинки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "动图"
-          }
-        }
-      }
-    },
     "Music": {
       "localizations": {
         "ru": {
@@ -7722,54 +6108,6 @@
         }
       }
     },
-    "My wall": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Моя стена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "我的留言墙"
-          }
-        }
-      }
-    },
-    "Name": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Имя"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名称"
-          }
-        }
-      }
-    },
-    "Names": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Имена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名字"
-          }
-        }
-      }
-    },
     "Network": {
       "localizations": {
         "ru": {
@@ -7818,22 +6156,6 @@
         }
       }
     },
-    "New game": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Новая партия"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新对局"
-          }
-        }
-      }
-    },
     "New message": {
       "localizations": {
         "ru": {
@@ -7846,28 +6168,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "新消息"
-          }
-        }
-      }
-    },
-    "New post": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New post"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Новая запись"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新帖子"
           }
         }
       }
@@ -7891,22 +6191,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "新版本"
-          }
-        }
-      }
-    },
-    "Next move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Следующий ход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下一步"
           }
         }
       }
@@ -8013,44 +6297,6 @@
         }
       }
     },
-    "No clock": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Без часов"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不限时"
-          }
-        }
-      }
-    },
-    "No comments yet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No comments yet"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пока нет комментариев"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有评论"
-          }
-        }
-      }
-    },
     "No connection to the network": {
       "extractionState": "manual",
       "localizations": {
@@ -8086,22 +6332,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有联系人"
-          }
-        }
-      }
-    },
-    "No correspondents found": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Собеседники не найдены"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未找到联系人"
           }
         }
       }
@@ -8205,28 +6435,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无照片"
-          }
-        }
-      }
-    },
-    "No posts yet": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No posts yet"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пока нет записей"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有帖子"
           }
         }
       }
@@ -8498,44 +6706,6 @@
         }
       }
     },
-    "Offer draw with next move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Предложить ничью со следующим ходом"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下次走棋时提和"
-          }
-        }
-      }
-    },
-    "On %@'s wall": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On %@'s wall"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "На стене: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在%@的墙上"
-          }
-        }
-      }
-    },
     "On hold": {
       "localizations": {
         "en": {
@@ -8554,28 +6724,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "通话保持中"
-          }
-        }
-      }
-    },
-    "On your wall": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On your wall"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "На вашей стене"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在你的墙上"
           }
         }
       }
@@ -8614,72 +6762,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在线状态"
-          }
-        }
-      }
-    },
-    "Only contacts": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Only contacts"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Только контакты"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仅联系人"
-          }
-        }
-      }
-    },
-    "Only me": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Only me"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Только я"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "仅自己"
-          }
-        }
-      }
-    },
-    "Only people who may write on this wall can comment": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Only people who may write on this wall can comment"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Комментировать могут те, кому можно писать на этой стене"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有可以在这面墙上发帖的人才能评论"
           }
         }
       }
@@ -8760,22 +6842,6 @@
         }
       }
     },
-    "Open game": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открыть партию"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开对局"
-          }
-        }
-      }
-    },
     "Open identity": {
       "localizations": {
         "ru": {
@@ -8804,22 +6870,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在打开您的身份…"
-          }
-        }
-      }
-    },
-    "Opponent's move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ход соперника"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轮到对方走棋"
           }
         }
       }
@@ -8890,29 +6940,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "其他"
-          }
-        }
-      }
-    },
-    "Out of time": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Out of time"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Время вышло"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "超时"
           }
         }
       }
@@ -9104,22 +7131,6 @@
         }
       }
     },
-    "Password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码"
-          }
-        }
-      }
-    },
     "Pause": {
       "localizations": {
         "en": {
@@ -9210,28 +7221,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "照片"
-          }
-        }
-      }
-    },
-    "Photos and videos": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Photos and videos"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Фото и видео"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照片和视频"
           }
         }
       }
@@ -9396,22 +7385,6 @@
         }
       }
     },
-    "Play the computer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Играть с компьютером"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "与电脑对弈"
-          }
-        }
-      }
-    },
     "Playlist": {
       "localizations": {
         "ru": {
@@ -9440,28 +7413,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "对准一次性名片"
-          }
-        }
-      }
-    },
-    "Posts on your people's walls\nwill appear here": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Posts on your people's walls\nwill appear here"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Посты со стен ваших собеседников\nпоявятся здесь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你联系人墙上的帖子\n将显示在这里"
           }
         }
       }
@@ -9530,22 +7481,6 @@
         }
       }
     },
-    "Previous move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Предыдущий ход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上一步"
-          }
-        }
-      }
-    },
     "Privacy": {
       "localizations": {
         "ru": {
@@ -9590,54 +7525,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "个人资料"
-          }
-        }
-      }
-    },
-    "Promote pawn": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Превратить пешку"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "兵升变"
-          }
-        }
-      }
-    },
-    "Publish": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Опубликовать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发布"
-          }
-        }
-      }
-    },
-    "Publishing": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Публикуется"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在发布"
           }
         }
       }
@@ -9922,22 +7809,6 @@
         }
       }
     },
-    "Reflector": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отражатель"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "反射器"
-          }
-        }
-      }
-    },
     "Refresh": {
       "localizations": {
         "ru": {
@@ -10040,28 +7911,6 @@
         }
       }
     },
-    "Remove from saved": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove from saved"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Убрать из сохранённых"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从已保存中移除"
-          }
-        }
-      }
-    },
     "Remove photo": {
       "localizations": {
         "ru": {
@@ -10090,29 +7939,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除贴纸包"
-          }
-        }
-      }
-    },
-    "Repetition": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Repetition"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Повторение позиции"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重复局面"
           }
         }
       }
@@ -10331,50 +8157,6 @@
         }
       }
     },
-    "Repost": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Repost"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Репост"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "转发"
-          }
-        }
-      }
-    },
-    "Reposted from %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reposted from %@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Репост со стены: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "转发自 %@"
-          }
-        }
-      }
-    },
     "Reset to Montana": {
       "localizations": {
         "ru": {
@@ -10387,61 +8169,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "重置为 Montana"
-          }
-        }
-      }
-    },
-    "Resign": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сдаться"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "认输"
-          }
-        }
-      }
-    },
-    "Resign this game?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сдаться в этой партии?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "要认输吗？"
-          }
-        }
-      }
-    },
-    "Resignation": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resignation"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сдача"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "认输"
           }
         }
       }
@@ -10674,22 +8401,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "与我的页面相同"
-          }
-        }
-      }
-    },
-    "Save": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранить"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存"
           }
         }
       }
@@ -11085,22 +8796,6 @@
         }
       }
     },
-    "Send a copy now": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить копию сейчас"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "立即发送副本"
-          }
-        }
-      }
-    },
     "Send later": {
       "localizations": {
         "ru": {
@@ -11425,22 +9120,6 @@
         }
       }
     },
-    "Show in full": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показать полностью"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示全文"
-          }
-        }
-      }
-    },
     "Show in playlist": {
       "localizations": {
         "ru": {
@@ -11632,50 +9311,6 @@
         }
       }
     },
-    "Some people": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Some people"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Некоторые"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "部分人"
-          }
-        }
-      }
-    },
-    "Someone": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Someone"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто-то"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "某人"
-          }
-        }
-      }
-    },
     "Sort": {
       "localizations": {
         "ru": {
@@ -11768,29 +9403,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "速度"
-          }
-        }
-      }
-    },
-    "Stalemate": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stalemate"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пат"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逼和"
           }
         }
       }
@@ -11988,22 +9600,6 @@
         }
       }
     },
-    "Take back move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вернуть ход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "悔棋"
-          }
-        }
-      }
-    },
     "Taken into this device: %lld conversations, %lld records, %lld attachments.": {
       "localizations": {
         "ru": {
@@ -12020,22 +9616,6 @@
         }
       }
     },
-    "Taking your history back": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Возвращаем вашу историю"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在取回您的历史记录"
-          }
-        }
-      }
-    },
     "Tap an orb to edit that side": {
       "localizations": {
         "ru": {
@@ -12048,29 +9628,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "轻点球体以编辑该侧"
-          }
-        }
-      }
-    },
-    "Tap to join": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap to join"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нажмите, чтобы войти"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "点按加入"
           }
         }
       }
@@ -12240,44 +9797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "代码不一致"
-          }
-        }
-      }
-    },
-    "The comments are under the original post": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The comments are under the original post"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Комментарии — под оригинальным постом"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "评论在原帖下"
-          }
-        }
-      }
-    },
-    "The computer is thinking": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Компьютер думает"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电脑正在思考"
           }
         }
       }
@@ -12572,22 +10091,6 @@
         }
       }
     },
-    "The set-up refused: %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Настройка отказала: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置被拒绝：%@"
-          }
-        }
-      }
-    },
     "The storage of this device did not open just now. Try again in a moment.": {
       "localizations": {
         "ru": {
@@ -12620,6 +10123,22 @@
         }
       }
     },
+    "The folder of this track did not open. Lend it again with the plus.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Папка этого трека не открылась. Дайте к ней доступ снова плюсом."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此曲目所在的文件夹未能打开。请用加号重新授予访问权限。"
+          }
+        }
+      }
+    },
     "The two phones could not open a path for the voice. Try again in a moment.": {
       "extractionState": "manual",
       "localizations": {
@@ -12639,22 +10158,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "两部手机未能为语音打开通路。请稍后再试。"
-          }
-        }
-      }
-    },
-    "The wall comes when %@'s phone answers.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Стена придёт, когда отзовётся телефон: %@."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当 %@ 的手机回应时，留言墙就会出现。"
           }
         }
       }
@@ -12837,22 +10340,6 @@
         }
       }
     },
-    "This conversation is unavailable": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Эта переписка недоступна"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此聊天不可用"
-          }
-        }
-      }
-    },
     "This device has not taken back the copy iCloud holds. Restore it now — a new copy made from this device would take its place in iCloud.": {
       "localizations": {
         "ru": {
@@ -12978,54 +10465,6 @@
         }
       }
     },
-    "This post is not on this phone yet. Open the writer's page, then tap the link again.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Этого поста ещё нет на этом телефоне. Откройте страницу автора и нажмите ссылку снова."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此帖子尚未在这部手机上。请打开作者的页面，然后再次点击链接。"
-          }
-        }
-      }
-    },
-    "Time control": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Контроль времени"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时间限制"
-          }
-        }
-      }
-    },
-    "Time per player": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Время на игрока"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每位棋手的时间"
-          }
-        }
-      }
-    },
     "TimeChain": {
       "localizations": {
         "ru": {
@@ -13075,22 +10514,6 @@
         }
       }
     },
-    "To": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кому"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收件人"
-          }
-        }
-      }
-    },
     "Today": {
       "localizations": {
         "ru": {
@@ -13119,28 +10542,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "合计：附件 %@，记录 %lld 条。备份由您的 24 个助记词所对应的密钥封存；助记词本身不在其中。"
-          }
-        }
-      }
-    },
-    "Tracks and files": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tracks and files"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Треки и файлы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音乐和文件"
           }
         }
       }
@@ -14858,22 +12259,6 @@
         }
       }
     },
-    "Waiting for earlier moves": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ожидание предыдущих ходов"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "等待之前的走棋记录"
-          }
-        }
-      }
-    },
     "Waiting for iCloud": {
       "localizations": {
         "ru": {
@@ -14890,104 +12275,6 @@
         }
       }
     },
-    "Waiting for the invitation to be accepted": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ждём, когда примут приглашение"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "等待对方接受邀请"
-          }
-        }
-      }
-    },
-    "Wakes": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Побудки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "唤醒"
-          }
-        }
-      }
-    },
-    "Wall": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wall"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Стена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "留言墙"
-          }
-        }
-      }
-    },
-    "Wall of Thoughts": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wall of Thoughts"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Стена Мыслей"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "思想之墙"
-          }
-        }
-      }
-    },
-    "Wall post": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wall post"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Запись на стене"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "留言墙帖子"
-          }
-        }
-      }
-    },
     "Wallpapers": {
       "localizations": {
         "ru": {
@@ -15000,22 +12287,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "壁纸"
-          }
-        }
-      }
-    },
-    "Walls": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Стены"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "留言墙"
           }
         }
       }
@@ -15113,38 +12384,6 @@
         }
       }
     },
-    "White bishop": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белый слон"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白象"
-          }
-        }
-      }
-    },
-    "White clock": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Время белых"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白方用时"
-          }
-        }
-      }
-    },
     "White icons": {
       "localizations": {
         "ru": {
@@ -15157,232 +12396,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "白色图标"
-          }
-        }
-      }
-    },
-    "White king": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белый король"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白王"
-          }
-        }
-      }
-    },
-    "White knight": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белый конь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白马"
-          }
-        }
-      }
-    },
-    "White pawn": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белая пешка"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白兵"
-          }
-        }
-      }
-    },
-    "White pieces": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белые фигуры"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白棋"
-          }
-        }
-      }
-    },
-    "White queen": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белый ферзь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白后"
-          }
-        }
-      }
-    },
-    "White rook": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белая ладья"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白车"
-          }
-        }
-      }
-    },
-    "White wins": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белые победили"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白方获胜"
-          }
-        }
-      }
-    },
-    "Who can see": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто может видеть"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁可以查看"
-          }
-        }
-      }
-    },
-    "Who can see my wall": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто может видеть мою стену"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁可以查看我的留言墙"
-          }
-        }
-      }
-    },
-    "Who can write": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Who can write"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто может писать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁可以发帖"
-          }
-        }
-      }
-    },
-    "Who can write on my wall": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Who can write on my wall"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто может писать на моей стене"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁可以在我的留言墙上发帖"
-          }
-        }
-      }
-    },
-    "Who cannot see": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто не может видеть"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁不能查看"
-          }
-        }
-      }
-    },
-    "Who cannot write": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Who cannot write"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто не может писать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁不能发帖"
           }
         }
       }
@@ -15403,54 +12416,6 @@
         }
       }
     },
-    "Window": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Окно"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "窗口"
-          }
-        }
-      }
-    },
-    "Wins %lld · Losses %lld · Draws %lld": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Победы %lld · Поражения %lld · Ничьи %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "胜 %lld · 负 %lld · 和 %lld"
-          }
-        }
-      }
-    },
-    "Withdraw invitation": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отозвать приглашение"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "撤回邀请"
-          }
-        }
-      }
-    },
     "Write": {
       "localizations": {
         "ru": {
@@ -15467,28 +12432,6 @@
         }
       }
     },
-    "Write a comment": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Write a comment"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Написать комментарий"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "写评论"
-          }
-        }
-      }
-    },
     "Write down these 24 words in order and keep them offline. They restore your history if you lose all your devices. Don't show them to anyone.": {
       "localizations": {
         "ru": {
@@ -15501,50 +12444,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "按顺序写下这 24 个单词并离线保存。如果您丢失所有设备，可用它们恢复聊天记录。请勿向任何人展示。"
-          }
-        }
-      }
-    },
-    "Write on the wall": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Write on the wall"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Написать на стене"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在留言墙上发帖"
-          }
-        }
-      }
-    },
-    "Write something": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Write something"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Напишите что-нибудь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "写点什么"
           }
         }
       }
@@ -15636,29 +12535,6 @@
         }
       }
     },
-    "You lost": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You lost"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вы проиграли"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你输了"
-          }
-        }
-      }
-    },
     "You must be 18 or older to use %@.": {
       "localizations": {
         "ru": {
@@ -15675,38 +12551,6 @@
         }
       }
     },
-    "You play black": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вы играете чёрными"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你执黑棋"
-          }
-        }
-      }
-    },
-    "You play white": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вы играете белыми"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你执白棋"
-          }
-        }
-      }
-    },
     "You will not receive messages, calls, typing or presence from this person. They will see neither your photo nor when you were last seen.": {
       "localizations": {
         "ru": {
@@ -15719,29 +12563,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "您将不会收到此人的消息、通话、输入状态或在线状态。对方将看不到您的头像，也看不到您的最后在线时间。"
-          }
-        }
-      }
-    },
-    "You won": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You won"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вы выиграли"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你赢了"
           }
         }
       }
@@ -15874,22 +12695,6 @@
         }
       }
     },
-    "Your move": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш ход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轮到你走棋"
-          }
-        }
-      }
-    },
     "Your music will appear here": {
       "localizations": {
         "ru": {
@@ -15925,22 +12730,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "你发送链接时，本机会读取该网页，因此该网站会看到这台手机。"
-          }
-        }
-      }
-    },
-    "Your pieces": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваши фигуры"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的棋子"
           }
         }
       }
@@ -16257,22 +13046,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "已编辑"
-          }
-        }
-      }
-    },
-    "expires %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "истекает %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有效期至 %@"
           }
         }
       }
@@ -17263,55 +14036,6 @@
         }
       }
     },
-    "Month": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Месяц"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "月"
-          }
-        }
-      }
-    },
-    "Transaction": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Транзакция"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "交易"
-          }
-        }
-      }
-    },
-    "From": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "От кого"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "来自"
-          }
-        }
-      }
-    },
     "Date": {
       "localizations": {
         "ru": {
@@ -17324,70 +14048,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "日期"
-          }
-        }
-      }
-    },
-    "Seal": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Печать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "印记"
-          }
-        }
-      }
-    },
-    "Code": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Код"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "验证码"
-          }
-        }
-      }
-    },
-    "Kind": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вид"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "类型"
-          }
-        }
-      }
-    },
-    "New": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Новый"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新建"
           }
         }
       }
@@ -17516,22 +14176,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "从群组中移除？"
-          }
-        }
-      }
-    },
-    "Views": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Просмотры"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浏览量"
           }
         }
       }
@@ -19412,309 +16056,6 @@
         }
       }
     },
-    "You are not in the Montana top. Privacy settings turn it on.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You are not in the Montana top. Privacy settings turn it on."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вас нет в топе Montana. Включить можно в настройках приватности."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你不在 Montana 排行榜中。可在隐私设置中开启。"
-          }
-        }
-      }
-    },
-    "What is Your hour worth Now?": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сколько стоит Ваш час Сейчас?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的一小时现在值多少？"
-          }
-        }
-      }
-    },
-    "Per hour": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "В час"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每小时"
-          }
-        }
-      }
-    },
-    "1 hour": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 час"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 小时"
-          }
-        }
-      }
-    },
-    "Your hour": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш час"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的一小时"
-          }
-        }
-      }
-    },
-    "Hour": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Час"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "小时"
-          }
-        }
-      }
-    },
-    "Choose chats": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите чаты"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择聊天"
-          }
-        }
-      }
-    },
-    "Choose members": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите участников"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择成员"
-          }
-        }
-      }
-    },
-    "No members yet": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пока нет участников"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂无成员"
-          }
-        }
-      }
-    },
-    "No chat of your own with this member": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нет своего чата с этим участником"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你与该成员没有单独的聊天"
-          }
-        }
-      }
-    },
-    "Amount": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сумма"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "数量"
-          }
-        }
-      }
-    },
-    "Last confirmed window": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Последнее подтверждённое окно"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最近确认的窗口"
-          }
-        }
-      }
-    },
-    "No confirmed window yet": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Подтверждённого окна ещё нет"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚无已确认窗口"
-          }
-        }
-      }
-    },
-    "Participation": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Участие"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "参与记录"
-          }
-        }
-      }
-    },
-    "Redemption window": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Окно погашения права"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "权益兑付窗口"
-          }
-        }
-      }
-    },
-    "Right to a share": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Право на долю"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "份额权益"
-          }
-        }
-      }
-    },
-    "The protocol core is unavailable on this device.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ядро протокола недоступно на этом устройстве."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此设备上的协议核心不可用。"
-          }
-        }
-      }
-    },
-    "The protocol device has not joined the network.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Устройство протокола ещё не подключено к сети."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "协议设备尚未加入网络。"
-          }
-        }
-      }
-    },
     "no keys": {
       "localizations": {
         "ru": {
@@ -19763,252 +16104,6 @@
         }
       }
     },
-    "How much do you earn?": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сколько вы зарабатываете?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你赚多少？"
-          }
-        }
-      }
-    },
-    "Year": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Год"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "年"
-          }
-        }
-      }
-    },
-    "Per month": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "В месяц"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每月"
-          }
-        }
-      }
-    },
-    "Per year": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "В год"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每年"
-          }
-        }
-      }
-    },
-    "A year of work is 2,080 hours: forty a week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Год работы — 2 080 часов: по сорок в неделю"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一年工作 2080 小时：每周四十小时"
-          }
-        }
-      }
-    },
-    "Chain link": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Звено"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链环"
-          }
-        }
-      }
-    },
-    "Previous seal": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Предыдущая печать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上一印记"
-          }
-        }
-      }
-    },
-    "Local TimeChain": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Локальный TimeChain"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "本地 TimeChain"
-          }
-        }
-      }
-    },
-    "Global TimeChain": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Глобальный TimeChain"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全局 TimeChain"
-          }
-        }
-      }
-    },
-    "Network nodes reached": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Узлы сети на связи"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已连接的网络节点"
-          }
-        }
-      }
-    },
-    "One seal on every device that holds this transfer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одна печать на каждом устройстве, где есть этот перевод"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "持有此转账的每台设备上都是同一印记"
-          }
-        }
-      }
-    },
-    "Not in your TimeChain yet": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ещё нет в вашей цепочке времени"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未记入你的时间链"
-          }
-        }
-      }
-    },
-    "System chain": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Системная ветка"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系统链"
-          }
-        }
-      }
-    },
-    "Restored by the system": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Восстановлено системой"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "由系统恢复"
-          }
-        }
-      }
-    },
-    "Your hour: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш час: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的一小时：%@"
-          }
-        }
-      }
-    },
     "Last letter": {
       "localizations": {
         "ru": {
@@ -20021,52 +16116,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近的信件"
-          }
-        }
-      }
-    },
-    "P2P wall": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P2P wall"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "П2П стена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P2P 墙"
-          }
-        }
-      }
-    },
-    "P2P wall: the nodes this phone reaches": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P2P wall: the nodes this phone reaches"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "П2П стена: узлы, до которых дотягивается этот телефон"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P2P 墙：这部手机能连到的节点"
           }
         }
       }
@@ -20119,297 +16168,6 @@
         }
       }
     },
-    "One-time code": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Одноразовый код"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性验证码"
-          }
-        }
-      }
-    },
-    "Hide password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скрыть пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐藏密码"
-          }
-        }
-      }
-    },
-    "Show password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показать пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示密码"
-          }
-        }
-      }
-    },
-    "A tap copies for this device alone; the copy is gone in ninety seconds.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Касание копирует только для этого устройства; копия исчезнет через девяносто секунд."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轻点即可仅在本设备上复制；副本将在九十秒后消失。"
-          }
-        }
-      }
-    },
-    "Delete this password?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить этот пароль?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除此密码？"
-          }
-        }
-      }
-    },
-    "Site": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сайт"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "网站"
-          }
-        }
-      }
-    },
-    "Generate password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Создать пароль"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "生成密码"
-          }
-        }
-      }
-    },
-    "One-time code key": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ключ одноразового кода"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性验证码密钥"
-          }
-        }
-      }
-    },
-    "The key of a one-time code: the letters a site shows, or its otpauth:// link.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ключ одноразового кода: буквы, которые показывает сайт, или его ссылка otpauth://."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一次性验证码的密钥：网站显示的字母，或其 otpauth:// 链接。"
-          }
-        }
-      }
-    },
-    "Share with": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Поделиться с"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享给"
-          }
-        }
-      }
-    },
-    "Shared password": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароль от собеседника"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享的密码"
-          }
-        }
-      }
-    },
-    "Sign-in": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вход"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录信息"
-          }
-        }
-      }
-    },
-    "Devices nearby": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Устройства рядом"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "附近的设备"
-          }
-        }
-      }
-    },
-    "External address": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Внешний адрес"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外部地址"
-          }
-        }
-      }
-    },
-    "How others see you": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Как вас видят другие"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "别人如何看到你"
-          }
-        }
-      }
-    },
-    "No devices nearby. Open Montana on another phone on the same Wi-Fi.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Рядом нет устройств. Откройте Montana на другом телефоне в той же сети Wi-Fi."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "附近没有设备。请在同一 Wi-Fi 下的另一部手机上打开 Montana。"
-          }
-        }
-      }
-    },
-    "Off: this device announces itself nowhere and carries nothing for anybody.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выключено: это устройство нигде себя не объявляет и ничего ни для кого не несёт."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已关闭：本设备不在任何地方宣告自身，也不为任何人传递内容。"
-          }
-        }
-      }
-    },
-    "Only people you already share a conversation with can tell it is you.": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Понять, что это вы, может только тот, с кем у вас уже есть переписка."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有与您已有对话的人才能认出是您。"
-          }
-        }
-      }
-    },
     "P2P network": {
       "localizations": {
         "ru": {
@@ -20442,23 +16200,6 @@
         }
       }
     },
-    "Reachable now": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Достижимы сейчас"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当前可达"
-          }
-        }
-      }
-    },
     "Starting…": {
       "localizations": {
         "ru": {
@@ -20475,22 +16216,6 @@
         }
       }
     },
-    "not learned yet": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "пока не известен"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未获知"
-          }
-        }
-      }
-    },
     "stake %@": {
       "localizations": {
         "ru": {
@@ -20503,151 +16228,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "赌注 %@"
-          }
-        }
-      }
-    },
-    "%lld ep.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld эп."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld纪元"
-          }
-        }
-      }
-    },
-    "%lld cent.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld в."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld世纪"
-          }
-        }
-      }
-    },
-    "Second": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Секунда"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "秒"
-          }
-        }
-      }
-    },
-    "Minute": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Минута"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分钟"
-          }
-        }
-      }
-    },
-    "Week": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Неделя"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "周"
-          }
-        }
-      }
-    },
-    "Century": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Век"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "世纪"
-          }
-        }
-      }
-    },
-    "Epoch": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Эпоха"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "纪元"
-          }
-        }
-      }
-    },
-    "Unit of time": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Единица времени"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时间单位"
-          }
-        }
-      }
-    },
-    "Top 13": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Топ 13"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前 13"
           }
         }
       }
@@ -20716,22 +16296,6 @@
         }
       }
     },
-    "Top up": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пополнить"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "充值"
-          }
-        }
-      }
-    },
     "Transfer is being confirmed": {
       "localizations": {
         "ru": {
@@ -20744,374 +16308,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在确认转账"
-          }
-        }
-      }
-    },
-    "Currency": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Валюта"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "货币"
-          }
-        }
-      }
-    },
-    "%lld not supported: %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld не поддерживаются: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld 个不支持：%@"
-          }
-        }
-      }
-    },
-    "%lld servers": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "серверов: %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务器：%lld"
-          }
-        }
-      }
-    },
-    "ALPN": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ALPN"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ALPN"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ALPN"
-          }
-        }
-      }
-    },
-    "Add an exit node with the plus below.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавьте узел выхода плюсом внизу."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请用下方的加号添加出口节点。"
-          }
-        }
-      }
-    },
-    "Add exit node": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить узел выхода"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加出口节点"
-          }
-        }
-      }
-    },
-    "Add subscription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add subscription"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить подписку"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加订阅"
-          }
-        }
-      }
-    },
-    "Added by hand": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавлены вручную"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手动添加"
-          }
-        }
-      }
-    },
-    "Allow Montana to run in the background in System Settings": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Разрешите Montana работать в фоне в настройках системы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请在系统设置中允许 Montana 在后台运行"
-          }
-        }
-      }
-    },
-    "Cipher": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cipher"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Шифр"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加密方式"
-          }
-        }
-      }
-    },
-    "Copy JSON": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy JSON"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Копировать JSON"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "复制 JSON"
-          }
-        }
-      }
-    },
-    "Credentials": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Credentials"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Учётные данные"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "凭据"
-          }
-        }
-      }
-    },
-    "DNS error": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ошибка DNS"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DNS 错误"
-          }
-        }
-      }
-    },
-    "Delete subscription": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить подписку"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除订阅"
-          }
-        }
-      }
-    },
-    "Download, Mbps": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download, Mbps"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Загрузка, Мбит/с"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下载，Mbps"
-          }
-        }
-      }
-    },
-    "Encryption": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encryption"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Шифрование"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加密"
-          }
-        }
-      }
-    },
-    "Exit nodes": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Узлы выхода"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出口节点"
-          }
-        }
-      }
-    },
-    "Fingerprint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fingerprint"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отпечаток"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指纹"
-          }
-        }
-      }
-    },
-    "Flow": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flow"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flow"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flow"
           }
         }
       }
@@ -21148,998 +16344,6 @@
         }
       }
     },
-    "Host header": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Host header"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Заголовок Host"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Host 头"
-          }
-        }
-      }
-    },
-    "Import from file": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import from file"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Импорт из файла"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从文件导入"
-          }
-        }
-      }
-    },
-    "JSON copied": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "JSON copied"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "JSON скопирован"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "JSON 已复制"
-          }
-        }
-      }
-    },
-    "Local IPs": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Local IPs"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Локальные IP"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "本地 IP"
-          }
-        }
-      }
-    },
-    "MTU": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MTU"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MTU"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MTU"
-          }
-        }
-      }
-    },
-    "Manual entry": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ручной ввод"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "手动输入"
-          }
-        }
-      }
-    },
-    "Mode": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mode"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режим"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "模式"
-          }
-        }
-      }
-    },
-    "Montana Network": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Монтана Сеть"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Montana 网络"
-          }
-        }
-      }
-    },
-    "New server": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New server"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Новый сервер"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新服务器"
-          }
-        }
-      }
-    },
-    "Obfuscation password": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obfuscation password"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пароль обфускации"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "混淆密码"
-          }
-        }
-      }
-    },
-    "P2P wall: the nodes this phone reaches, and the switch over them": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P2P wall: the nodes this phone reaches, and the switch over them"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "П2П стена: узлы, до которых дотягивается этот телефон, и переключатель над ними"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "P2P 墙：这部手机能连到的节点，以及它们上方的开关"
-          }
-        }
-      }
-    },
-    "Paste from clipboard": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вставить из буфера обмена"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从剪贴板粘贴"
-          }
-        }
-      }
-    },
-    "Path": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Path"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Путь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "路径"
-          }
-        }
-      }
-    },
-    "Pin subscription": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Закрепить подписку"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "置顶订阅"
-          }
-        }
-      }
-    },
-    "Pinned certificate SHA-256": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pinned certificate SHA-256"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SHA-256 сертификата"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "证书 SHA-256"
-          }
-        }
-      }
-    },
-    "Port": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Port"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Порт"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "端口"
-          }
-        }
-      }
-    },
-    "Port hopping": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Port hopping"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перебор портов"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "端口跳跃"
-          }
-        }
-      }
-    },
-    "Pre-shared key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pre-shared key"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Общий ключ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "预共享密钥"
-          }
-        }
-      }
-    },
-    "Private key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Private key"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приватный ключ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "私钥"
-          }
-        }
-      }
-    },
-    "Protocol": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Protocol"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Протокол"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "协议"
-          }
-        }
-      }
-    },
-    "Public key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Public key"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Публичный ключ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公钥"
-          }
-        }
-      }
-    },
-    "Rename": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Переименовать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重命名"
-          }
-        }
-      }
-    },
-    "Reserved": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reserved"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reserved"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reserved"
-          }
-        }
-      }
-    },
-    "SNI": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SNI"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SNI"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SNI"
-          }
-        }
-      }
-    },
-    "Scan QR code": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сканировать QR-код"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "扫描 QR 码"
-          }
-        }
-      }
-    },
-    "Security": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Security"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Защита"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安全"
-          }
-        }
-      }
-    },
-    "Seed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seed"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seed"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seed"
-          }
-        }
-      }
-    },
-    "Server": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сервер"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务器"
-          }
-        }
-      }
-    },
-    "Servers": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Серверы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务器"
-          }
-        }
-      }
-    },
-    "Service name": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Service name"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Имя сервиса"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务名称"
-          }
-        }
-      }
-    },
-    "Short ID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Short ID"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Short ID"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Short ID"
-          }
-        }
-      }
-    },
-    "Sort by ping": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сортировать по пингу"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按延迟排序"
-          }
-        }
-      }
-    },
-    "SpiderX": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SpiderX"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SpiderX"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SpiderX"
-          }
-        }
-      }
-    },
-    "Subscription URL": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subscription URL"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "URL подписки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "订阅 URL"
-          }
-        }
-      }
-    },
-    "Subscription link": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subscription link"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ссылка подписки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "订阅链接"
-          }
-        }
-      }
-    },
-    "TLS error": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ошибка TLS"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TLS 错误"
-          }
-        }
-      }
-    },
-    "Transport": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transport"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Транспорт"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "传输"
-          }
-        }
-      }
-    },
-    "UUID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UUID"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UUID"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UUID"
-          }
-        }
-      }
-    },
-    "Unpin subscription": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открепить подписку"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取消置顶订阅"
-          }
-        }
-      }
-    },
-    "Update subscriptions": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Обновить подписки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更新订阅"
-          }
-        }
-      }
-    },
-    "Upload, Mbps": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Upload, Mbps"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отдача, Мбит/с"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上传，Mbps"
-          }
-        }
-      }
-    },
-    "User": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "User"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пользователь"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用户"
-          }
-        }
-      }
-    },
-    "Whitelists: no live node on the wall": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Белые списки — живых узлов на стене нет"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "白名单模式：墙上没有可用节点"
-          }
-        }
-      }
-    },
-    "Wi-Fi+LTE": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wi-Fi+LTE"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wi-Fi+LTE"
-          }
-        }
-      }
-    },
-    "already in the list": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "already in the list"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "уже в списке"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已在列表中"
-          }
-        }
-      }
-    },
-    "connecting…": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "подключение…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "连接中…"
-          }
-        }
-      }
-    },
-    "connection error": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ошибка соединения"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "连接错误"
-          }
-        }
-      }
-    },
-    "disconnecting…": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "отключение…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "断开中…"
-          }
-        }
-      }
-    },
     "engine not linked": {
       "localizations": {
         "ru": {
@@ -22156,70 +16360,6 @@
         }
       }
     },
-    "invalid link": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "неверная ссылка"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接无效"
-          }
-        }
-      }
-    },
-    "link copied": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ссылка скопирована"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链接已复制"
-          }
-        }
-      }
-    },
-    "loading subscription…": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "загружаем подписку…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在加载订阅…"
-          }
-        }
-      }
-    },
-    "loading subscription… attempt %lld of %lld": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "загружаем подписку… попытка %lld из %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在加载订阅…第 %lld 次，共 %lld 次"
-          }
-        }
-      }
-    },
     "ms": {
       "localizations": {
         "ru": {
@@ -22232,116 +16372,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "毫秒"
-          }
-        }
-      }
-    },
-    "no server found": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "no server found"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "сервер не найден"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未找到服务器"
-          }
-        }
-      }
-    },
-    "not supported by the engine": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "движок не поддерживает"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "引擎不支持"
-          }
-        }
-      }
-    },
-    "reconnecting…": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "переподключение…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新连接中…"
-          }
-        }
-      }
-    },
-    "subscription failed": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "подписка не загрузилась"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "订阅加载失败"
-          }
-        }
-      }
-    },
-    "subscription failed: %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "подписка не загрузилась: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "订阅加载失败：%@"
-          }
-        }
-      }
-    },
-    "the file could not be read": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "the file could not be read"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "файл не прочитан"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法读取文件"
           }
         }
       }
@@ -22390,118 +16420,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的账户将被删除：此设备会抹去你的 24 词身份。你的历史记录会加密留在这里，只有用同样的 24 个词才能再次打开——在此设备上，或在已持有副本的另一台设备上。没有人替你保管这些词：请先写下来：设置 → 隐私 → 助记词。删除应用也会抹去历史记录。"
-          }
-        }
-      }
-    },
-    "Time online": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Время в сети"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在线时间"
-          }
-        }
-      }
-    },
-    "Chain links": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Звенья цепи"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "链节"
-          }
-        }
-      }
-    },
-    "Person": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Личность"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "个人"
-          }
-        }
-      }
-    },
-    "Frozen vectors": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Замороженные векторы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "冻结向量"
-          }
-        }
-      }
-    },
-    "Genesis machines reached": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Машины генезиса на связи"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已连接的创世机器"
-          }
-        }
-      }
-    },
-    "Share the chains": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Поделиться цепочками"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享链"
-          }
-        }
-      }
-    },
-    "For an observer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Для наблюдателя"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "供观察者"
           }
         }
       }
@@ -22602,332 +16520,6 @@
         }
       }
     },
-    "My other accounts": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Мои другие аккаунты"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "我的其他账户"
-          }
-        }
-      }
-    },
-    "Explorer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Эксплорер"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浏览器"
-          }
-        }
-      }
-    },
-    "Open in Explorer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открыть в Эксплорере"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在浏览器中打开"
-          }
-        }
-      }
-    },
-    "Copy confirmation link": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скопировать ссылку подтверждения"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "复制确认链接"
-          }
-        }
-      }
-    },
-    "Share confirmation link": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Поделиться ссылкой подтверждения"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享确认链接"
-          }
-        }
-      }
-    },
-    "On": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вкл."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开启"
-          }
-        }
-      }
-    },
-    "Link your accounts forever?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Связать ваши аккаунты навсегда?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "永久关联您的账户？"
-          }
-        }
-      }
-    },
-    "Send and link": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отправить и связать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发送并关联"
-          }
-        }
-      }
-    },
-    "A transfer to your own account links the two accounts publicly forever.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перевод на свой аккаунт навсегда публично связывает два аккаунта."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向您自己的账户转账会将这两个账户永久公开关联。"
-          }
-        }
-      }
-    },
-    "Every month": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Все месяцы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有月份"
-          }
-        }
-      }
-    },
-    "Operations": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Операции"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作"
-          }
-        }
-      }
-    },
-    "Spending": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Расходы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支出"
-          }
-        }
-      }
-    },
-    "Income": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Доходы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收入"
-          }
-        }
-      }
-    },
-    "Analytics": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Аналитика"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分析"
-          }
-        }
-      }
-    },
-    "No operations": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Операций нет"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂无操作"
-          }
-        }
-      }
-    },
-    "Search contacts": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Поиск по контактам"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索联系人"
-          }
-        }
-      }
-    },
-    "Burning of the day": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сжигание за сутки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当日燃烧"
-          }
-        }
-      }
-    },
-    "Spending of the day": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Расходы за сутки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当日支出"
-          }
-        }
-      }
-    },
-    "Category": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Категория"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "类别"
-          }
-        }
-      }
-    },
-    "Operation": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Операция"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作详情"
-          }
-        }
-      }
-    },
     "Transactions": {
       "localizations": {
         "ru": {
@@ -22956,22 +16548,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无交易"
-          }
-        }
-      }
-    },
-    "Available %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Доступно %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可用 %@"
           }
         }
       }
@@ -23114,22 +16690,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "录制"
-          }
-        }
-      }
-    },
-    "YouTube": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "YouTube"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "YouTube"
           }
         }
       }
@@ -24414,310 +17974,6 @@
         }
       }
     },
-    "Fabric of Time": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ткань времени"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时间织网"
-          }
-        }
-      }
-    },
-    "Days until the first count: %lld": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дней до первого счёта: %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "距首次计算还有 %lld 天"
-          }
-        }
-      }
-    },
-    "Regular correspondents": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Регулярные собеседники"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "固定通话对象"
-          }
-        }
-      }
-    },
-    "What is the Fabric of Time?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Что такое Ткань времени?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "什么是时间织网？"
-          }
-        }
-      }
-    },
-    "Who is a regular correspondent?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Кто такой регулярный собеседник?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "谁是固定交流对象？"
-          }
-        }
-      }
-    },
-    "Does the Fabric of Time lower a newcomer?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Опускает ли Ткань времени новичка?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时间织网会降低新用户的等级吗？"
-          }
-        }
-      }
-    },
-    "What do the nodes of the network learn?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Что узнают узлы сети?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "网络节点会知道什么？"
-          }
-        }
-      }
-    },
-    "How does this version differ from the specification?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Чем эта версия отличается от спецификации?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这个版本与规范有何不同？"
-          }
-        }
-      }
-    },
-    "What counts as an exchange?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Что считается обменом?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "什么算作交流？"
-          }
-        }
-      }
-    },
-    "When does a person's phone sign for me?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Когда телефон собеседника подписывает за меня?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对方的手机何时为我签名？"
-          }
-        }
-      }
-    },
-    "When a word of yours reaches their phone and they wrote to you themselves in the last 7 days, their phone signs, once a day at most, that your word reached it: the minute it arrived, the hash the fingerprint of your conversation is read from, and their own ceiling. It gives the signature to you alone, inside your conversation. A person who only writes and is never answered receives none.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Когда ваше слово доходит до его телефона, а он сам писал вам за последние 7 дней, его телефон не чаще раза в сутки подписывает, что ваше слово дошло: минуту прихода, хеш, из которого читается отпечаток вашей переписки, и свой потолок. Подпись он отдаёт только вам, внутри вашей переписки. Тот, кто только пишет и не получает ответа, не получает ни одной."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当你的消息到达对方手机，而对方在最近 7 天内也给你发过消息时，对方手机每天最多签名一次，证明你的消息已到达：到达的分钟、读取你们对话指纹的哈希，以及他自己的上限。签名只交给你，且只在你们的对话之内。只发消息却从未得到回复的人收不到任何签名。"
-          }
-        }
-      }
-    },
-    "A person from whom your phone holds a signature in each of the last two weeks: the newer 7 days and the 7 before them. The window slides with the clock of the network; there are no fixed weeks. People are told apart by the key their signatures are made with, which their 24 words give for your conversation alone, not by anything they say about themselves.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Человек, от которого у вашего телефона есть подпись в каждой из двух последних недель: в последние 7 дней и в 7 дней до них. Окно скользит вместе с часами сети, фиксированных недель нет. Людей различают по ключу их подписей, который их 24 слова дают только для переписки с вами, а не по тому, что они говорят о себе."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在最近两周的每一周里（最近 7 天和之前的 7 天），你的手机都持有其签名的人。窗口随网络时钟滑动，没有固定的周。人们按签名所用的密钥区分，这把密钥由对方的 24 个词只为你们的对话生成，而不是按他们对自己的说法。"
-          }
-        }
-      }
-    },
-    "What do the people I write to learn?": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Что узнают те, с кем я переписываюсь?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "与我交流的人会知道什么？"
-          }
-        }
-      }
-    },
-    "Your ceiling, inside the signatures your phone gives them, and nothing else of the Fabric of Time. A signature names your conversation by the hash its fingerprint is read from, which only the two of you can compute, and it is made with a key your 24 words give for that conversation alone. No key and no number in it is the same with two people, so two people you write to cannot tell from it that they speak with the same person.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш потолок внутри подписей, которые им даёт ваш телефон, и больше ничего из Ткани времени. Подпись называет вашу переписку хешем, из которого читается её отпечаток, и вычислить его можете только вы двое, а сделана она ключом, который ваши 24 слова дают только для этой переписки. Ни ключ, ни число в ней не совпадают у двух людей, поэтому двое ваших собеседников не могут понять по ней, что говорят с одним человеком."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的上限，只在你的手机交给他们的签名之内，此外没有任何时间织网的内容。签名用读取你们对话指纹的哈希来指明这段对话，只有你们两人能算出它；签名所用的密钥由你的 24 个词只为这段对话生成。其中没有任何密钥或数字在两个人那里相同，因此与你交流的两个人无法据此知道他们在和同一个人交谈。"
-          }
-        }
-      }
-    },
-    "Nothing they can read: signatures and ceilings ride inside your conversation, sealed for the other person, by the same road as your letters. Signatures stay on your phone for two weeks and then leave it.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ничего, что они могут прочесть: подписи и потолки идут внутри вашей переписки, запечатанные для другого человека, той же дорогой, что ваши письма. Подписи хранятся на вашем телефоне две недели, затем уходят."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有他们能读懂的内容：签名和上限在你们的对话内传送，为对方加密，走与你的消息相同的道路。签名在你的手机上保留两周，然后删除。"
-          }
-        }
-      }
-    },
-    "In four ways. A phone holds no window of the network's core, so the minute of a signature and the two weeks are read from the clock of the Montana nodes, learned from their answers. The signatures are not yet witnessed into the network; they stay on the phone that received them. Each of your devices with the same 24 words counts the signatures that reached it. And a signature names a conversation and is made with a key for that conversation alone, where the specification names the key of a person: this version knows people only by their conversations.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "В четырёх местах. Телефон не держит окна ядра сети, поэтому минута подписи и две недели читаются по часам узлов Монтаны, узнанным из их ответов. Подписи пока не свидетельствуются в сеть: они остаются на телефоне, который их получил. Каждое ваше устройство с теми же 24 словами считает подписи, дошедшие до него. И подпись называет переписку и делается ключом только этой переписки, тогда как спецификация называет ключ человека: эта версия знает людей только по их перепискам."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有四点不同。手机不持有网络核心的窗口，因此签名的分钟和两周按从 Montana 节点回复中得知的时钟读取。签名尚未见证到网络中，它们留在收到它们的手机上。你用同样 24 个词的每台设备只计算到达它的签名。并且签名指明的是一段对话，所用密钥只属于这段对话，而规范指明的是一个人的密钥：这个版本只通过对话认识人。"
-          }
-        }
-      }
-    },
-    "No. The Fabric of Time only lowers: a person who states a false ceiling can at most spare someone a lowering and never lifts anyone above their own ceiling. One signature a day from one person is kept, the one with the lower ceiling, so two of their devices answering the same word weigh as one.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Нет. Ткань времени только опускает: человек, заявивший ложный потолок, может самое большее избавить кого-то от понижения и никогда не поднимает никого выше его собственного потолка. От одного человека хранится одна подпись в сутки, с меньшим потолком, поэтому два его устройства, ответившие на одно слово, весят как одно."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不能。时间织网只会降低：声称虚假上限的人最多只能让某人免于降低，永远不能把任何人提高到其自身上限之上。来自同一个人的签名每天只保留一条，即上限较低的那条，因此他的两台设备回应同一条消息时只算一次。"
-          }
-        }
-      }
-    },
-    "Signatures": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Подписи"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "签名"
-          }
-        }
-      }
-    },
-    "Ceiling": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Потолок"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上限"
-          }
-        }
-      }
-    },
     "ON THIS PHONE": {
       "localizations": {
         "ru": {
@@ -24778,22 +18034,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有对应消息的文件"
-          }
-        }
-      }
-    },
-    "Pictures of walls": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Картинки стен"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "墙面图片"
           }
         }
       }
@@ -24910,22 +18150,6 @@
         }
       }
     },
-    "Your files": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваши файлы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的文件"
-          }
-        }
-      }
-    },
     "Clear cache": {
       "localizations": {
         "ru": {
@@ -24986,22 +18210,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "缓存"
-          }
-        }
-      }
-    },
-    "Hide this person": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скрыть этого человека"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐藏此人"
           }
         }
       }
@@ -25262,22 +18470,6 @@
         }
       }
     },
-    "Time": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Время"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时间"
-          }
-        }
-      }
-    },
     "%@ needs build %lld. This build is %lld.": {
       "localizations": {
         "ru": {
@@ -25306,38 +18498,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请安装新版本以继续。"
-          }
-        }
-      }
-    },
-    "Likes": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Лайки"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "点赞"
-          }
-        }
-      }
-    },
-    "Nobody yet": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пока никого"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂时没有人"
           }
         }
       }
@@ -25423,22 +18583,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "未识别到语音"
-          }
-        }
-      }
-    },
-    "Live here and now": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Живи здесь и сейчас"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "活在此时此地"
           }
         }
       }

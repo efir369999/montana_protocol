@@ -34,7 +34,7 @@ func mtIsAudioName(_ name: String) -> Bool {
         .contains((name as NSString).pathExtension.lowercased())
 }
 
-/// A post's measures, one owner for the app and the share sheet: the sheet's preview shows what the wall will take.
+/// A post's measures, one owner for the app and the share sheet: the sheet's preview shows what the post will take.
 enum MTPostMeasure {
     static let files = 10
     static let narrowest = 9.0 / 16.0   // a picture's shape in a post, width over height: from upright 9:16 to wide 16:9
@@ -269,7 +269,7 @@ enum MontanaMedia {
         async -> (blobKey: Data, manifest: [[String: Any]])? {
         // There is a letter name -> the key is derived from it, and the second attempt recognises the chunks of the first.
         // There is no name (the Share extension) -> the old behaviour, a fresh key.
-        // A KEEPER'S KEY (24.09, the wall): a post's keeper lays the same file under the post's own key — the same bytes,
+        // A KEEPER'S KEY (24.09): a post's keeper lays the same file under the post's own key — the same bytes,
         // the same key, the same pieces give the same chunk names the post's manifest already carries.
         let blobKey = key ?? letterMid.map { letterBlobKey($0) } ?? Data(montanaRandom(32))
         let total = source.byteCount

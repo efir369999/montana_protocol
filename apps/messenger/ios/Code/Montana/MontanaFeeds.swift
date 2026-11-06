@@ -276,6 +276,7 @@ enum MTWallpaper {
         if case .photo(let f) = choice(for: conv) { return f }
         return nil
     }
+    #if !MONTANA_MESSENGER
     /// THE PAGES HAVE NO GROUND OF THEIR OWN ANY MORE (the author's word 23.09: «remove the pages' background from
     /// Appearance completely»). A choice nobody can reach again must not keep acting: what an older build stored
     /// for the pages — the picture, its softness, the three kept pictures — is forgotten once, files and all, and
@@ -287,6 +288,7 @@ enum MTWallpaper {
         for f in Set(files) { try? FileManager.default.removeItem(at: folder().appendingPathComponent(f)) }
         for k in ["pagesWall", "pagesWallBlur", "pagesWallRecent"] { d.removeObject(forKey: k) }
     }()
+    #endif
     /// THE SOFTNESS OF -> CHAT'S OWN GROUND (the author's word 23.09: the slider belongs to the chat's
     /// background too). The pages had it and a chat did not — by my decree, not his: "a chat's ground is
     /// sharp and asks nothing" was written here in my own hand. It is kept per conversation, as the choice
@@ -838,7 +840,9 @@ struct MontanaCrestGround: View {
     @ObservedObject private var book = MTWallpaper.Book.shared
     var body: some View {
         let _ = book.rev
+        #if !MONTANA_MESSENGER
         let _ = MTWallpaper.pagesForgotten   // the pages' own ground of older builds, forgotten once (23.09)
+        #endif
         crest
     }
     /// THE CREST IS THE CREST THE AUTHOR PUT THERE (his word 22.09): the Dream Department's arms stand
@@ -920,7 +924,7 @@ struct MTMoment: Identifiable, Equatable {
 /// in the dynamic glyph's slot while the glyph is the gallery's, on the one container of the pages under the bar
 /// (MontanaTimePanelList) -- the rows to the screen's edges, the page's own ground. Every moment of every conversation and my
 /// own stories, in the order the platform's photos keep: the days oldest to newest, each day a header row and its tiles three
-/// to a row (as the wall's), the newest at the bottom, the list opened at its end (endFirst). The moments have ONE builder
+/// to a row, the newest at the bottom, the list opened at its end (endFirst). The moments have ONE builder
 /// kept until the letters change (ChatStore.mediaLibrary): the chats page used to walk every letter twice and ask the disk for
 /// every file on every pass of its body while the gallery stood, and the page itself was born anew in the sliding slot at
 /// every opening -- a grid of 567 tiles and two dozen hosted cells built inside the touch's own turn of the loop (T1, 1945,
@@ -929,7 +933,7 @@ struct MTMoment: Identifiable, Equatable {
 /// (the author's word 25.09: «take the feed out of the gallery; viewing as native as it gets, as the phone's photos» --
 /// MTMomentsViewer, hosted by the chats page); a hold on a tile opens the platform's own menu with the moment's deeds (show in
 /// chat, forward, delete my story); the plus, bottom right as on every page, is the platform's own picker -- videos from the
-/// library into my stories by the one import road. The page searches itself, as the music and the wall do: the word narrows
+/// library into my stories by the one import road. The page searches itself, as the music does: the word narrows
 /// the moments by the name of the conversation they lie in.
 struct GalleryTabView: View {
     @EnvironmentObject private var store: ChatStore
@@ -1452,7 +1456,9 @@ final class MontanaVideoDock: NSObject, ObservableObject {
         if !queue.isEmpty { self.queue = queue }
         if self.file != file {
             VoicePlayer.shared.stepAside()   // one thing plays: a voice stands down, a track steps aside with its place (26.09)
-            MTApps.youtube?.rest()   // and YouTube rests where it stands (MTApps.youtube)
+            #if !MONTANA_MESSENGER
+            MTApps.youtube?.rest()   // and YouTube rests where it stands (the Protocol's alone, cut C4)
+            #endif
             self.file = file; self.chat = chat; self.caption = caption; progress = 0; elapsed = 0; duration = 0
             let url = MontanaMediaVault.playableURL(file) ?? attachmentURL(file)
             track = []; reading = file; badgeAt = nil
@@ -2653,9 +2659,9 @@ enum MTDocLink {
         try? FileManager.default.removeItem(at: dir.appendingPathComponent(file, isDirectory: true))
     }
     /// THE LINKS LEFT BEHIND (18.10.2026, Agent 93, T1: 7.4 GB in this folder under «History and the rest» of Data and Storage): a
-    /// link outlived its document -- the store cleared on the node's word, a wall's tile trimmed -- and alone kept the bytes on the
-    /// disk. The store and the wall's trim take their links with them now (MontanaMediaStore.remove, MTBoardLook.trim); what was
-    /// left before is counted here, a link whose bytes nothing else names, and released by the person's word.
+    /// link outlived its document -- the store cleared on the node's word -- and alone kept the bytes on the disk. The store takes
+    /// its links with it now (MontanaMediaStore.remove); what was left before is counted here, a link whose bytes nothing else
+    /// names, and released by the person's word.
     static func left() -> [(name: String, file: URL, bytes: Int64)] {
         let fm = FileManager.default
         guard let names = try? fm.contentsOfDirectory(atPath: dir.path) else { return [] }
@@ -2672,14 +2678,14 @@ enum MTDocLink {
         return out
     }
     /// The person's word on the links left behind: a chat's file the store or the node holds whole leaves; one neither holds goes
-    /// back into the store, where the node's next pass takes it; a wall's video leaves -- its wall keeps it, not the person's node,
-    /// and the page says so before the word. Nothing that lies only here is lost.
+    /// back into the store, where the node's next pass takes it; a post's file of the Protocol's own applications leaves
+    /// (postLinkPrefixes). Nothing that lies only here is lost.
     static func release() async -> (freed: Int64, back: Int) {
         let all = left()
-        let walls = all.filter { l in l.name.hasPrefix("wall_") }
-        let chats = all.filter { l in !l.name.hasPrefix("wall_") }
+        let posts = all.filter { l in postLinkPrefixes.contains { p in l.name.hasPrefix(p) } }
+        let chats = all.filter { l in !postLinkPrefixes.contains { p in l.name.hasPrefix(p) } }
         var freed: Int64 = 0, back = 0
-        for l in walls { forget(l.name); freed += l.bytes }
+        for l in posts { forget(l.name); freed += l.bytes }
         MTHomeBook.shared.ensure()
         let book = MTHomeBook.shared.all()
         let asked = chats.compactMap { l in book[l.name]?.p }.flatMap { p in p }
@@ -2690,9 +2696,16 @@ enum MTDocLink {
             // the only copy: it goes back into the store, and stays here when the store refuses it
             if MontanaMediaStore.adopt(from: l.file, name: l.name) { back += 1; forget(l.name) }
         }
-        MontanaTrace.mark("doc_links", "released freed=\(freed) back=\(back) walls=\(walls.count) chats=\(chats.count)")
+        MontanaTrace.mark("doc_links", "released freed=\(freed) back=\(back) posts=\(posts.count) chats=\(chats.count)")
         return (freed, back)
     }
+    #if MONTANA_MESSENGER
+    private static let postLinkPrefixes: [String] = []
+    #else
+    /// A wall's video leaves -- its wall keeps it, not the person's node, and the page says so before the word. A wall's tile
+    /// trimmed takes its link with it (MTBoardLook.trim).
+    private static let postLinkPrefixes = ["wall_"]
+    #endif
     static func named(_ src: URL, as name: String) -> URL {
         var clean = name.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
         if clean.isEmpty { clean = src.lastPathComponent }

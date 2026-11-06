@@ -44,6 +44,7 @@ final class MontanaPhoneNode: ObservableObject {
     private(set) var hostKem = Data()    // node's own ML-KEM
     private(set) var overlay = Data()    // SHA256(hostKem)
     @Published private(set) var status = String(localized: "Starting node…", bundle: MTLanguage.bundle)
+    #if !MONTANA_MESSENGER   // the Wi-Fi neighbours, their picker and the neighbours' scan are the mesh's (15846)
     @Published private(set) var peers: [MontanaPeer] = []   // neighbors on Wi-Fi (live scan every 5s)
     @Published var selectedPeerId: String? = nil            // addr of the device chosen in the picker
     @Published private(set) var messages: [P2PMsg] = []     // Wi-Fi conversation, delivered directly
@@ -55,6 +56,7 @@ final class MontanaPhoneNode: ObservableObject {
     private var seenPeers: [String: MontanaPeer] = [:]   // neighborRef -> peer (last known)
     private var seenAt: [String: Date] = [:]            // when each was last heard announcing
     private static let presenceTTL: TimeInterval = 45   // one missed announce is noise; three is absence
+    #endif
     private var pathMonitor: NWPathMonitor?
     private var wifiMonitor: NWPathMonitor?
     private var lteMonitor: NWPathMonitor?
@@ -80,8 +82,10 @@ final class MontanaPhoneNode: ObservableObject {
     private var presenceTimer: DispatchSourceTimer?
     @Published private(set) var wifiOn = false     // Wi-Fi transport available on this device
     @Published private(set) var lteOn = false      // cellular transport available
+    #if !MONTANA_MESSENGER   // the Bluetooth LE mesh is the Protocol's alone (15846)
     @Published private(set) var btPeers: [String] = []   // montana references reachable over the Bluetooth LE mesh
     @Published private(set) var btOn = false             // Bluetooth powered on for this device
+    #endif
     /// Other devices of this same seed, seen on the local network. Not correspondents — the holders that
     /// a reinstalled device asks for its archive (spec s.2 Stages 3-5).
     @Published private(set) var siblings: [MontanaPeer] = []
@@ -89,6 +93,7 @@ final class MontanaPhoneNode: ObservableObject {
     /// everyone in radio range — it travels only over an established end-to-end channel, which is why
     /// a device shows an address until the two have actually spoken.
 
+    #if !MONTANA_MESSENGER   // MontanaBLEMesh's word of who is in range (15846)
     func setBTPeers(_ endpoints: [String]) {
         DispatchQueue.main.async {
             let fresh = Set(endpoints).subtracting(self.btPeers)
@@ -98,6 +103,7 @@ final class MontanaPhoneNode: ObservableObject {
             }
         }
     }
+    #endif
 
     /// A neighbour appearing is enough to build the link. Waiting for the user to press send made the
     /// first message of every conversation pay for the dial and the handshake — about two seconds cold,
@@ -129,6 +135,7 @@ final class MontanaPhoneNode: ObservableObject {
         }
         return out
     }
+    #if !MONTANA_MESSENGER   // written by MontanaBLEMesh alone, the mesh's radio (15846)
     func learnEndpoint(ref: String, ip: String, port: UInt16) {
         guard ref != MontanaPhoneNode.myRef(), !ip.isEmpty, port > 0 else { return }
         let before = MontanaOverlayBook.shared.endpoints(ref: ref).first?.hostPort
@@ -136,12 +143,30 @@ final class MontanaPhoneNode: ObservableObject {
         let hostEndpoint = ip.contains(":") ? "[\(ip)]:\(port)" : "\(ip):\(port)"
         if before != hostEndpoint { MontanaTrace.mark("endpoint_learn", "peer=\(String(ref.prefix(10))) \(hostEndpoint)") }
     }
+    #endif
 
     // SSOT direct-candidate set: live Bonjour discoveries first, then manual, then BLE-learned endpoints.
-    private func directCandidates() -> [MontanaPeer] { peers + Array(learnedPeers.values) }
+    // Messenger meets no Bonjour neighbour (15846): its candidates are the overlay book's alone.
+    private func directCandidates() -> [MontanaPeer] {
+        #if MONTANA_MESSENGER
+        return Array(learnedPeers.values)
+        #else
+        return peers + Array(learnedPeers.values)
+        #endif
+    }
     /// Montana nodes that answered on this local network. There are few -- a home, not a city -- and
     /// each of them is a path to any conversation: addressing is parsed by the sealed envelope, not by an announcement.
+    #if !MONTANA_MESSENGER   // filled by the neighbours' scan alone, the mesh's (15846)
     @Published private(set) var lanNodes: [MontanaPeer] = []
+    #endif
+    /// The trace's word for the nodes of this local network: one owner for the net and held lines. Messenger meets none (15846).
+    private var lanTrace: String {
+        #if MONTANA_MESSENGER
+        return ""
+        #else
+        return "lan=\(lanNodes.count) "
+        #endif
+    }
 
     /// Reachable nodes -- ONE value for the whole client.
     ///
@@ -156,19 +181,26 @@ final class MontanaPhoneNode: ObservableObject {
     var reachableNodes: Int {
         var seen = Set<String>()
         for c in MontanaDirect.shared.liveChannels() { seen.insert("\(c.ip):\(c.port)") }
+        #if !MONTANA_MESSENGER
         for n in lanNodes where n.directPort > 0 { seen.insert("\(n.ip):\(n.directPort)") }
+        #endif
         return seen.count
     }
+    #if !MONTANA_MESSENGER
     func setBTOn(_ on: Bool) { DispatchQueue.main.async { self.btOn = on } }
+    #endif
 
     /// Being findable is the person's choice, and it is ONE switch ([I-10]): while it is off this
     /// device announces itself nowhere — not on the local network, not over the radio — and is reached
     /// only by those who already hold its address.
+    /// The Protocol's alone: Montana Messenger carries no mesh, is never findable on it and compiles none of it (15846).
+    #if !MONTANA_MESSENGER
+    static let meshDiscoverableKey = "mt.mesh.discoverable"
     static var meshDiscoverable: Bool {
-        get { MTApps.mesh != nil && (UserDefaults.standard.object(forKey: "mt.mesh.discoverable") as? Bool ?? false) }
+        get { MTApps.mesh != nil && (UserDefaults.standard.object(forKey: meshDiscoverableKey) as? Bool ?? false) }
         set {
-            guard let mesh = MTApps.mesh else { return }   // Montana Messenger carries no mesh: never findable on it (15846)
-            UserDefaults.standard.set(newValue, forKey: "mt.mesh.discoverable")
+            guard let mesh = MTApps.mesh else { return }
+            UserDefaults.standard.set(newValue, forKey: meshDiscoverableKey)
             mesh.setDiscoverable(newValue)
             // OFF at birth, and the system's local-network question rises only HERE, at the
             // person's own switch (the author's word 27.08): the first advertise/browse is
@@ -197,11 +229,14 @@ final class MontanaPhoneNode: ObservableObject {
         MontanaTrace.mark("discoverable_applied", "on=\(Self.meshDiscoverable) scan=on relay=on")
         startPeerScan()      // finding a way for a letter is not «being findable», and never was
     }
+    #endif
     private var inboxTimer: DispatchSourceTimer?
     private var started = false
     private var lastIfaces = ""
 
-    /// Our packet tunnel is carrying this device's traffic right now.
+    #if !MONTANA_MESSENGER
+    /// Our packet tunnel is carrying this device's traffic right now (the Protocol's alone: Montana Messenger reads no tunnel,
+    /// decision 651 = a).
     static func tunnelUp() -> Bool {
         var ifap: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&ifap) == 0, let first = ifap else { return false }
@@ -226,6 +261,7 @@ final class MontanaPhoneNode: ObservableObject {
     static func isTunnelHost(_ ip: String) -> Bool {
         ip.hasPrefix("198.18.") || ip.lowercased().hasPrefix("fd6d:6f6e:7461:")
     }
+    #endif
 
     /// LAN IPv4 (en0 Wi-Fi). nil if not found.
     static func lanIP() -> String? {
@@ -285,14 +321,17 @@ final class MontanaPhoneNode: ObservableObject {
     // Enabled at the network decentralization stage.
     static let stageGate: Bool = true
 
+    #if !MONTANA_MESSENGER
     private var meshDirectPort: UInt16 = 0
     private var meshStarted = false
+    #endif
     private var seedWatch: NSObjectProtocol?
 
     /// The LOCAL half, lifted separately and only with the person's consent: the router port
     /// map, the Bonjour announce (when discoverable), the neighbour scan and the radio. The
     /// system's "find devices on local networks" prompt belongs to this half alone — refusing
     /// it costs the mesh, never the nodes.
+    #if !MONTANA_MESSENGER   // Montana Messenger carries no mesh: no local half to lift (15846)
     func startLocalMeshIfAccepted() {
         guard Self.stageGate, started, Self.meshDiscoverable, !meshStarted else { return }
         meshStarted = true
@@ -308,6 +347,7 @@ final class MontanaPhoneNode: ObservableObject {
         startPeerScan()
         if Self.meshDiscoverable { MTApps.mesh?.start() }
     }
+    #endif
 
     /// An identity is born AFTER launch, and the first core call arrives in a world where the seed is
     /// not there yet. The core left this call silently and rose only on the next opening of the app --
@@ -342,7 +382,12 @@ final class MontanaPhoneNode: ObservableObject {
         // always. The mesh — port mapping, the Bonjour announce, the neighbour scan, the
         // radio — is the LOCAL half behind the intro and the system prompt. One gate over
         // both once meant: refuse the local network and the node path died with it.
-        if started { startLocalMeshIfAccepted(); return }   // the intro accepted later lifts the mesh over a live core
+        if started {
+            #if !MONTANA_MESSENGER
+            startLocalMeshIfAccepted()   // the intro accepted later lifts the mesh over a live core
+            #endif
+            return
+        }
         // The core lives by ONE condition -- there is an identity. Neither the answer about the local
         // network nor the order in which the seed appeared commands it: the question is about mesh,
         guard let mnemonic = MontanaSeed.mnemonic else { awaitSeed(); return }
@@ -378,8 +423,10 @@ final class MontanaPhoneNode: ObservableObject {
                 MontanaNATService.shared.start(directPort: dport)
                 // The nodes this device knows of.
                 MontanaNodes.open()
+                #if !MONTANA_MESSENGER
                 self.meshDirectPort = dport
                 self.startLocalMeshIfAccepted()
+                #endif
             }
             self.startPathMonitor()
             // Registering the receiving queue on our own node (loopback) runs in the background so that
@@ -477,7 +524,11 @@ final class MontanaPhoneNode: ObservableObject {
         let nodes = MontanaNodes.liveNodes
         let channels = MontanaDirect.shared.liveChannels().count
         let ownDoor = Date().timeIntervalSince(MontanaDirect.shared.lastGlobalInboundAt) < 60
+        #if MONTANA_MESSENGER
+        let radio = false   // no mesh, no radio between phones (15846)
+        #else
         let radio = (MTApps.mesh?.linkCount ?? 0) > 0 && !btPeers.isEmpty
+        #endif
         let up = started && nodes > 0
         // The verdict exists once we hold a node, or once the doors have been knocked and
         // answered — silence before the first knock is ignorance, not absence.
@@ -501,8 +552,12 @@ final class MontanaPhoneNode: ObservableObject {
         // Diagnostics only: how many correspondents a message would reach right now.
         var reachable = 0
         let known = Set(MontanaOverlayBook.shared.allEntries().map { $0.ref }.filter { !$0.isEmpty })
-            .union(seenPeers.keys).union(btPeers)
-        for w in known where !plan(to: w).isEmpty { reachable += 1 }
+        #if MONTANA_MESSENGER
+        let counted = known
+        #else
+        let counted = known.union(seenPeers.keys).union(btPeers)   // the Wi-Fi and the radio's neighbours (15846)
+        #endif
+        for w in counted where !plan(to: w).isEmpty { reachable += 1 }
         reachablePeers = reachable
     }
 
@@ -521,12 +576,15 @@ final class MontanaPhoneNode: ObservableObject {
     /// doubling runs on to sixteen minutes; a channel that stands forgets it, and a network that returns asks every address anew.
     private static let pathStepMax: Double = 960
     private var pathEpochSeen = 0
+    #if !MONTANA_MESSENGER
     private var bleStateAt = Date.distantPast
+    #endif
 
     private func maintainPaths() {
         guard Self.stageGate, started else { return }
         MontanaNodes.open()
         let now = Date()
+        #if !MONTANA_MESSENGER   // the radio is the mesh's (15846)
         if now.timeIntervalSince(bleStateAt) >= 30 {
             bleStateAt = now
             // A switched-off radio says so ONCE. A line every half minute about a thing that
@@ -536,6 +594,7 @@ final class MontanaPhoneNode: ObservableObject {
                 + "peers=\(MTApps.mesh?.knownPeerCount ?? 0) queue=\(MTApps.mesh?.queuedFragments ?? 0)"
             MontanaTrace.markChanged("ble_state", s)
         }
+        #endif
         MontanaTrace.markChanged("roads", "all")
         let epoch = Self.pathEpoch
         if epoch != pathEpochSeen { pathEpochSeen = epoch; pathAt.removeAll(); Self.unparkAll() }   // the network came back: every address is a question again
@@ -594,11 +653,19 @@ final class MontanaPhoneNode: ObservableObject {
         let nodes = MontanaNodes.live().map { $0.label }.joined(separator: ",")
         // The measure is the CHANGE (16.1.2): 47 of 48 lines in a quarter of an hour said the
         // same thing. The line speaks when its content differs from the last one written.
-        MontanaTrace.markChanged("net", "disc=\(Self.meshDiscoverable ? 1 : 0) nodes=\(reachableNodes)"
-            + "(lan=\(lanNodes.count) chan=\(MontanaDirect.shared.liveChannels().count) "
+        // The mesh's part -- whether this phone offers itself, the router's door, the radio's neighbours -- the Protocol's alone (15846).
+        #if MONTANA_MESSENGER
+        let mesh = "", radio = ""
+        #else
+        let radio = " ble=\(btPeers.count)"
+        let mesh = "disc=\(Self.meshDiscoverable ? 1 : 0) ext=\(MTApps.mesh?.routerDoor.external ?? ""):\(MTApps.mesh?.routerDoor.port ?? 0) "
+        #endif
+        let chan = MontanaDirect.shared.liveChannels().count
+        MontanaTrace.markChanged("net", mesh + "nodes=\(reachableNodes)"
+            + "(" + lanTrace + "chan=\(chan) "
             + "relay=\(MontanaNodes.liveNodes) doors=\(MontanaNodes.liveDoors))[\(nodes)] "
-            + "port=\(MontanaDirect.shared.port) ext=\(MTApps.mesh?.routerDoor.external ?? ""):\(MTApps.mesh?.routerDoor.port ?? 0) "
-            + "wifi=\(wifiOn ? 1 : 0) lte=\(lteOn ? 1 : 0) ble=\(btPeers.count)")
+            + "port=\(MontanaDirect.shared.port) "
+            + "wifi=\(wifiOn ? 1 : 0) lte=\(lteOn ? 1 : 0)" + radio)
     }
 
     /// Whether the system's current path carries IPv6 (NWPath.supportsIPv6), written by the path monitor at every update.
@@ -639,14 +706,20 @@ final class MontanaPhoneNode: ObservableObject {
             DispatchQueue.main.async { self.netUp = up }
             MontanaLog.event("node net path -> \(up ? "up" : "down")")
             if !up {
+                #if MONTANA_MESSENGER
+                DispatchQueue.main.async { self.nodeUp = false }
+                #else
                 self.seenPeers.removeAll()
                 DispatchQueue.main.async { self.peers = []; self.nodeUp = false }
+                #endif
             } else {
                 Self.pathReturned()
                 self.refreshNodePresence()
+                #if !MONTANA_MESSENGER
                 if self.localPort > 0, Self.meshDiscoverable {
                     self.courier.advertiseMDNS(port: self.localPort, directPort: MontanaDirect.shared.port)
                 }
+                #endif
                 // The network returned -- a redial WITHOUT force: a live channel is not touched
                 // (reprobeNode drops only the certainly dead), we raise only what is missing.
                 DispatchQueue.global(qos: .userInitiated).async { MontanaNodes.openNow() }
@@ -661,11 +734,15 @@ final class MontanaPhoneNode: ObservableObject {
             guard let self else { return }
             let on = (p.status == .satisfied)
             if !on {
+                #if MONTANA_MESSENGER
+                DispatchQueue.main.async { self.wifiOn = false }
+                #else
                 // Wi-Fi gone: LAN-scoped discoveries are unreachable over cellular by construction —
                 // drop them so the direct route cannot pick a dead endpoint (Bonjour re-adds on return).
                 self.seenPeers = self.seenPeers.filter { MontanaTransport.isGlobalIP($0.value.ip) }
                 let list = Array(self.seenPeers.values)
                 DispatchQueue.main.async { self.peers = list; self.wifiOn = false }
+                #endif
             } else {
                 DispatchQueue.main.async { self.wifiOn = true }
             }
@@ -682,6 +759,7 @@ final class MontanaPhoneNode: ObservableObject {
     /// Connect link to hand to a peer: this node's address on the network it is on.
     /// montana://p2p/<neighborRef>/<ip>/<directPort>.
 
+    #if !MONTANA_MESSENGER   // the neighbours' scan is the mesh's, started only by its switch (15846)
     private func startPeerScan() {
         scanTimer?.cancel()
         let t = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
@@ -736,6 +814,7 @@ final class MontanaPhoneNode: ObservableObject {
         t.resume()
         scanTimer = t
     }
+    #endif
 
     // iOS suspends a backgrounded app -> its Bonjour advertisement dies and neighbors lose it (red).
     // On return to the foreground re-publish immediately so the neighbor sees us again without waiting.
@@ -750,9 +829,11 @@ final class MontanaPhoneNode: ObservableObject {
             MontanaTrace.mark("wake_seen", "n=\(wakes.count) last_ago_s=\(last)")
         }
         guard started, localPort > 0 else { MontanaLog.event("P2P foreground -> autoStart (node was not up)"); autoStart(); return }
+        #if !MONTANA_MESSENGER
         guard Self.meshDiscoverable else { return }
         MontanaLog.event("P2P foreground -> re-advertise \(lanEndpoint)")
         courier.advertiseMDNS(port: localPort, directPort: MontanaDirect.shared.port)
+        #endif
     }
     func onBackground() {
         guard Self.stageGate else { return }
@@ -781,17 +862,28 @@ final class MontanaPhoneNode: ObservableObject {
         var live = false                                 // an established Noise_PQ channel — tens of ms
         var endpoints: [MontanaPeerEndpoint] = []        // dialable endpoints, shortest first
         var transit: Data? = nil                         // destination overlay, reachable THROUGH other peers
-        var ble = false                                  // in Bluetooth range
+        #if !MONTANA_MESSENGER
+        var ble = false                                  // in Bluetooth range: the mesh's radio (15846)
+        #endif
         var nodes = 0                                    // nodes standing right now — a way into the mesh
         var medium: MontanaTransport? = nil              // what a message over this plan is tagged with
-        var isEmpty: Bool { !live && endpoints.isEmpty && transit == nil && !ble && nodes == 0 }
+        var isEmpty: Bool {
+            #if MONTANA_MESSENGER
+            return !live && endpoints.isEmpty && transit == nil && nodes == 0
+            #else
+            return !live && endpoints.isEmpty && transit == nil && !ble && nodes == 0
+            #endif
+        }
         // Named for the trace, so a message that did not move says why in one word.
         var route: String {
             if live { return "live" }
             if !endpoints.isEmpty { return "direct" }
             if transit != nil { return "transit" }
             if nodes > 0 { return "node" }
-            return ble ? "bluetooth" : "none"
+            #if !MONTANA_MESSENGER
+            if ble { return "bluetooth" }
+            #endif
+            return "none"
         }
     }
 
@@ -799,7 +891,9 @@ final class MontanaPhoneNode: ObservableObject {
         var p = ReachPlan()
         guard Self.stageGate, !peerRef.isEmpty else { return p }
         p.live = hasLiveChannel(peerRef)
+        #if !MONTANA_MESSENGER
         p.ble = btPeers.contains(peerRef)
+        #endif
 
         // Addresses, ordered by how short the path is: this LAN first (a Bonjour neighbour answers in
         // under a hundred milliseconds), then globally routable ones, and never a LAN address while
@@ -807,8 +901,13 @@ final class MontanaPhoneNode: ObservableObject {
         var seen = Set<String>()
         var lan: [MontanaPeerEndpoint] = [], global: [MontanaPeerEndpoint] = []
         let now = Date().timeIntervalSince1970
+        #if MONTANA_MESSENGER
+        let candidate = "book"   // the overlay book alone: Messenger meets no Bonjour neighbour (15846)
+        #else
+        let candidate = "bonjour"
+        #endif
         for cand in directCandidates() where cand.neighborRef == peerRef && cand.directPort > 0 {
-            let ep = MontanaPeerEndpoint(ip: cand.ip, port: cand.directPort, at: now, source: "bonjour")
+            let ep = MontanaPeerEndpoint(ip: cand.ip, port: cand.directPort, at: now, source: candidate)
             guard MTLocalNetwork.admits(ep.ip), seen.insert(ep.hostPort).inserted else { continue }
             // A neighbour ANSWERED on this network a moment ago — that answer is the proof the
             // network is there, and it is a better proof than a flag about interfaces. The flag
@@ -856,7 +955,10 @@ final class MontanaPhoneNode: ObservableObject {
         p.nodes = MontanaNodes.liveNodes
         if p.live || !p.endpoints.isEmpty || p.transit != nil || p.nodes > 0 {
             p.medium = MontanaTransport.delivery(cellularEgress: !wifiOn && lteOn)
-        } else if p.ble { p.medium = .bluetooth }
+        }
+        #if !MONTANA_MESSENGER
+        if p.medium == nil, p.ble { p.medium = .bluetooth }
+        #endif
         return p
     }
 
@@ -1005,8 +1107,13 @@ final class MontanaPhoneNode: ObservableObject {
         // Prefer the Wi-Fi direct channel (instant persistent push); fall back to the Bluetooth mesh.
         // Per-message glyph = physical medium: cellular egress -> cellular, else Wi-Fi.
         let p = plan(to: peerRef)
+        #if MONTANA_MESSENGER
+        let radio = ""
+        #else
+        let radio = "ble=\(p.ble) "
+        #endif
         MontanaTrace.mark("send", mid: mid, "dir=out kind=\(MontanaNotify.kind(for: text)) to=\(String(peerRef.prefix(10))) route=\(p.route) via=\(p.medium?.rawValue ?? "none") "
-            + "live=\(p.live) eps=\(p.endpoints.map { $0.hostPort }.joined(separator: ",")) transit=\(p.transit != nil) ble=\(p.ble) relay=\(p.nodes) "
+            + "live=\(p.live) eps=\(p.endpoints.map { $0.hostPort }.joined(separator: ",")) transit=\(p.transit != nil) " + radio + "relay=\(p.nodes) "
             + routeWitness(peerRef))
 
         // A near transport and a path are different things, and here they are separated.
@@ -1019,12 +1126,15 @@ final class MontanaPhoneNode: ObservableObject {
         // DISTINCT owners named by the Canon, and while there are fewer, a letter does not leave but
         // waits in the queue. Dialling the peer's global address directly is exactly what the set forbids: "no direct
         // path exists — not as a default, not as a retreat, and not as a choice offered to a person».
-        let bleOK = p.ble
+        #if !MONTANA_MESSENGER
+        let bleOK = p.ble   // the mesh's radio, the Protocol's alone (15846)
+        #endif
         let near = p.endpoints.filter { MontanaPath.isNear($0) }
         // Near transport over the wire: the envelope is laid before ALL nodes of this network under the
         // label of its own pipe. The label holder will open it, the rest will carry it. The peer address
         // is not here and is not needed -- it does not exist by the set, and trying to "dial them" was an
         // error of construction, not of settings.
+        #if !MONTANA_MESSENGER   // the nodes of this network are met by the mesh's scan alone (15846)
         if !lanNodes.isEmpty, let tag = MTPipeBook.outgoingTag(for: peerRef) {
             for n in lanNodes where n.directPort > 0 {
                 MontanaDirect.shared.ensureChannel(ip: n.ip, port: n.directPort, ref: nil) { _ in }
@@ -1038,12 +1148,18 @@ final class MontanaPhoneNode: ObservableObject {
                 return left(.wifi)
             }
         }
+        #endif
         let ownerRefs = MontanaDirect.shared.ownerRefsOfLiveChannels(excluding: peerRef)
         let owners = MontanaPath.distinctOwners(among: ownerRefs)
         let pathOK = owners >= MontanaPath.hopMin
-        if near.isEmpty, !bleOK, !pathOK {
+        #if MONTANA_MESSENGER
+        let held = near.isEmpty && !pathOK
+        #else
+        let held = near.isEmpty && !bleOK && !pathOK
+        #endif
+        if held {
             MontanaTrace.mark("held", mid: mid, "owners=\(owners)/\(MontanaPath.hopMin) named=\(ownerRefs.count) "
-                + "nodes=\(reachableNodes)(lan=\(lanNodes.count) relay=\(MontanaNodes.liveNodes))")
+                + "nodes=\(reachableNodes)(" + lanTrace + "relay=\(MontanaNodes.liveNodes))")
             let hold = Hold.pathNotAssembled(owners: owners, nodes: reachableNodes)
             DispatchQueue.main.async { self.lastHold = hold }
             return nil
@@ -1062,7 +1178,11 @@ final class MontanaPhoneNode: ObservableObject {
 
         // How many endpoints to try at once. Without a tunnel an extra dial is free; with a tunnel every
         // stream goes through an extension under a hard memory bound, so the fan narrows to one.
+        #if MONTANA_MESSENGER
+        let fanOut = 3
+        #else
         let fanOut = MontanaPhoneNode.tunnelUp() ? 1 : 3
+        #endif
         // Over a near transport -- directly. Into the network -- only when the path is assembled, and
         // then the envelope goes not to the peer address but to carriers: they lead it on by the label.
         var any = false
@@ -1073,7 +1193,9 @@ final class MontanaPhoneNode: ObservableObject {
         if any {
             noteLeftByStandingRoad(mid)   // 16.6.16: a near dial of our own delivers or fails within seconds — the retry bells then
             MontanaTrace.mark("sent_route", mid: mid, "route=lan carrier=dial")
+            #if !MONTANA_MESSENGER
             if bleOK { scheduleBluetoothFallback(to: peerRef, envelope: envelope, mid: mid) }
+            #endif
             return left(p.medium)
         }
 
@@ -1085,7 +1207,9 @@ final class MontanaPhoneNode: ObservableObject {
            MontanaDirect.shared.sendUnderTag(tag, payload: envelope, mid: mid) {
             MontanaTrace.mark("node_tx", mid: mid, "relay=\(MontanaNodes.liveNodes)")
             MontanaTrace.mark("sent_route", mid: mid, "route=node")
+            #if !MONTANA_MESSENGER
             if bleOK { scheduleBluetoothFallback(to: peerRef, envelope: envelope, mid: mid) }
+            #endif
             return left(p.medium ?? MontanaTransport.delivery(cellularEgress: !wifiOn && lteOn))
         }
 
@@ -1094,15 +1218,19 @@ final class MontanaPhoneNode: ObservableObject {
         // destination alone; the receiver's dedup makes a duplicate copy free.
         if pathOK, let dst = p.transit, MontanaDirect.shared.sendVia(dstOverlay: dst, payload: envelope, mid: mid) {
             MontanaTrace.mark("sent_route", mid: mid, "route=transit")
+            #if !MONTANA_MESSENGER
             if bleOK { scheduleBluetoothFallback(to: peerRef, envelope: envelope, mid: mid) }
+            #endif
             return left(p.medium)
         }
         // Nothing on the network at all — radio is the only way left.
+        #if !MONTANA_MESSENGER
         if MTApps.mesh?.send(to: peerRef, envelope: envelope) == true {
             MontanaTrace.mark("bt_tx", mid: mid, "only")
             MontanaTrace.mark("sent_route", mid: mid, "route=ble")
             return left(.bluetooth)
         }
+        #endif
         // No route right now: ask the mesh where this peer is (Stage 6 DHT — signed, serverless) and
         // open the path (Stage 4 — UDP warm-up + simultaneous TCP open). The delivery engine holds the
         // message and drains it the moment the channel comes up, so nothing is lost by returning nil.
@@ -1114,16 +1242,19 @@ final class MontanaPhoneNode: ObservableObject {
     /// keeps reading as reachable and the route keeps choosing a port nobody listens on. Then look the
     /// peer up in the mesh right away, so the next attempt has a fresh address instead of the dead one.
     func forgetEndpoint(ref: String, ip: String, port: UInt16) {
+        #if !MONTANA_MESSENGER   // the Wi-Fi neighbours are the mesh's scan (15846)
         if let p = seenPeers[ref], p.ip == ip, p.directPort == port {
             seenPeers[ref] = nil
             peers = Array(seenPeers.values)
         }
+        #endif
         openPath(to: ref)
     }
 
     /// Radio takes over only when the network tier has had its chance and did not deliver. The wait is
     /// short enough that a failure is not felt, and long enough that a channel coming up wins — which
     /// it usually does in about a hundred milliseconds.
+    #if !MONTANA_MESSENGER   // the mesh's radio is the Protocol's alone (15846)
     private func scheduleBluetoothFallback(to peer: String, envelope: Data, mid: String) {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) { [weak self] in
             guard let self, !self.hasLiveChannel(peer) else { return }
@@ -1133,6 +1264,7 @@ final class MontanaPhoneNode: ObservableObject {
             }
         }
     }
+    #endif
 
     /// Bring a path to this peer up out of band: fresh endpoints from the DHT, then punch + dial. Used
     /// by the delivery engine's reachability drive and by the manual mesh test.
@@ -1152,7 +1284,11 @@ final class MontanaPhoneNode: ObservableObject {
             MontanaDirect.shared.sendBlob(toRef: peerRef, ip: peer.ip, port: peer.directPort, blobId: blobId, sealed: sealed)
             return true
         }
+        #if MONTANA_MESSENGER
+        return false
+        #else
         return MTApps.mesh?.sendBlob(to: peerRef, blobId: blobId, sealed: sealed) == true   // cross-network: blob over the BLE mesh
+        #endif
     }
 
     /// The first byte says what the frame is: a sealed blob opens with zero, a letter with this.

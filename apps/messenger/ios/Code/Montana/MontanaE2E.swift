@@ -150,7 +150,7 @@ enum MTPeerAbout {
 extension Notification.Name { static let montanaPeerAboutArrived = Notification.Name("montanaPeerAboutArrived") }
 
 /// THE ONE OWNER OF THE MODAL STACK (25.09). Ten places presented and dismissed by hand -- the photo host, the system
-/// share sheet over it, the player, the wall's composer, the alerts -- each finding the topmost controller and giving the
+/// share sheet over it, the player, a post's composer, the alerts -- each finding the topmost controller and giving the
 /// platform's transition machine its own order, with no regard for a move in flight or a child still standing, and not one
 /// of them left a line in the diary. The 15 Pro Max, 20:27:23-20:33:13Z: the share sheet raised over the photo took every
 /// touch for six minutes across four returns to the screen while the main thread beat, until the app was swept away -- and
@@ -566,14 +566,19 @@ final class E2E {
             }
         }
         let name = MontanaDeliveryEngine.Announced.nameWireTag(store?.peerNames[peer] ?? "")
-        // «W» + my wall's version (24.09): the visitor fetches my page when it changes — never when they look at it. «C» + my
+        // «W» + my page's version (24.09): the visitor fetches my page when it changes — never when they look at it. «C» + my
         // balance (04.10), right after the ground's digits: the same uppercase and digits, unread by every older build. «L» + my
         // Global Level (11.10) after the balance: every older reader of the balance stops at its first letter.
         // «Q» last (16.10.2026 No.72): this build's extension takes a deletion for everyone quietly -- a deletion may wake it.
         // Nothing of the fabric rides here (18.10.2026): a testimony names the correspondence by its own secret, so no word tells whom
-        // to name, and a value the same to every correspondent would name the person to them all ([I-17]). An edition with no wall
-        // says «W» with no digits (slice S4c2): the ground's tag after it is still read, and no version is heard.
-        return "F" + face + "N" + name + "A" + MTPeerAbout.heldTag(peer) + "W" + (MTApps.wall?.spokenVersion(for: peer) ?? "")
+        // to name, and a value the same to every correspondent would name the person to them all ([I-17]). The Messenger says the
+        // letter W with no digits (cut C6): the word's shape is the wire's, the ground's tag after it is still read.
+        #if MONTANA_MESSENGER
+        let w = ""
+        #else
+        let w = MTApps.wall?.spokenVersion(for: peer) ?? ""
+        #endif
+        return "F" + face + "N" + name + "A" + MTPeerAbout.heldTag(peer) + "W" + w
             + "G" + MTPageGround.heldTag(peer) + E2E.coinTail() + E2E.levelTail() + "Q"
     }
     /// The bio's tag stands right after the name's digits; a build before 24.09 names nothing of it.
@@ -584,7 +589,7 @@ final class E2E {
         let d = rest.dropFirst().prefix { $0.isNumber }
         return d.isEmpty ? nil : String(d)
     }
-    /// The tag of my page's ground on their screen stands after the wall's version; a build before it names nothing.
+    /// The tag of my page's ground on their screen stands after the page's version; a build before it names nothing.
     static func groundHeld(in payload: Substring) -> String? {
         guard let i = payload.firstIndex(of: "N") else { return nil }
         var rest = payload[payload.index(after: i)...].drop { $0.isNumber }
@@ -624,8 +629,12 @@ final class E2E {
     /// (MTLevelShow) and only once this life knows the person's seconds and, where the edition carries coins, the book -- an unknown
     /// level is not said as none.
     static func levelTail() -> String {
-        guard MTEdition.levels, MTLevelShow.on, let person = MTPersonLevel.now, let wallet = MTPersonChain.walletTerm else { return "" }
+        #if MONTANA_MESSENGER
+        return ""   // Messenger carries no levels and says none to a pair (decision 618 (b), cut C3a)
+        #else
+        guard MTLevelShow.on, let person = MTPersonLevel.now, let wallet = MTPersonChain.walletTerm else { return "" }
         return "L" + String(MTPersonChain.global(person: person, wallet: wallet))
+        #endif
     }
     /// The level a peer's word tells stands after the balance's digits, or after the ground's when the coins are hidden. nil: the
     /// word names none of the held tags (a book not yet read, a build before the ground) and says nothing of the level; -1: it
@@ -699,6 +708,7 @@ final class E2E {
         let myAbout = MontanaDeliveryEngine.Announced.aboutTag(bio: MTPeerAbout.myBio, link: MTPeerAbout.myLink)
         let faceOff = f != myFace, nameOff = n != myName
         let heldAbout = Self.aboutHeld(in: payload)
+        #if !MONTANA_MESSENGER
         // Their wall's version stands after the bio's tag; a build before the wall names nothing of it.
         func wallHeard() -> String? {
             guard let i = payload.firstIndex(of: "N") else { return nil }
@@ -712,6 +722,7 @@ final class E2E {
             if Thread.isMainThread { MTApps.wall?.heard(version: wv, from: peer) }
             else { DispatchQueue.main.async { MTApps.wall?.heard(version: wv, from: peer) } }
         }
+        #endif
         let heldGround = Self.groundHeld(in: payload)
         // A ground still being made compares with nothing: it goes to them when it is ready (MTPageGround.prepare).
         let groundOff = heldGround.map { h in MTPageGround.mine().map { $0.tag != h } ?? false } ?? false
@@ -902,8 +913,8 @@ final class E2E {
     private static func presencePeers() -> [String] {
         let order = E2E.shared.store?.orderSeq ?? [:]
         let held = Set(MTPipeBook.all()).filter { MontanaConv.holds($0) && MTSamePair.merged($0) == nil }   // a folded pipe only forwards
-        // WIDENED TO 128 (25.09): the word that says «my build speaks the wall» and names its version rides here, and the owner
-        // carries the wall to whoever spoke it — past thirty-two correspondents the rest never heard of a wall at all.
+        // WIDENED TO 128 (25.09): the word that says my build speaks pages and names its version rides here, and the owner
+        // carries the page to whoever spoke it — past thirty-two correspondents the rest never heard of a page at all.
         return Array(held.sorted { (order[$0] ?? 0, $0) > (order[$1] ?? 0, $1) }.prefix(128))
     }
     /// Those greeted in this life: the farewell reaches them whatever the list's order has become since (24.09, the
@@ -946,7 +957,7 @@ final class E2E {
     /// moment the person was never there. `again` is the privacy switch's: the light returns though the state stood.
     private static var appSaid: Bool?
     /// THE FAREWELL WAITS A BREATH (29.09). A leaving said the instant the application left the screen, and a return said
-    /// «here» again: a person posting to the wall from the photos, locking and unlocking, switching apps, said «gone» and
+    /// «here» again: a person posting from the photos, locking and unlocking, switching apps, said «gone» and
     /// «here» to every correspondence at each turn -- twenty-four peers, two doors each, 96 posts a turn, up to 228 signal
     /// posts a minute on T1 (23:26-23:31Z, 28.09), every one a connection through the tunnel. The farewell now leaves
     /// awayGraceS after the door closes, inside the same hold that keeps the process alive; a return within the grace

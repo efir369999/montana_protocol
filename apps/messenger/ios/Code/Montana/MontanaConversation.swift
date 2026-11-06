@@ -558,6 +558,13 @@ struct LiveDraftSection: View {
 
 
 
+#if !MONTANA_MESSENGER
+extension ChatInputBar {
+    /// The bar of the mesh wall's room (meshRoom): set where the page draws it, the Protocol's alone (15846).
+    func meshWall(_ on: Bool) -> ChatInputBar { var b = self; b.meshRoom = on; return b }
+}
+#endif
+
 /// WHAT THE «+» HOLDS, AS ONE VALUE (the author word 22.09): from the second line the plate opens
 /// flat — its actions stand in a line under the field — so the bar is handed every one of them.
 struct MTComposeActions {
@@ -601,10 +608,12 @@ struct ChatInputBar: View {
     var onPasteImages: ([UIImage]) -> Void = { _ in }   // pictures pasted into the field (the author's word 10.09)
     var hasAttachment = false               // something waits above the field: the arrow sends even an empty field
     var hint = false                        // a press too short for a tape: the field says how to record
+    #if !MONTANA_MESSENGER   // the Protocol's alone: Montana Messenger carries no mesh, nor its room (15846)
     /// THE MESH WALL'S BAR (29.09): the room's pictures, files, stickers and voices ride the radio (MTMeshRoom.share); a place,
     /// a person's card and one's own card are words of the app the room does not carry, and a round video note is past the
     /// radio's measure -- so their buttons do not stand, and the microphone records the voice alone.
     var meshRoom = false
+    #endif
     /// A BAR OF WORDS ALONE: no picture, file, voice or round note stands, and the arrow is the bar's end.
     var textOnly = false
     // A GROUP'S BAR IS THE PAIR'S BAR, KEY FOR KEY (the author's word 17.10.2026 19:3x UTC: «in groups and channels every button under
@@ -636,7 +645,12 @@ struct ChatInputBar: View {
     var coinPicks = false
     var onSendCoin: (Int) -> Void = { _ in }
     static let coinMode = "coin"
-    private var coinMode: Bool { coins && mediaMode == Self.coinMode && !meshRoom && !textOnly }
+    private var coinMode: Bool {
+        #if !MONTANA_MESSENGER
+        if meshRoom { return false }   // the mesh wall carries no coin
+        #endif
+        return coins && mediaMode == Self.coinMode && !textOnly
+    }
     /// The number written in the coin's mode: digits alone, the thousands' commas and spaces aside; any other letter makes none.
     private var coinAmount: Int {
         let digits = model.text.filter { ch in !ch.isWhitespace && ch != "," }
@@ -820,13 +834,18 @@ struct ChatInputBar: View {
                 rowGlyph("doc") { showEmoji = false; actions.file() }
                 Spacer(minLength: 0)
             }
-            if !meshRoom && !textOnly {
-                rowGlyph("location") { showEmoji = false; actions.location() }
-                Spacer(minLength: 0)
-                rowGlyph("person.crop.circle") { showEmoji = false; actions.contact() }
-                Spacer(minLength: 0)
-            }
+            #if MONTANA_MESSENGER
+            if !textOnly { placeAndCard }
+            #else
+            if !meshRoom && !textOnly { placeAndCard }   // the mesh wall carries neither
+            #endif
         }
+    }
+    @ViewBuilder private var placeAndCard: some View {
+        rowGlyph("location") { showEmoji = false; actions.location() }
+        Spacer(minLength: 0)
+        rowGlyph("person.crop.circle") { showEmoji = false; actions.contact() }
+        Spacer(minLength: 0)
     }
     private func rowGlyph(_ glyph: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
@@ -954,7 +973,11 @@ struct ChatInputBar: View {
         } else if !textOnly && ((model.text.trimmingCharacters(in: .whitespaces).isEmpty && !hasAttachment) || recording) {
             // A single tap switches the mode (microphone ↔ camera); press and HOLD records in the
             // current mode — released to send, slid left to cancel (the author's word 10.09).
+            #if MONTANA_MESSENGER
+            let video = mediaMode == "video"
+            #else
             let video = mediaMode == "video" && !meshRoom   // the mesh wall records the voice alone
+            #endif
             // Press and HOLD records in the current mode — released to send, slid left to cancel,
             // carried up to the lock and let go to record hands-free (the author's word 10.09);
             // a single tap switches microphone and camera. LOCKED, the swollen button STAYS at
@@ -1010,7 +1033,12 @@ struct ChatInputBar: View {
                         onVerdict: { v in
                             switch v {
                             case .tap:
-                                if !recording { rec.standDown(); if !meshRoom { mediaMode = video ? (coins ? Self.coinMode : "mic") : "video" } }   // a tap mid-recording switches nothing; the mesh wall keeps the voice
+                                guard !recording else { break }   // a tap mid-recording switches nothing
+                                rec.standDown()
+                                #if !MONTANA_MESSENGER
+                                if meshRoom { break }   // the mesh wall keeps the voice
+                                #endif
+                                mediaMode = video ? (coins ? Self.coinMode : "mic") : "video"
                             case .lock:
                                 // Let go at the lock (or the system took the touch): the tape rolls on
                                 // hands-free — the crown's arrow sends, its pause and bin stand by.
@@ -1115,9 +1143,14 @@ struct ChatConversationView: View {
         if rowCache.messageChat == chat.name, rowCache.messageRevision == store.messagesRev {
             return rowCache.messages
         }
-        // A step of a chess game is not a row of the feed (29.09): the board reads those letters from the store itself. The letter
-        // that closes a game is (the author's word 06.10.2026 20:2x UTC): it says how the game ended -- and nothing of coins.
-        let a = (store.messages[chat.name] ?? []).filter { m in !m.isGameStep || m.gameLetter?.ends == true }
+        // A letter of a retired kind is no row of the feed (mtRetiredLetter; Messenger's secret letter, decision 668 (a)).
+        #if MONTANA_MESSENGER
+        let a = (store.messages[chat.name] ?? []).filter { m in !mtRetiredLetter(m.text) }
+        #else
+        // A step of a chess game is not a row of the feed either (29.09): the board reads those letters from the store itself. The
+        // letter that closes a game is (the author's word 06.10.2026 20:2x UTC): it says how the game ended -- and nothing of coins.
+        let a = (store.messages[chat.name] ?? []).filter { m in (!m.isGameStep || m.gameLetter?.ends == true) && !mtRetiredLetter(m.text) }
+        #endif
         var sorted = true
         for i in 1..<max(a.count, 1) where ChatStore.before(a[i], a[i - 1]) { sorted = false; break }
         rowCache.messages = sorted ? a : a.sorted(by: ChatStore.before)
@@ -1182,15 +1215,17 @@ struct ChatConversationView: View {
     @State private var showGallery = false
     @State private var showFileImporter = false
     @State private var modal: ChatModal?      // what we show full-screen (camera/photo/video/file)
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
     @State private var chessGame: MTGamePush?   // a game opened from its invitation, on this chat's own stack (29.09)
     @State private var chessPlayed: String?      // the pair's game while it is played (MTApps.chess.playedGame): the mark's ring
     @State private var askChess = false          // the platform's question before a new game
+    #endif
     @State private var roomAsk: MTRoomKind?      // a group's call chosen at the top: whom to invite (07.10)
     @State private var roomAskVideo = false
     @State private var groupRefusal: String?     // what the group took from its members, said when this phone tries it (G.5)
     @State private var askEraseGroup = false     // out of a group: «Delete and Exit» asks first (stage R)
     @AppStorage("composeMediaMode") private var composeMediaMode = "mic"
-    @State private var wallPage: MTPageRoute?   // the wall a post's card opens, on this chat's own stack (30.09)
+    @State private var personPage: MTPageRoute?   // a person's page over this chat, on its own stack: a group's speaker (30.09)
     @State private var coinMove: MTMoveRoute?   // the move a coin letter's bubble opens, on this chat's own stack (05.10)
     @State private var playerBarSize: CGSize = .zero   // the floating player's height — the feed's reserve
     /// The room the floating player takes at the feed's bottom — for the feed and for what hangs over it.
@@ -1389,8 +1424,10 @@ struct ChatConversationView: View {
             let holding = rec.isRecording || (dock.file != nil && dock.chat == chat.name)
             messagesList
                 .sheet(item: $commentsPost) { m in MTChannelCommentsSheet(key: chat.name, post: m) }   // a channel's post's comments
+                #if !MONTANA_MESSENGER
                 // A CHANNEL'S OLD WALL POSTS STAND IN ITS FEED (MTChannelWallFold, the critic's K-2): laid once on this phone as it opens.
                 .task(id: chat.name) { if isChannel { MTApps.wall?.fold(channel: chat.name, store: store) } }
+                #endif
                 .blur(radius: holding ? 10 : 0)
                 .allowsHitTesting(!holding)   // what stands behind the blur takes no touches — the voice's and the note's alike
                 .animation(.easeOut(duration: 0.25), value: holding)
@@ -1532,8 +1569,6 @@ struct ChatConversationView: View {
         .mtBoxed()
     }
 
-    /// A GAME ENTERED FROM THIS CHAT (29.09): the entry accepts an unanswered invitation (MTChessSend.join) and the board rises
-    /// on this chat's own stack (MTGamePush) -- the invitation's tap, the banner's tap and the meeting (30.09) walk this one road.
     /// THE COIN FROM THE FIELD (ChatInputBar's coin mode): the available the plate shows alone
     /// may say that a sum is short (MTCoinSplit.available). A chain/network answer which is still undecided is never
     /// translated into «Not enough coins» -- that would make the shown available balance lie.
@@ -1563,6 +1598,9 @@ struct ChatConversationView: View {
         }
     }
 
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+    /// A GAME ENTERED FROM THIS CHAT (29.09): the entry accepts an unanswered invitation (MTChessSend.join) and the board rises
+    /// on this chat's own stack (MTGamePush) -- the invitation's tap, the banner's tap and the meeting (30.09) walk this one road.
     /// THE GAME'S BOARD OVER THE CHAT: it opens a game -- one answered, played or over -- and accepts nothing.
     private func enterGame(_ game: String) {
         guard !chat.isGroup else { return }
@@ -1576,12 +1614,11 @@ struct ChatConversationView: View {
         guard MTApps.chess?.join(game, in: chat, store: store) == true else { return }
         chessGame = MTGamePush(game: game)
     }
+    #endif
 
     private var chatCoreL1: some View {
         chatCoreL0
         .onChange(of: store.peerSeenAt[chat.name]) { _, ts in seenTick.arm(ts) }   // 10-C.2: a new stamp re-arms
-        // AN INVITATION LANDING IN THE OPEN CHAT RAISES NO BOARD (the author's words 06.10.2026 20:5x UTC, replacing «when both are
-        // in the chat, let them get into the game at once» of 30.09): it stands in the feed with its Accept and Decline.
         // THE EMOJI PANEL IS THE FIELD'S INPUT VIEW, so it leaves whenever the field stops being
         // the responder — by a tap, by the interactive drag, by a screen on top — and the flag
         // reads that ONE fact (textViewDidEndEditing sets focused = false) instead of each gesture
@@ -1610,6 +1647,9 @@ struct ChatConversationView: View {
                 MontanaOutsideOpen.openedAt = t0   // the feed's first frame closes the same clock
                 MontanaMainProbe.run("chat-open")   // the main thread's worst stall of the next twelve seconds, named
             }
+            #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
+            // AN INVITATION LANDING IN THE OPEN CHAT RAISES NO BOARD (the author's words 06.10.2026 20:5x UTC, replacing «when both are
+            // in the chat, let them get into the game at once» of 30.09): it stands in the feed with its Accept and Decline.
             // THE BANNER'S GAME RISES OVER THE CHAT (29.09): a tap on a chess banner enters the game itself -- unless it is an
             // invitation that waits for this phone's answer: the chat is its place then, with its two buttons (06.10).
             if let asked = MontanaOutsideOpen.pendingGame,
@@ -1619,6 +1659,7 @@ struct ChatConversationView: View {
                     DispatchQueue.main.async { enterGame(asked.game) }
                 }
             }
+            #endif
             store.traceRows(chat.name)   // display diagnostics: the feed's rows go to the journal on EVERY opening
             if let cid = chat.convId, cid != chat.name { store.traceRows(cid) }   // a split key shows itself at once
             // «unread» separator: the first letter of theirs not yet read — the letter's own word (23.09), taken
@@ -1856,10 +1897,10 @@ struct ChatConversationView: View {
         .frame(maxWidth: .infinity)
     }
     /// THE MARKS STAND CLOSE BESIDE THE NAME (the author's word 04.10.2026 10:06 UTC: «the buttons at the top of the chat closer to
-    /// each other, and the name's bubble on the rest of the room»). The chess and the handset are separate buttons (30.09 20:29), the
+    /// each other, and the name's bubble on the rest of the room»). Each mark is its own button (30.09 20:29), and the
     /// marks are one round of the platform's glass with the ring on that same circle (02.10 18:27, MTBarRoundMark).
     /// ONE STEP BETWEEN EVERY ROUND (the author's word 05.10.2026 11:04 UTC: «the step between all the buttons as between the handset
-    /// and the chess; the room freed goes to the interlocutor's bubble»): the back, the bubble and the marks stand at one gap, and
+    /// and [...]; the room freed goes to the interlocutor's bubble»): the back, the bubble and the marks stand at one gap, and
     /// the bubble keeps the same room a round keeps around it inside its 44-point target, so every visible distance is the same.
     private func chatRow(round: CGFloat, gap: CGFloat, room: CGFloat) -> some View {
         HStack(spacing: gap) {
@@ -1873,7 +1914,9 @@ struct ChatConversationView: View {
             if coinStands {
                 if MTApps.coins != nil { walletMark(round) }   // the wallet's mark only where the coins stand (guard 4): Messenger draws none
                 flipMark(round)
+                #if !MONTANA_MESSENGER
                 if MTApps.chess != nil { chessMark(round) }
+                #endif
                 handsetMark(round)
             } else if chat.isGroup, !isChannel {
                 // A CHANNEL'S PAGE HAS NO HANDSET (the author's word 16.10.2026 17:34 UTC: «on the channels' pages the handset is not
@@ -1882,7 +1925,7 @@ struct ChatConversationView: View {
             }
         }
     }
-    /// The platform's back chevron on the marks' one round, the size of the chess and the rest.
+    /// The platform's back chevron on the marks' one round, the size of the rest.
     private func backMark(_ side: CGFloat, _ back: @escaping () -> Void) -> some View {
         Button(action: back) {
             MTBarRoundMark(ringed: false, side: side) { MontanaBarGlyph(glyph: "chevron.backward") }
@@ -1991,6 +2034,7 @@ struct ChatConversationView: View {
         .accessibilityLabel(Text("TimeCoin"))
     }
 
+    #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
     /// THE CHESS MARK (the author's words 29.09, and 30.09 23:26 and 23:29: «the chess icon's system highlight only while a game
     /// is active; a finished one is not highlighted»; «a tap asks to start a new game when there is none, and enters the game when
     /// one is played»). The game's icon on the round glass the handset wears; the platform's blue ring (MTMiniFace.playingRing,
@@ -2008,6 +2052,7 @@ struct ChatConversationView: View {
         }
         .accessibilityLabel(Text("Chess"))
     }
+    #endif
 
     /// THE FEED'S TURN IS OUR MINT COIN (the author's words 02.10 14:03 and 16:55, then 18:29 and 19:24: «make the turn button a
     /// coin; while it is on it spins and coins are minted in the chat -- the fabric of time»): the coins' own coin (their door's coin)
@@ -2062,15 +2107,18 @@ struct ChatConversationView: View {
     private var chatCoreM3: some View {
         chatCoreM2
         // The ring follows the pair's letters: read again when a letter lands in this chat, never on another pass.
+        #if !MONTANA_MESSENGER
         .task(id: store.messages[chat.name]?.last?.id) {
             chessPlayed = MTApps.chess?.playedGame(in: chat, store: store)
         }
+        #endif
         // WHOM TO INVITE INTO THE GROUP'S CALL (MTRoomMark chose the kind): the sheet hangs on the chat, never inside the bar's item
         .sheet(item: $roomAsk) { k in MTRoomInviteSheet(chat: chat.name, kind: k, video: roomAskVideo, opening: true) }
         // A RIGHT THE GROUP TOOK, OR SLOW MODE'S WAIT (MTGroup.refusal, G.5): the reference's own sentence, the field left as it was
         .alert(groupRefusal ?? "", isPresented: Binding(get: { groupRefusal != nil }, set: { on in if !on { groupRefusal = nil } })) {
             Button("OK", role: .cancel) {}
         }
+        #if !MONTANA_MESSENGER
         // A NEW GAME FROM THE CHAT: the platform's question, no stake and no balance (the author's word 29.10.2026 19:31 UTC).
         .alert("Start a new game?", isPresented: $askChess) {
             Button("New game") {
@@ -2078,6 +2126,7 @@ struct ChatConversationView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        #endif
         .confirmationDialog("Call back?", isPresented: Binding(
             get: { callBackVideo != nil }, set: { if !$0 { callBackVideo = nil } }),
             titleVisibility: .visible) {
@@ -2189,14 +2238,16 @@ struct ChatConversationView: View {
 
     private var chatCoreL3: some View {
         chatCoreM3
+            #if !MONTANA_MESSENGER
             .navigationDestination(item: $chessGame) { push in
                 MTApps.chess?.board(push.game, in: chat)
             }
+            #endif
             .navigationDestination(item: $coinMove) { r in
                 MTApps.coins?.movePage(r, peer: store.displayName(for: chat.convId ?? chat.name))
             }
-            .navigationDestination(item: $wallPage) { r in
-                // THE CARD OPENS THE WALL THE POST STANDS ON (the author's word 30.09): the friend's page for the post I wrote there,
+            .navigationDestination(item: $personPage) { r in
+                // THE CARD OPENS THE PAGE THE POST STANDS ON (the author's word 30.09): the friend's page for the post I wrote there,
                 // my own page for the post they wrote on mine -- the very pages the header and My page open.
                 switch r {
                 case .person(let c): MontanaPeerInfoScreen(chat: c, onSave: onChatUpdate).montanaMotionMeter()
@@ -2726,11 +2777,13 @@ struct ChatConversationView: View {
                             datePill(dayLabel(message.createdAt))   // new-day separator
                         }
                         if message.id == firstUnreadId { unreadDivider }   // unread separator
+                        #if !MONTANA_MESSENGER
                         if ChatStore.isMeshRoom(chat.name), !message.isFromMe, let who = MTApps.mesh?.name(of: message.senderRef) {
                             // USER-DATA: the name a person gave themselves on the mesh wall.
                             Text(verbatim: who).font(.caption.weight(.semibold)).foregroundColor(.secondary).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 18).padding(.top, 6)
                         }
+                        #endif
                         if chat.isGroup, row.topPad, MessageBubble.speakerPlace(message, plate: !row.members.isEmpty) == .above,
                            let who = MTGroup.shared.speakerLine(message, in: chat.name) {
                             // THE SPEAKER'S NAME IN THEIR OWN COLOUR AT THE HEAD OF THEIR RUN (the author's word 16.10.2026 17:34 UTC:
@@ -2801,19 +2854,7 @@ struct ChatConversationView: View {
                                     if let d = message.docFile { ui.docPage = MTDocOpen(id: d, name: message.docName ?? d) }   // tap on the file — the page over everything
                                 }, onTapPlace: { place in ui.placeOpen = place },
                                    onTapMusic: { f in openMusic(f) },
-                                   onTapChess: { game in
-                                       // THE INVITATION OPENS ITS GAME OVER THE CHAT (the author's word 29.09): the invitee's tap
-                                       // accepts and starts the clocks (MTChessSend.join); the game's page rises on this chat's
-                                       // own stack, as a post opens whole, and the back leads home to the letters.
-                                       enterGame(game)
-                                   },
-                                   chessOpen: message.gameLetter.map { c in c.invite && !message.isFromMe
-                                       && MTApps.chess?.awaitsMe(c.game, rows: store.messages[chat.name] ?? []) == true } ?? false,
-                                   onChessDecline: { game in MTApps.chess?.decline(game, in: chat, store: store) },
-                                   onChessAccept: { game in acceptGame(game) },
-                                   chessStatus: message.gameLetter.flatMap { c in
-                                       c.invite ? MTApps.chess?.status(c.game, rows: store.messages[chat.name] ?? []) : nil },
-                                   onTapWallPost: { _ in wallPage = message.isFromMe ? .person(chat) : .mine },   // mine stands on their wall, theirs on mine
+
                                    onTapCoin: { coinMove = MTMoveRoute(ref: message.mid, mine: message.isFromMe) },
                                    onTapReply: { rid in jumpTo(rid) },
                                    tail: row.tail,
@@ -2855,6 +2896,20 @@ struct ChatConversationView: View {
                                    post: postLook(row),
                                    onShare: { sheet = .forward(message) },   // the round beside a channel's post: the menu's own «Forward»
                                    onComments: { commentsPost = message })   // the post's comments, the reference's thread
+                                #if !MONTANA_MESSENGER   // the game's letter and a post's card are the Protocol's alone (cuts C5 and C6)
+                                .wallPost(onTap: { _ in personPage = message.isFromMe ? .person(chat) : .mine })   // mine stands on their wall, theirs on mine
+                                .game(onTap: { game in
+                                    // THE INVITATION OPENS ITS GAME OVER THE CHAT (the author's word 29.09): the invitee's tap
+                                    // accepts and starts the clocks (MTChessSend.join); the game's page rises on this chat's
+                                    // own stack, as a post opens whole, and the back leads home to the letters.
+                                    enterGame(game)
+                                }, open: message.gameLetter.map { c in c.invite && !message.isFromMe
+                                    && MTApps.chess?.awaitsMe(c.game, rows: store.messages[chat.name] ?? []) == true } ?? false,
+                                decline: { game in MTApps.chess?.decline(game, in: chat, store: store) },
+                                accept: { game in acceptGame(game) },
+                                status: message.gameLetter.flatMap { c in
+                                    c.invite ? MTApps.chess?.status(c.game, rows: store.messages[chat.name] ?? []) : nil })
+                                #endif
                                 .equatable()
                             }
                             // Selection mode and search mode both hand the tap to the ROW: in the
@@ -3533,7 +3588,7 @@ struct ChatConversationView: View {
         let root = MTSamePair.root(pipe)
         guard let row = store.listChats().first(where: { c in !c.isGroup && MTSamePair.root(c.convRef) == root }) else { return }
         hideKeyboard()
-        wallPage = .person(row)
+        personPage = .person(row)
     }
     /// A GROUP'S EVENT ROW (MTGroupEvent, stage R): the reference folder's service row -- a capsule in the middle of the feed in the
     /// day's own dress; a voice chat's row is the way in while its room lives.
@@ -3685,7 +3740,6 @@ struct ChatConversationView: View {
                          onPasteImages: { imgs in attachPasted(imgs) },
                          hasAttachment: !pastedImages.isEmpty,
                          hint: holdHint,
-                         meshRoom: ChatStore.isMeshRoom(chat.name),
                          channel: isChannel,
                          silent: isChannel && 0 <= channelSilentTick && MTGroup.shared.silent(chat.name),
                          onSilent: { MTGroup.shared.setSilent(chat.name, on: !MTGroup.shared.silent(chat.name)); channelSilentTick += 1 },
@@ -3694,6 +3748,9 @@ struct ChatConversationView: View {
                          coins: MTApps.coins?.canPay(chat, store: store) == true || groupCoin,
                          coinPicks: groupCoin,
                          onSendCoin: { n in sendCoin(n) })
+                         #if !MONTANA_MESSENGER
+                         .meshWall(ChatStore.isMeshRoom(chat.name))
+                         #endif
         }
         .padding(.horizontal).padding(.vertical, MTInputField.barPad)   // the bar's room — the tier's owner's number
         .background(alignment: .top) {
@@ -4719,7 +4776,7 @@ struct MTChatAvatar: View {
     var showPresence = false
     var body: some View {
         let montana = ChatStore.isMontanaRoom(chat.name)
-        let saved = ChatStore.isLocalRoom(chat.name) && !montana && !ChatStore.isMeshRoom(chat.name)
+        let saved = chat.name == savedMessagesKey   // Saved Messages alone wears one's own face
         MTChatFace(face: saved ? nil : (montana ? montanaRoomFace : store.avatarFor(chat)), color: chat.color, initial: store.initial(for: chat), local: saved, size: size, who: chat.convRef)
             .modifier(MTPresenceBadge(active: showPresence && !saved && !chat.isGroup && (store.presenceWord(chat.convRef)?.tier ?? 0) > 0))
     }
@@ -5109,7 +5166,7 @@ struct MontanaMediaSender {
 
 }
 
-/// THE BAR'S RIGHT MARKS' ONE ROUND (the author's word 02.10 18:27): the turn, the chess and the handset each a glyph on one
+/// THE BAR'S RIGHT MARKS' ONE ROUND (the author's word 02.10 18:27): the turn, [...] and the handset each a glyph on one
 /// circle of glass, the platform's own regular glass where it has it (MTGlassCirclePlate), 44 points -- the bar's own item
 /// height -- and the platform's blue ring (MTMiniFace.playingRing) drawn inside that same circle (strokeBorder), so the ring and
 /// the plate are one circle by construction. Before the newest system the mark's plate with its rim (montanaOctagonFace mark:)

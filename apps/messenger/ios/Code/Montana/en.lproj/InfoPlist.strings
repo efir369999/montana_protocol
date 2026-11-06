@@ -6,7 +6,7 @@
 
 "NSBluetoothAlwaysUsageDescription" = "Bluetooth forms a direct device-to-device mesh, so your phones can exchange messages nearby.";
 "NSCameraUsageDescription" = "The camera takes photos and videos for your chats, video messages and video calls, and scans a person's QR code.";
-"NSFaceIDUsageDescription" = "Face ID opens your saved passwords and shows your 24-word recovery phrase.";
+"NSFaceIDUsageDescription" = "Face ID shows your 24-word recovery phrase.";
 "NSLocalNetworkUsageDescription" = "Your device and your correspondent's connect directly over Wi-Fi. The permission is needed only so the phones can find each other on the same network.";
 "NSLocationWhenInUseUsageDescription" = "Your location is used only so you can send it in a chat.";
 "NSMicrophoneUsageDescription" = "The microphone records voice messages, videos and calls.";
