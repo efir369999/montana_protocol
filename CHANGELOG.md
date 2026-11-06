@@ -2,9 +2,19 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2363) - 2026-11-06
+
+Source commit `9a67c720f5c4`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2363.md).
+
+- The music's diary on this device tells a track that ran to its end from one the phone could not read to its end: a track that falls silent early is named by the moment it stopped and its length, so its cause can be found and mended.
+
+**Security and anonymity**
+
+- No new server, network road or key leaving the device. The diary on the device (MontanaTrace) gains three marks -- music_end (the player's clock, the bar's tick, the length), sound_end broken and sound_decode (the platform's error code) -- naming no track, file or folder.
+
 ## 1.0 (2362) - 2026-11-06
 
-Source commit `13ad3ebf2d1e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2362.md).
+Source commit `6e2b29ca7c9c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2362.md).
 
 - The music page shows only tracks that play: the tracks of a lent folder that did not open stay out of the list, the queue and the shuffle until the folder opens again or is lent again with the plus, and the folder lent again takes its tracks back in their places.
 - Passwords leave the app: the Passwords tile and page are gone, a secret letter sent by an older build is no longer shown, and the passwords vault is erased from this device's keychain at launch.
