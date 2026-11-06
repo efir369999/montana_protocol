@@ -2,9 +2,19 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2362) - 2026-11-06
+
+Source commit `46960956b97b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2362.md).
+
+- The music page shows only tracks that play: the tracks of a lent folder that did not open stay out of the list, the queue and the shuffle until the folder opens again or is lent again with the plus, and the folder lent again takes its tracks back in their places.
+
+**Security and anonymity**
+
+- No new server, network road or key leaving the device. A lent folder that does not open is told in the diary by its cause (MTMusicFolders.open: the bookmark's refusal or the platform's), naming no folder; its tracks stay in this device's own list (Application Support, excluded from backup) and the music list is written only when it changes.
+
 ## 1.0 (2361) - 2026-11-05
 
-Source commit `193eace9a758`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2361.md).
+Source commit `a2913264003b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2361.md).
 
 - Each app opens by its own link scheme: Montana by montana://, MT Protocol by mt-protocol://. A Montana link in a letter opens inside the app where you tap it, and an invitation still opens in either app.
 - The app has one name everywhere: the permission questions no longer name it (the system already shows its name above them), and its iCloud folder is called MT Protocol, as under the icon.
