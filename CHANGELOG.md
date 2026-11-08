@@ -2,6 +2,16 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2365) - 2026-11-09
+
+Source commit `06cca42c988b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2365.md).
+
+- The voice button is rebuilt so the press reaches it: on iOS 27.0.1 a press on the microphone did not reach the button at all, so holding it recorded nothing. The press is now taken by the button's own platform recogniser, and its whole area is declared touchable.
+
+**Security and anonymity**
+
+- No change to any algorithm, key or network road. MontanaHoldControl tracks the press through a UILongPressGestureRecognizer (minimum duration 0, cancels and delays nothing) instead of UIControl's beginTracking, with the same thresholds and verdicts; the slot carries contentShape(Rectangle()). The diary on the device gains hold_hit (the point and the enabled flag where the platform hands a finger to the button) and hold_down by=press -- coordinates only, no content.
+
 ## 1.0 (2364) - 2026-11-06
 
 Source commit `0a3ed5688699`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2364.md).
