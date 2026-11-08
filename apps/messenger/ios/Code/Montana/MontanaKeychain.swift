@@ -363,7 +363,12 @@ enum MTRetired {
     /// A letter's machine line, by its first seventeen or nineteen characters. The secret letter of the vault that left both editions
     /// (decision 671 (a), the author's word 17083: «no passwords anywhere») is a retired kind: an older build's comes buried unread
     /// and ringing nothing (decision 668 (a)).
-    private static let letterLines: Set<String> = ["81e52bba0644a78b"]
+    private static let letterLines: Set<String> = Set(["81e52bba0644a78b"]).union(editionLines)
+    #if MONTANA_MESSENGER   // no coins in Messenger (cut C6; review of build 120, R-6): a Protocol peer's coin letter, by its machine line
+    private static let editionLines: Set<String> = ["71beceb0eafaa682"]   // of seventeen characters, is buried unread and rings nothing
+    #else
+    private static let editionLines: Set<String> = []
+    #endif
 
     static func value(_ key: String) -> Bool { values.contains(print(key)) }
     /// A keychain item of what left, by its print: the vault of the Passwords (decision 673 (a)); MontanaKeychain.forgetRetired erases it.

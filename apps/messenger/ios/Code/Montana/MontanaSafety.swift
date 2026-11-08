@@ -17,8 +17,8 @@ enum MontanaSafety {
     static let abuseMail = contactMail
     static let supportMail = contactMail
     /// THE EDITION'S OWN SITE (App Review 5.1.1(i), audit blocker 3): each edition names its own site, and its policy is the one on
-    /// it -- montana.quest/privacy/ is MT Protocol's (quest.montana.app), montana.xxx/privacy/ is Montana Messenger's
-    /// (xxx.montana.business); one app never opens the other's.
+    /// it -- montana.xxx/privacy/ is MT Protocol's (quest.montana.app), montana.quest/privacy/ is Montana Messenger's
+    /// (xxx.montana.business; decision 711 = a); one app never opens the other's.
     static let site = MTEdition.site
     static let privacy = site + "/privacy/"   // the policy on the site, in the languages the site speaks
     static let guide = "https://montana.xxx/faq/"   // the questions and answers on the site, in its three languages and as files agents read

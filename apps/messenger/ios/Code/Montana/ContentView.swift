@@ -206,10 +206,10 @@ final class MTTurnDrag: ObservableObject {
     /// shared one bar with the card: the card's back arrow and dots stood beside the chooser's cross and the
     /// preview's cross and checkmark. The slot of the document and the place is its.
     var chatGround: MTGroundOpen?
-    #if !MONTANA_MESSENGER   // the game's page is chess's alone (cut C5)
+    #if !MONTANA_MESSENGER   // the game's page is chess's alone (cut C5), the wallet's the coins' (cut C6)
     var chessPage: MTGameOpen?
-    #endif
     var walletPage: MTPageFlag?
+    #endif
     var settingsShown: Bool {
         get { overlayPage == .settings }
         set { if newValue { overlayPage = .settings } else if overlayPage == .settings { overlayPage = nil } }
@@ -272,10 +272,10 @@ final class MTTurnDrag: ObservableObject {
     /// May the tabs turn under the finger now: nothing over the tabs, nothing held by the page.
     var tabsMayTurn: Bool {
         #if !MONTANA_MESSENGER
-        if chessPage != nil { return false }
+        if chessPage != nil || walletPage != nil { return false }
         #endif
         return overlayChat == nil && overlayPage == nil && docPage == nil && placeAsk == nil && placeOpen == nil
-            && chatGround == nil && walletPage == nil && !drawerOpen && !pageHolds
+            && chatGround == nil && !drawerOpen && !pageHolds
     }
     /// THE ROW'S LEFT END (the author's word 25.09: «a swipe past the contacts opens the side panel»): the pane is the first
     /// of the row and nothing stands to its left -- a stroke to the right there is the drawer's, not the rubber band's.
@@ -392,14 +392,14 @@ final class MTTurnDrag: ObservableObject {
     /// tap, and the chat the banner names opens over the tabs alone.
     func clearPages() {
         #if MONTANA_MESSENGER
-        let game = false
+        let apps = 0
         #else
-        let game = chessPage != nil
-        chessPage = nil
+        let apps = [walletPage != nil, chessPage != nil].filter { held in held }.count   // the Protocol's own pages (cuts C5, C6)
+        walletPage = nil; chessPage = nil
         #endif
-        let standing = [walletPage != nil, game, chatGround != nil, docPage != nil,
+        let standing = apps + [chatGround != nil, docPage != nil,
                         placeAsk != nil, placeOpen != nil, overlayPage != nil, drawerOpen].filter { held in held }.count
-        walletPage = nil; chatGround = nil; docPage = nil
+        chatGround = nil; docPage = nil
         placeAsk = nil; placeOpen = nil; overlayPage = nil
         if drawerOpen { drawerOpen = false }
         if 0 < standing { MontanaTrace.mark("outside_open", "pages taken down=\(standing)") }
@@ -1563,9 +1563,7 @@ enum MTApplication: String, CaseIterable, Identifiable {
     case chats, groups, channels, music, gallery
     #if !MONTANA_MESSENGER
     case chess
-    #endif
-    case wallet
-    #if !MONTANA_MESSENGER
+    case wallet   // no coins in Messenger (cut C6)
     case vpnWall, meshWall
     case p2pWall
     #endif
@@ -1573,7 +1571,7 @@ enum MTApplication: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     /// The icons' preview in Settings, in its own order.
     #if MONTANA_MESSENGER
-    static let libraryPreview: [MTApplication] = [.contacts, .calls, .chats, .wallet, .music, .gallery, .settings]
+    static let libraryPreview: [MTApplication] = [.contacts, .calls, .chats, .music, .gallery, .settings]
     #else
     static let libraryPreview: [MTApplication] = [.contacts, .calls, .chats, .feed, .wallet, .music, .gallery, .chess, .vpnWall, .meshWall, .p2pWall, .settings]
     #endif
@@ -1582,8 +1580,8 @@ enum MTApplication: String, CaseIterable, Identifiable {
     /// shows no tile, title or empty page of an application its edition does not carry.
     var carried: Bool {
         switch self {
-        case .wallet: return MTApps.coins != nil
         #if !MONTANA_MESSENGER
+        case .wallet: return MTApps.coins != nil
         case .vpnWall: return MTApps.vpn?.carried == true
         case .meshWall: return MTApps.mesh != nil
         #endif
@@ -1620,8 +1618,8 @@ enum MTApplication: String, CaseIterable, Identifiable {
         case .settings: return String(localized: "Settings", bundle: MTLanguage.bundle)
         #if !MONTANA_MESSENGER
         case .chess: return String(localized: "Chess", bundle: MTLanguage.bundle)
-        #endif
         case .wallet: return String(localized: "TimeCoin", bundle: MTLanguage.bundle)   // the author's word 04.10.2026 15:00 UTC: «rename the wallet TimeCoin»
+        #endif
         }
     }
     var group: MTLibraryGroup {
@@ -1629,8 +1627,9 @@ enum MTApplication: String, CaseIterable, Identifiable {
         case .contacts, .calls, .chats, .groups, .channels: return .communication
         #if !MONTANA_MESSENGER
         case .vpnWall, .meshWall, .feed, .p2pWall: return .montana   // the walls beside the feed: publications common to people (29.09)
+        case .wallet: return .montana
         #endif
-        case .messenger, .wallet: return .montana
+        case .messenger: return .montana
         case .music, .gallery: return .media
         #if !MONTANA_MESSENGER
         case .chess: return .media
@@ -1738,8 +1737,8 @@ struct MontanaSideDrawer: View {
             switch app {
             #if !MONTANA_MESSENGER
             case .chess: if MTApps.chess != nil { ui.chessPage = MTGameOpen() }
-            #endif
             case .wallet: if MTApps.coins != nil { ui.walletPage = MTPageFlag(id: "wallet") }
+            #endif
             case .contacts: ui.pane = .contacts
             case .calls: ui.pane = .calls
             #if !MONTANA_MESSENGER
@@ -2449,7 +2448,9 @@ struct MainTabView: View {
                     .zIndex(10)
             }
         }
+        #if !MONTANA_MESSENGER
         .montanaPage(item: $ui.walletPage) { _ in MTApps.coins?.coinsPage(ui: ui) }
+        #endif
         // THE DOCUMENT over everything — the whole screen; the edge swipe or the platform's close item.
         .montanaPage(item: $ui.docPage) { d in DocPreview(file: d.id, title: d.name) }
         // THE PLACE over everything: its own bar, its own cross, nothing of the chat above it.
@@ -2494,14 +2495,16 @@ struct MainTabView: View {
             // built in the finger's row, warmed after the launch).
             #if !MONTANA_MESSENGER
             MTApps.vpn?.moment(.launched)
-            #endif
             MTApps.coins?.moment(.launched)   // the coin book read off the main thread from here (04.10 13:04)
+            #endif
             scheduleShareIngest()
             MontanaTrace.mark("shares_done")
             askWhatIsUnasked()
         }
         .onChange(of: scenePhase) { _, p in
+            #if !MONTANA_MESSENGER
             if p == .active { MTApps.coins?.moment(.active) }   // the coins' own work at the return: minting, the seed's devices, their tips
+            #endif
             if p == .active { MTNotifyAllowed.shared.read("active") }   // the person may have changed it in Settings (06.10)
         }
         .onChange(of: scenePhase) { _, p in if p == .active {
@@ -2516,12 +2519,19 @@ struct MainTabView: View {
             ui.pane = .chats
             if (note.userInfo?["outside"] as? Bool) == true { ui.clearPages() }
         }
+        #if !MONTANA_MESSENGER
         .onReceive(NotificationCenter.default.publisher(for: .montanaOpenWallet)) { _ in if MTApps.coins != nil { ui.walletPage = MTPageFlag(id: "wallet") } }
+        #endif
         // THE ORGANISATIONS' PAGE RAISED (a joining link, a banner): only where the Messenger door stands.
         .onReceive(NotificationCenter.default.publisher(for: .montanaOpenMessenger)) { _ in
             if MTApps.messenger != nil { ui.overlayChat = nil; ui.overlayPage = .messenger }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .montanaAddPerson)) { _ in ui.walletPage = nil; ui.overlayPage = .birth }
+        .onReceive(NotificationCenter.default.publisher(for: .montanaAddPerson)) { _ in
+            #if !MONTANA_MESSENGER
+            ui.walletPage = nil
+            #endif
+            ui.overlayPage = .birth
+        }
         .onReceive(scheduleTick) { _ in store.fireDueScheduled() }
         .onChange(of: scenePhase) { _, p in   // the system's question answered and the app back: the copy's question follows
             if p == .active, MontanaSeed.hasSeed, !MTKeeping.told {
@@ -2900,10 +2910,12 @@ struct ContactsTabView: View {
                 title: store.title(for: c),
                 photoURL: store.avatarFor(c), color: c.color, initial: store.initial(for: c), who: c.convRef,
                 canDeleteForBoth: MontanaConv.holds(c.convRef),
-                coinsTravel: store.coinsTravel(c),
                 onBoth: { delete(c, forBoth: true); deletingChat = nil },
                 onMine: { delete(c, forBoth: false); deletingChat = nil },
                 onCancel: { deletingChat = nil })
+            #if !MONTANA_MESSENGER
+            .travels(store.coinsTravel(c))
+            #endif
         }
         // The one block sheet — the profile's ([C-1]).
         if here, let c = blockingChat {
@@ -3222,7 +3234,7 @@ let montanaRoomKey = "Montana"
 enum MTPlayQuiet {
     static var held: Bool {
         #if MONTANA_MESSENGER
-        MTApps.flowOn(ChatStore.openConvNow ?? "")
+        false   // no Money Flow and no game in Messenger (cuts C5, C6)
         #else
         MTApps.flowOn(ChatStore.openConvNow ?? "") || MTApps.chess?.shownGame != nil
         #endif
@@ -4020,7 +4032,7 @@ let retiredWallMark = "\u{200B}\u{200B}VW:"
 // edition buries it unread as service, so an edition that carries no wall never draws it as a row.
 let wallMark = "\u{200B}\u{200B}WL:"
 #endif
-// THE COPY KEPT BY THE PEOPLE ONE WRITES TO (the author's word 08.10.2026 20:3x, MTKeeping; Network «A copy kept by the people one
+// THE COPY KEPT BY THE PEOPLE ONE WRITES TO (the author's word 08.10.2026 20:3x UTC, MTKeeping; Network «A copy kept by the people one
 // speaks with»): one word, JSON with «w» -- a question, a yes, a part, a keeper's «held», a release -- riding the correspondence,
 // and a call and its answer riding the pipe of a slot. Never a row; an older build buries it unread.
 let keepMark = "\u{200B}\u{200B}KP:"
@@ -4467,20 +4479,30 @@ struct MontanaDeleteChatSheet: View {
     let initial: String
     var who: String? = nil   // whose face, for its balance and level (MTAvatarBadges, 11.10)
     let canDeleteForBoth: Bool
-    /// A coin letter of mine is on its way in this chat (ChatStore.coinsTravel): the sheet says so and offers no deletion -- the
-    /// erasure would take the letter off the wire with its coins (the coin audit's first point, 05.10.2026 18:4x UTC).
-    var coinsTravel = false
     var onBoth: () -> Void
     var onMine: () -> Void
     var onCancel: () -> Void
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
+    /// A coin letter of mine is on its way in this chat (ChatStore.coinsTravel): the sheet says so and offers no deletion -- the
+    /// erasure would take the letter off the wire with its coins (the coin audit's first point, 05.10.2026 18:4x UTC).
+    var coinsTravel = false
+    /// The Protocol's callers set it after the sheet's arguments (a postfix #if, SE-0308).
+    func travels(_ held: Bool) -> Self { var sheet = self; sheet.coinsTravel = held; return sheet }
+    private var note: LocalizedStringKey? { coinsTravel ? MTApps.coins.map { LocalizedStringKey($0.said(.chatTravels)) } : nil }   // the coins' own note (guard 4)
+    private var actions: [MontanaFaceSheet.Action] { coinsTravel ? [] : deletions }
+    #else
+    private var note: LocalizedStringKey? { nil }
+    private var actions: [MontanaFaceSheet.Action] { deletions }
+    #endif
+    private var deletions: [MontanaFaceSheet.Action] {
+        (canDeleteForBoth ? [MontanaFaceSheet.Action(title: "Delete for me and them", destructive: true, act: onBoth)] : [])
+            + [MontanaFaceSheet.Action(title: "Delete for me only", destructive: false, act: onMine)]
+    }
 
     var body: some View {
         MontanaFaceSheet(photoURL: photoURL, color: color, initial: initial, who: who,
                          question: "Permanently delete the chat with \(title)?",
-                         note: coinsTravel ? MTApps.coins.map { LocalizedStringKey($0.said(.chatTravels)) } : nil,   // the coins' own note (guard 4)
-                         actions: coinsTravel ? [] : (canDeleteForBoth ? [MontanaFaceSheet.Action(title: "Delete for me and them", destructive: true, act: onBoth)] : [])
-                             + [MontanaFaceSheet.Action(title: "Delete for me only", destructive: false, act: onMine)],
-                         onCancel: onCancel)
+                         note: note, actions: actions, onCancel: onCancel)
     }
 }
 

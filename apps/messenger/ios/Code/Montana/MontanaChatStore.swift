@@ -127,6 +127,7 @@ class ChatStore: ObservableObject {
         var rowsByChat: [String: Set<MID>] = [:]
         var namesByChat: [String: [String]] = [:], names: [String] = [], blobs: [String] = []
         for (chat, m) in letters {
+            #if !MONTANA_MESSENGER
             // A COIN LETTER OF MINE ON ITS WAY KEEPS ITS ROW (the author's word «fix all points in order» 05.10.2026 18:4x UTC, the
             // coin audit's first point; MTCoinSend.travels): the row is the queue's one reason to carry the letter, and without it
             // the coins it took were gone for both sides.
@@ -134,6 +135,7 @@ class ChatStore: ObservableObject {
                 MontanaTrace.mark("delete_refused", "a letter holding value on its way keeps its row mid=\(String(m.mid.prefix(12)))")
                 continue
             }
+            #endif
             rowsByChat[chat, default: []].insert(m.id)
             forgetPictures(of: m)
             MTRowJournal.drop(chat, mid: m.mid)
@@ -156,6 +158,7 @@ class ChatStore: ObservableObject {
         if !blobs.isEmpty { MontanaBlobStore.drop(blobs) }
         save(blocking: false)
     }
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// A coin letter of mine on its way (the coin door's travels): the cheap marks first, the book only for a coin letter of mine.
     func coinTravels(_ m: Message) -> Bool {
         guard let coins = MTApps.coins, m.isFromMe, m.deliveryStatus == .sending || m.deliveryStatus == .sent, coins.isLetter(m) else { return false }
@@ -168,6 +171,7 @@ class ChatStore: ObservableObject {
     func coinsTravel(_ chat: Chat) -> Bool {
         Set([chat.convRef, chat.name]).contains { key in (messages[key] ?? []).contains { m in coinTravels(m) } }
     }
+    #endif
     static func listPreview(_ m: Message) -> String {
         // The fold reaches the list row as well (Guideline 1.2): a folded letter's words do not
         // stand in the list beside the name.
@@ -1528,7 +1532,9 @@ class ChatStore: ObservableObject {
         messages[chat]?[i].statusAt = Date().timeIntervalSince1970   // the moment of the rung, written here only
         if next == .read { messages[chat]?[i].isRead = true }
         stageMoved.insert(chat)   // the row's record follows in the save's beat (followStages)
+        #if !MONTANA_MESSENGER
         if let row = messages[chat]?[i], row.isFromMe { MTApps.coins?.hold(row, in: chat) }   // a coin letter's coins follow its rung (05.10)
+        #endif
         return true
     }
     /// THE ROW WEARS THE LADDER'S STAGE FROM ITS FIRST FRAME (the critic 23.09): the record carries the stage
@@ -1581,7 +1587,9 @@ class ChatStore: ObservableObject {
               list[i].deliveryStatus == .failed else { return }
         messages[chat]?[i].deliveryStatus = .sending
         stageMoved.insert(chat)
+        #if !MONTANA_MESSENGER
         if let row = messages[chat]?[i], row.isFromMe { MTApps.coins?.hold(row, in: chat) }   // on its way again, a coin letter's coins taken again (05.10)
+        #endif
     }
 
     /// How long an upload may stay silent before it is declared unsent. A 512 KiB chunk
@@ -2114,11 +2122,13 @@ class ChatStore: ObservableObject {
         MontanaLog.event("CONVDEL ← \(chat.prefix(10)) wiped by peer")
     }
     func deleteEverywhere(chat: String, msgId: String) {
+        #if !MONTANA_MESSENGER
         // The coin audit's first point (05.10.2026 18:4x UTC): a coin letter of mine on its way is not taken off the wire.
         if let row = messages[chat]?.first(where: { m in m.msgId == msgId }), coinTravels(row) {
             MontanaTrace.mark("delete_refused", "everywhere: a letter holding value on its way keeps its row mid=\(String(msgId.prefix(12)))")
             return
         }
+        #endif
         bury([msgId], in: chat)
         MontanaNotify.removeBanners(letters: [msgId])   // erased for everyone: its banner goes too (the critic R-4)
         MontanaTrace.mark("row_removed", "deleteEverywhere mid=\(String(msgId.prefix(8)))")
@@ -2869,7 +2879,9 @@ class ChatStore: ObservableObject {
                     }
                     self.historyLoaded = true   // the mirror law may judge the queue only from here
                     MainActor.assumeIsolated { MTGroup.shared.standAll(store: self) }   // a held group with no row stands one (17.10.2026)
+                    #if !MONTANA_MESSENGER
                     MainActor.assumeIsolated { MTApps.coins?.settle(self) }   // the book holds every coin letter the chats hold (04.10 23:57), the transfers' records decided
+                    #endif
                     self.restoreFromArchive(epoch: loadEpoch, acct: loadAcct, folders: nil)
                     // The audit and the heads need the archive keys — the folder label is derived
                     // from them — and the keys derive off the main thread (15.18): both wait for
@@ -3943,8 +3955,10 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     func editMessage(_ chat: String, id: MID, newText: String) {
         guard let i = messages[chat]?.firstIndex(where: { $0.id == id }),
               let row = messages[chat]?[i], row.text != newText else { return }   // nothing changed — the wire says nothing
+        #if !MONTANA_MESSENGER
         // A coin letter is never edited, and no edit becomes one (06.10): its coins were taken once, under its words.
         if let coins = MTApps.coins, coins.isLetter(row) || coins.isLetter(newText) { return }
+        #endif
         // A letter of a retired kind is never edited, and no edit becomes one (mtRetiredLetter; decision 668 (a)).
         guard !mtRetiredLetter(row.text), !mtRetiredLetter(newText) else { return }
         messages[chat]?[i].text = newText
@@ -4077,13 +4091,15 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     /// archive folder. The list is stored apart from the feed, so it is removed by the same
     /// motion, and the screen learns of it by announcement, not by guessing.
     func removeConversationLocally(_ conv: String) {
-        // THE COINS OF A LETTER THAT CAN NO LONGER GO COME BACK FIRST (the author's word «fix all points in order» 05.10.2026 18:4x
-        // UTC, the coin audit's first point): the correspondent's erasure reaches here unasked, and the queue and the node box of the
+        #if !MONTANA_MESSENGER
+        // THE COINS OF A LETTER THAT CAN NO LONGER GO COME BACK FIRST (the author's word «fix all points in order» 05.10.2026 18:4x UTC,
+        // the coin audit's first point): the correspondent's erasure reaches here unasked, and the queue and the node box of the
         // conversation go with it (clearChat) -- a coin letter of mine still holding its coins gives them back before its row goes.
         for m in (messages[conv] ?? []) where m.isFromMe && MTApps.coins?.isLetter(m) == true {
             let back = { MainActor.assumeIsolated { _ = MTApps.coins?.release(m, in: conv) } }   // the row's values ride along; the book moves on main
             if Thread.isMainThread { back() } else { DispatchQueue.main.async(execute: back) }
         }
+        #endif
         // «Delete for both» — AT THE ROOT: every mid of the conversation gets its tombstone AT
         // ONCE, and a letter returning by ANY repeat (the node store, the extension box, the
         // live channel, a repeated link tap) does not resurrect (precedent 934: a repeated tap
@@ -4717,9 +4733,11 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                     if o["b"] != nil || o["l"] != nil {   // a word with the coin key alone says nothing of the bio (20.10)
                         MTPeerAbout.note(chat, bio: (o["b"] as? String) ?? "", link: (o["l"] as? String) ?? "", at: at)
                     }
+                    #if !MONTANA_MESSENGER
                     // the pair's balance, coin key and words' tag (the coin door); THEIR SEND FOUND NO KEY OF MINE (21.10.2026, «q»):
                     // the word they hold is lost or never came -- told again now
                     if MTApps.coins?.heardAbout(o, from: chat, at: at) == true { E2E.shared.sendAboutIfNeeded(to: chat) }
+                    #endif
                 }
                 E2E.noteAboutCapable(chat)   // a build that speaks the word reads it
                 sendDeliveryReceipt(chat, msgId: m.msgId, isFromMe: m.isFromMe, text: m.text)
@@ -4922,7 +4940,9 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // repeat lands the row while the name keeps the credit one; the other order lost 123 000 coins on the iPhone 15 Pro Max.
         // The coin door asks it here, before the journal below: a transfer's telling letter asks the nodes, and a chosen person's
         // letter is paid by itself a turn after its landing.
+        #if !MONTANA_MESSENGER
         if !placed.isFromMe { MTApps.coins?.landed(placed, in: chat, store: self) }
+        #endif
         // THE ROW IS ON DISK BEFORE ANYONE IS TOLD IT EXISTS (the journal, 16.09): the receipt, the
         // list record and the emptying of the landing box all stand behind this line.
         MontanaMainProbe.step("journal") { _ = MTRowJournal.put(chat, placed) }
@@ -4952,8 +4972,10 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         MontanaDeliveryEngine.shared.confirmDelivered(mid: mid, by: by)   // receipt — the ONLY dequeue condition
         if MTGroup.shared.copyDelivered(mid, store: self) { return }   // a group's copy witnesses the group's row, never a row of the pipe (MTGroup)
         guard let i = messages[chat]?.firstIndex(where: { $0.isFromMe && $0.msgId == "mid:\(mid)" }) else {
+            #if !MONTANA_MESSENGER
             let again = { MainActor.assumeIsolated { _ = MTApps.coins?.arrived(mid, from: chat) } }   // a coin letter whose row is gone: its coins that came back are taken again (05.10)
             if Thread.isMainThread { again() } else { DispatchQueue.main.async(execute: again) }
+            #endif
             noteOrphanDelivered(mid, keep: true)
             MontanaTrace.mark("receipt_orphan", mid: mid, "no row yet — kept for its birth")
             return
@@ -6170,9 +6192,11 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     func deleteChat(_ chat: Chat, forBoth: Bool) -> Bool {
         // The room with no wire is not deleted (the author's word 17.09): the list always shows it.
         guard !Self.isLocalRoom(chat.name) else { MontanaTrace.mark("delete_refused", "the local room stays"); return false }
+        #if !MONTANA_MESSENGER
         // The coin audit's first point (05.10.2026 18:4x UTC): the chat waits while a coin letter of mine is on its way in it -- its
         // erasure would take the letter off the wire with its coins (MontanaDeleteChatSheet says so instead of offering it).
         guard !coinsTravel(chat) else { MontanaTrace.mark("delete_refused", "a letter holding value on its way in this chat"); return false }
+        #endif
         let peer = chat.convRef
         // The funeral is named at its birth (the critic R-5): the moment is kept here before the conversation goes, so a letter of
         // theirs born before it and still on its way stands nothing again.
@@ -6686,6 +6710,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         guard let d = body.data(using: .utf8),
               let obj = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
               let emoji = obj["e"] as? String, let op = obj["op"] as? String else { return }
+        #if !MONTANA_MESSENGER
         // COINS GIVEN ON A LETTER (the author's word 03.10 13:40): the reaction's own road, its own op -- credited, never an emoji.
         if op == "coin" {
             if !mine, let c = obj["c"] as? Int, let r = obj["r"] as? String, let sid = obj["sid"] as? String, !sid.isEmpty {
@@ -6702,6 +6727,10 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             }
             return
         }
+        #endif
+        // A reaction is added or taken back (MontanaConversation: op add or del); any other word -- a paid one in an edition
+        // that has no coins -- touches no emoji.
+        guard op == "add" || op == "del" else { return }
         applyReaction(chat, sid: (obj["sid"] as? String) ?? "", txt: (obj["txt"] as? String) ?? "",
                       emoji: emoji, add: op == "add", at: at)
     }
@@ -6749,6 +6778,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             MontanaTrace.mark("send_refused", "raw-reference chat=\(String(chat.prefix(10)))")
             return Message(text: "", isFromMe: true, time: nowHHMM(), senderRef: nil)
         }
+        #if !MONTANA_MESSENGER
         // A COIN LETTER LEAVES BY ITS ONE DOOR (the author's words 06.10.2026 09:3x-09:4x UTC: «close the double spends»): a text that
         // reads as a coin letter goes only when MTCoinSend.transfer sends it, its coins taken first. A copy pasted from a bubble or
         // typed would be credited by its reader with nothing taken here -- a coin printed.
@@ -6756,6 +6786,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             MontanaTrace.mark("send_refused", "a letter holding value outside its door chat=\(String(chat.prefix(10)))")
             return Message(text: "", isFromMe: true, time: nowHHMM(), senderRef: nil)
         }
+        #endif
         // AN EMPTY ADDRESS IS NO ADDRESS (15.48, the author's word 08.09: «a retry mark on a letter
         // to Saved Messages»). Saved Messages has no correspondent; the chat handed «» instead of
         // nil, the letter was queued to nobody, the engine found no pipe for nobody and painted it
@@ -7036,8 +7067,9 @@ enum SeedScope {
     /// The settings of the applications behind a door, each list named by its door (mt-copy-scope-check reads them there); one
     /// expression of its own, so the compiler types the long list above and this one apart (link 15426).
     private static let doorSettingKeys: [String] = {
-        var lists = [MTApps.coins?.settingKeys]   // the coins' own settings (guard 4)
-        #if !MONTANA_MESSENGER   // the VPN and the mesh are the Protocol's alone (decision 651 = a, link 15846)
+        var lists: [[String]?] = []
+        #if !MONTANA_MESSENGER   // the coins, the VPN and the mesh are the Protocol's alone (decision 651 = a, link 15846; cut C6)
+        lists.append(MTApps.coins?.settingKeys)   // the coins' own settings (guard 4)
         lists.append(MTApps.vpn?.settingKeys)   // the VPN's own settings (slice S3b b3)
         lists.append([MontanaPhoneNode.meshDiscoverableKey])   // the mesh's findability switch
         #endif
@@ -7138,8 +7170,9 @@ enum SeedScope {
         + doorSeatKeys
     /// The person's keys of the applications behind a door, each list named by its door.
     private static let doorSeatKeys: [String] = {
-        var keys = MTApps.coins?.seatKeys ?? []   // the balances and levels the pairs told this person (guard 4)
+        var keys: [String] = []
         #if !MONTANA_MESSENGER
+        keys += MTApps.coins?.seatKeys ?? []   // the balances and levels the pairs told this person (guard 4)
         keys += MTApps.wall?.seatKeys ?? []   // the walls' pages held here and the moments first seen (slice S4c2)
         keys += MTApps.vpn?.seatKeys ?? []   // the VPN wall's retired asking, the Protocol's alone (decision 651 = a)
         #endif
@@ -7165,13 +7198,13 @@ enum SeedScope {
         "DOC:Montana/Chats", "AS:MontanaHistory", "AS:MontanaJournal", "GROUP:delivery", "GROUP:inbox",
         "DOC:Montana/TimeChain"]
         + doorSeatFolders
-        + (MTApps.coins?.seatFolders ?? [])   // the person's coin book, named by the coins' door (guard 4)
     #if MONTANA_MESSENGER
     private static let doorSeatFolders: [String] = []
     #else
     /// The files of the posts being written (cut C6d): the wall's load lets go of every file no draft of the person seated
     /// names, so a parked person's drafts would lose theirs.
     private static let doorSeatFolders = ["AS:Montana/WallDrafts"]
+        + (MTApps.coins?.seatFolders ?? [])   // the person's coin book, named by the coins' door (guard 4)
     #endif
     // Per-chat keys of the era before the sealed maps (SC-05): collapsed once, forgotten with the person.
     static let legacyPrefixes = ["lastSeen_", "draft_", "mute_", "block_"]
@@ -7370,11 +7403,13 @@ enum SeedScope {
         let seated = MTSeats.anyParked
         // The coin book of the person forgotten is on disk whole and set aside before anything of theirs leaves (the coin door's
         // forgottenAlone); with other seats the seat's own road parks it (MTSeats.leaveForgotten).
+        #if !MONTANA_MESSENGER
         if !seated {
             let aside = { MainActor.assumeIsolated { MTApps.coins?.moment(.forgottenAlone) } }
             // MAIN-SAFE-SYNC: the main thread runs aside itself; only a caller off it waits, on main, which waits on nobody here.
             if Thread.isMainThread { aside() } else { DispatchQueue.main.sync(execute: aside) }
         }
+        #endif
         if seated {
             for k in ud.dictionaryRepresentation().keys where MTSeats.layerHolds(k) { ud.removeObject(forKey: k) }
             for k in seatKeychain { MontanaKeychain.delete(k) }

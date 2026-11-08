@@ -197,10 +197,10 @@ enum MontanaCard {
     /// daily one.
     static let permPrefix = "https://montana.quest/perp/"
     static let tempPrefix = "https://montana.quest/temp/"
-    /// ONE CARD, ONE NODE, TWO SITES (07.10.2026, carried over from MT Messenger): the Messenger writes its invitations on
-    /// montana.xxx and the Protocol on montana.quest; a site's /r/ page opens an app by that app's scheme (montana:// the
+    /// ONE CARD, ONE NODE, TWO SITES (07.10.2026, carried over from MT Messenger): both apps write their invitations on
+    /// montana.quest, whose association file names both bundles; its /r/ page opens an app by that app's scheme (montana:// the
     /// Messenger's, mt-protocol:// the Protocol's, Code/Names.xcconfig). Each app reads the /r/, /perp/ and /temp/ forms of
-    /// both sites, so its own scanner opens the other's code as well.
+    /// both sites, so a card written on montana.xxx before still opens.
     static let linkHosts = Set(["montana.quest", "montana.xxx", "www.montana.xxx"])
     /// Every written form an invitation is read from.
     static let readPrefixes: [String] =
@@ -1453,6 +1453,7 @@ enum MontanaMeeting {
                 return
             }
         }
+        #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
         // WHICH MONTANA OPENS IT (MTSiblingApps, the author's word 11.10.2026 14:13 UTC): an invitation is asked first; the root
         // answers at once when no other Montana app stands, or asks the person in the platform's own dialog.
         if !chosen, MTSiblingApps.invites(given) {
@@ -1460,6 +1461,7 @@ enum MontanaMeeting {
             DispatchQueue.main.async { NotificationCenter.default.post(name: .montanaChooseApp, object: nil, userInfo: ["link": link]) }
             return
         }
+        #endif
         // A GROUP'S INVITE LINK IS ITS OWNER'S CARD AND THE GROUP'S MARK (stage R.6, the reference folder's «Invite Link»):
         // the mark waits for the meeting, and the card goes on by the one road of a link
         var url = given
@@ -1477,6 +1479,7 @@ enum MontanaMeeting {
             return
         }
         #endif
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): a coin's link is answered as any unknown one
         // A COIN'S LINK OPENS THE WALLET (the author's word 03.10: «every Montana link of the coins is tappable, not only the
         // others'»): the coin letter's machine line is no invitation -- the invitation road below answered it «could not be opened».
         // Only where the coins stand (guard 4 of docs/APPS-API.md): an edition without them answers such a link as any unknown one.
@@ -1485,6 +1488,7 @@ enum MontanaMeeting {
             DispatchQueue.main.async { NotificationCenter.default.post(name: .montanaOpenWallet, object: nil) }
             return
         }
+        #endif
         let host = url.host?.lowercased() ?? ""
         let webForm = url.scheme?.lowercased() == "https"
             && MontanaCard.linkHosts.contains(host) && ["/r/", "/perp/", "/temp/"].contains { url.path.hasPrefix($0) }
@@ -1734,6 +1738,9 @@ final class MontanaMeetBook {
 // (MT_SCHEME_PROTOCOL, MT_SCHEME_MESSENGER) and read here from Info.plist.
 // ════════════════════════════════════════════════════════════
 enum MTSiblingApps {
+    // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7): it keeps only the
+    // taking of a link the Protocol hands it under its own scheme (handHost, ownSchemes, handedOver).
+    #if !MONTANA_MESSENGER
     struct App: Identifiable, Equatable {
         let scheme: String
         let name: String
@@ -1745,12 +1752,14 @@ enum MTSiblingApps {
     static let all = [App(scheme: info("MTSchemeProtocol"), name: info("MTNameProtocol")),
                       App(scheme: info("MTSchemeMessenger"), name: info("MTNameMessenger"))]
     private static func info(_ key: String) -> String { Bundle.main.object(forInfoDictionaryKey: key) as? String ?? "" }
+    #endif
     static let handHost = "open"   // NOT-UI: the host of a handed link
     /// This app's own schemes, as Info.plist states them.
     static let ownSchemes: Set<String> = {
         let types = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? [[String: Any]] ?? []
         return Set(types.flatMap { t in (t["CFBundleURLSchemes"] as? [String]) ?? [] }.map { s in s.lowercased() })
     }()
+    #if !MONTANA_MESSENGER
     /// This app's own name: the one under its icon (on the Mac, Montana Core).
     static var ownName: String { MontanaSafety.appName }
     /// The other Montana apps standing on this phone now.
@@ -1760,6 +1769,7 @@ enum MTSiblingApps {
             return UIApplication.shared.canOpenURL(u)
         }
     }
+    #endif
     /// A link handed over by another Montana app: the link inside it.
     static func handedOver(_ url: URL) -> URL? {
         guard let s = url.scheme?.lowercased(), ownSchemes.contains(s), url.host?.lowercased() == handHost,
@@ -1767,6 +1777,7 @@ enum MTSiblingApps {
               let d = Data(base64urlNoPad: v), let link = String(data: d, encoding: .utf8) else { return nil }
         return URL(string: link)
     }
+    #if !MONTANA_MESSENGER
     /// Whether a link begins a correspondence -- a card or a name, a group's mark aside: the one resolver of a scan and a paste.
     static func invites(_ url: URL) -> Bool {
         let bare = MTGroup.joinMark(in: url)?.url ?? url
@@ -1783,4 +1794,5 @@ enum MTSiblingApps {
         MontanaTrace.mark("open_in", "app=" + app.scheme + " len=" + String(link.count))
         UIApplication.shared.open(u)
     }
+    #endif
 }

@@ -218,6 +218,7 @@ struct MTGroupRequest: Codable, Equatable {
     var at: Double
 }
 
+#if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): a coin's payees are not declared there
 /// ONE PERSON OF A GROUP AS A COIN OF THIS PHONE REACHES THEM (MTGroup.coinPeople): their seat and the name this phone shows them by,
 /// the pair's chat a transfer to them rides when this phone holds one open to coins, and whether it holds a pipe with them at all.
 struct MTGroupPayee {
@@ -226,6 +227,7 @@ struct MTGroupPayee {
     let chat: Chat?
     let held: Bool
 }
+#endif
 
 /// WHAT AN ADMINISTRATOR MAY DO (the checklist's G.6, the reference's «What can this admin do?»), each a short word on the wire --
 /// the rights whose deed this phone's group can hold: the owner names the ones an administrator lacks.
@@ -444,6 +446,7 @@ final class MTGroup {
         return [shownName(pipe: g.owner, said: g.names[Self.ownerSeat])]
     }
 
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// WHOM A COIN OF THE GROUP REACHES FROM THIS PHONE (the author's word 17.10.2026 21:14 UTC, asked whether a coin in a group is a
     /// transfer to one chosen member or no coin at all: «yes, with a choice by check marks among the members, as on the Send page of
     /// the time coin»). A transfer is one record on the nodes for one receiver, named by the pair's tag under the pipe's secret
@@ -466,6 +469,7 @@ final class MTGroup {
             return MTGroupPayee(seat: p.seat, name: p.name, chat: MTApps.coins?.canPay(chat, store: store) == true ? chat : nil, held: true)
         }
     }
+    #endif
     /// THE GROUP IS TOLD, IT IS NEVER PAID (the author's word 17.10.2026 21:14 UTC): the coins went to each person picked by the pair's
     /// own transfer (MTCoinSendSheet, MTCoinSend.transfer); the group's feed gets the sender's plain words of how many were paid -- no
     /// sum, no name, no transfer's link and no coin letter's machine line, so no phone of the group credits anything by it (carries
@@ -2788,7 +2792,10 @@ final class MTGroup {
         #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         if MTRowLetter.game(text) != nil { return false }
         #endif
-        return MTApps.coins?.isLetter(text) != true && !MTRowLetter.ownRow(text)
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): no coin letter to refuse there
+        if MTApps.coins?.isLetter(text) == true { return false }
+        #endif
+        return !MTRowLetter.ownRow(text)
     }
     static func clean(_ s: String, _ limit: Int) -> String {
         String(MTCrown.plain(s.trimmingCharacters(in: .whitespacesAndNewlines)).prefix(limit))

@@ -396,8 +396,8 @@ enum MontanaNotify {
         }
     }
 
-    /// A DELETED LETTER OR CONVERSATION LEAVES NO BANNER BEHIND (the critic R-4, 11.10.2026; the author's word 11.10.2026 17:1x
-    /// UTC: «check the whole architecture of the chats' time chains, so there are no holes by the constitution»): only the opening
+    /// A DELETED LETTER OR CONVERSATION LEAVES NO BANNER BEHIND (the critic R-4, 11.10.2026; the author's word 11.10.2026 17:1x UTC:
+    /// «check the whole architecture of the chats' time chains, so there are no holes by the constitution»): only the opening
     /// of a chat took its banners down (markRead), so a letter its writer erased for everyone, or a conversation erased at either
     /// end, still stood on the lock screen in its own words. A banner names its chat (userInfo «chat», the thread) and its letter
     /// (userInfo «mid», the extension's and the call's; the app's own by its identifier: the name, «group-» and «pin-» forms).

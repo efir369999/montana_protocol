@@ -25,7 +25,7 @@ mtrelay-go/pkg-headers-nomod/
 build-boevoe/
 build-p2p/
 
-# every versioned build folder (build-p2p-v*, build-merge*, and the like)
+# every versioned build directory (build-p2p-v*, build-merge*, and the like)
 build-*/
 *.sdkstatcache
 
@@ -36,7 +36,7 @@ Code/Frameworks/WebRTC.xcframework
 Code/Frameworks/MontanaXray.xcframework/
 scripts/xray-ios/MontanaXray.xcframework/
 
-# the built core and the transport libraries: built locally by script only
+# the built core and transport libraries -- a local scripted build only
 Code/Frameworks/*.xcframework/
 Code/Frameworks/.*/
 Code/Frameworks/*.old*/
@@ -62,3 +62,4 @@ Code/Frameworks/*.xcframework.*
 # A session worktree checked out inside the client tree is not the tree (29.09: fix/vpn-ping-grpc-ams stood in .worktrees/ and
 # blocked the delivery guard and the language gate of the main tree).
 .worktrees/
+# the master wall under its Russian name, spelled without Cyrillic (06.11, Agent 1014): a name not opening on a Latin letter or digit

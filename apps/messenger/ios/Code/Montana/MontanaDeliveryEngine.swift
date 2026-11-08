@@ -1417,7 +1417,9 @@ final class MontanaDeliveryEngine {
             let verdicts = store.rowVerdicts(facing.map { $0.mid })
             store.liftClockRed(riding: riding)   // once: the reds of silence an older build painted on letters still riding
             store.paintOrphanSending(queueMids: queueMids)
+            #if !MONTANA_MESSENGER
             MTApps.coins?.due(store)   // a coin letter of mine past its day gives its coins back (10.10)
+            #endif
             guard !facing.isEmpty else { return }
             self.q.async {
                 var a = self.load(); let n = a.count
@@ -1611,7 +1613,12 @@ final class MontanaDeliveryEngine {
         // receiver opening the app later had no way left to get it.
         // A COIN LETTER HAS NO END (the author's words 07.10.2026 15:4x UTC: «online or in cold storage, what difference -- they
         // must leave»): its coins ride with it until the receiver's receipt, and no clock hands them back.
-        if now - it.since > carry, MTApps.coins?.isLetter(it.text) != true {
+        #if MONTANA_MESSENGER
+        let ends = now - it.since > carry
+        #else
+        let ends = now - it.since > carry && MTApps.coins?.isLetter(it.text) != true
+        #endif
+        if ends {
             a.remove(at: i); save(a)
             let chat = it.chat, m = it.mid, tries = it.tries, age = Int(now - it.since)
             if isBurialWord(it.text) { MTPipeBook.forget(it.to) }   // the tombstone or the closing word expired — the pipe goes with it

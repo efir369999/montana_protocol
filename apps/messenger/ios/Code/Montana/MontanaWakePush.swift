@@ -596,7 +596,7 @@ enum MontanaWakePush {
     /// THE DOOR OF A CONVERSATION — one rule both sides compute alike: the FIRST door, in the
     /// network's own list order, that is alive for me AND named alive by the peer. Measured 05.09
     /// 02:08 and 14:25: the ru phone under its tunnel cannot reach api.montana.quest at all, the en
-    /// phone on cellular cannot reach door.montana.quest — the two have no common Moscow door, and
+    /// phone on cellular cannot reach door.montana.quest — the two have no common door on the mow node, and
     /// «the later of the two elected» could not know it: each side posted into the other's hole.
     /// Each names the doors alive FOR ITSELF; the intersection is the same set on both screens, its
     /// first door the same door, and a door one side finds dead leaves the intersection with that
@@ -1346,7 +1346,7 @@ enum MontanaWakePush {
             regChainEnds(tag, host)   // the chain stops at the first refusal: the next round asks this door afresh
             // A DOOR THAT DID NOT ANSWER IS ASKED AGAIN (15.09): a removal that times out leaves the
             // door holding a pair this phone withdrew, and the next occasion may be an hour away —
-            // measured 14:45, Amsterdam's removal answered -1 and the blocked caller's wake found the
+            // measured 14:45, the ams node's removal answered -1 and the blocked caller's wake found the
             // row twenty-five seconds later. Every failure but «the door does not know the question»
             // (404) rides the one retry, on the same growing pause the rate limit uses.
             guard code != 404 else { return }
@@ -2034,8 +2034,8 @@ enum MontanaWakePush {
             let (code, w) = await hedgedPut(doors, payload: payload, bytes: data.count, bid: bid, bulk: bulk)
             if code == 200 {
                 // A LETTER'S CARGO LIES ON EVERY MACHINE (20.10, T1 16:53Z). A piece lay on the one machine its put reached,
-                // and the sender dropped its crate at that 200. Two photos of the iPhone 15 landed on Amsterdam at 16:47:11Z;
-                // T1 had not reached Amsterdam since 16:17Z (both its doors timed out) and the Moscow node's own hop to its
+                // and the sender dropped its crate at that 200. Two photos of the iPhone 15 landed on the ams node at 16:47:11Z;
+                // T1 had not reached the ams node since 16:17Z (both its doors timed out) and the mow node's own hop to its
                 // sibling timed out as well (503 to every ask), so the photos stood as «loading» on T1 while the sender had
                 // reached both machines a second before. A node's copy to its sibling rides that same broken road; only the
                 // sender, who has just reached a machine, can lay the piece on the others. A failed copy costs the redundancy
@@ -3315,7 +3315,7 @@ enum MontanaWakePush {
             guard !due.isEmpty else {
                 MontanaTrace.markFolded("wakepush_vreg", "standing=\(subs.count) door=\(host) -- nothing new", window: 600)
                 if let p = subs.first {
-                    askHeld(url, host: host, token: hex, topic: topic, pair: p, extra: ["life": Int(MontanaCall.callLifeS), "dw": 1], tag: "wakepush_vheld")
+                    askHeld(url, host: host, token: hex, topic: topic, pair: p, extra: ["dw": 1], tag: "wakepush_vheld")
                 }
                 continue
             }
@@ -3331,7 +3331,7 @@ enum MontanaWakePush {
                            noteRegistered(host, chunk, at: now, token: hex)
                            if unheard { UserDefaults.standard.set(life, forKey: lifePrefix + host) }   // this door heard this life whole
                        },
-                       extra: ["life": Int(MontanaCall.callLifeS), "dw": 1], firstExtra: fresh)
+                       extra: ["dw": 1], firstExtra: fresh)
         }
     }
 

@@ -633,7 +633,7 @@ final class MontanaDirect {
         let dialParams: NWParameters
         if port == 443 {
             let tls = NWProtocolTLS.Options()
-            sec_protocol_options_add_tls_application_protocol(tls.securityProtocolOptions, "mt-node")  // WIRE-CONST: the node ALPN; nginx in Moscow accepts mt-node AND mt-door (transition)
+            sec_protocol_options_add_tls_application_protocol(tls.securityProtocolOptions, "mt-node")  // WIRE-CONST: the node ALPN; nginx on the mow node accepts mt-node AND mt-door (transition)
             ip.withCString { sec_protocol_options_set_tls_server_name(tls.securityProtocolOptions, $0) }
             dialParams = NWParameters(tls: tls, tcp: tcpOpts)
         } else {

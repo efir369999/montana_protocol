@@ -39,12 +39,13 @@ enum MTPeerKind {
 // One case per pane: the title, the empty-state icon and the selection of messages live together, so
 // adding a pane is one case and not four parallel switches.
 enum MTMediaTab: Int, CaseIterable, Identifiable {
-    #if !MONTANA_MESSENGER   // the Protocol's alone (cut C6)
+    #if !MONTANA_MESSENGER   // the Protocol's alone: its wall and its coins (cut C6)
     case wall   // the wall first (the author's word 24.09)
-    #endif
     // THE TRANSACTIONS (the author's word 12.10.2026 12:2x UTC: «[...] a section of transactions, to see only what was sent to and
     // received from the correspondent»).
-    case transactions, media, video, files, links, music, voice
+    case transactions
+    #endif
+    case media, video, files, links, music, voice
 
     var id: Int { rawValue }
 
@@ -52,8 +53,8 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
         switch self {
         #if !MONTANA_MESSENGER
         case .wall: return "Wall"
-        #endif
         case .transactions: return "Transactions"
+        #endif
         case .media: return "Media"
         case .video: return "Video"
         case .files: return "Files"
@@ -68,8 +69,8 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
         switch self {
         #if !MONTANA_MESSENGER
         case .wall: return String(localized: "Wall", bundle: MTLanguage.bundle)
-        #endif
         case .transactions: return String(localized: "Transactions", bundle: MTLanguage.bundle)
+        #endif
         case .media: return String(localized: "Media", bundle: MTLanguage.bundle)
         case .video: return String(localized: "Video", bundle: MTLanguage.bundle)
         case .files: return String(localized: "Files", bundle: MTLanguage.bundle)
@@ -83,8 +84,8 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
         switch self {
         #if !MONTANA_MESSENGER
         case .wall: return "text.below.photo"
-        #endif
         case .transactions: return "arrow.left.arrow.right"
+        #endif
         case .media: return "photo.on.rectangle"
         case .video: return "video.fill"
         case .files: return "doc.fill"
@@ -98,8 +99,8 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
         switch self {
         #if !MONTANA_MESSENGER
         case .wall: return "No posts yet"
-        #endif
         case .transactions: return "No transactions yet"
+        #endif
         case .media: return "Shared media will appear here"
         case .video: return "Shared video will appear here"
         case .files: return "Shared files will appear here"
@@ -118,8 +119,8 @@ enum MTMediaTab: Int, CaseIterable, Identifiable {
         switch self {
         #if !MONTANA_MESSENGER
         case .wall: return []   // the wall is its owner's posts, not the letters (MTBoardPane)
-        #endif
         case .transactions: return []   // the transfers are the coin book's, not the letters (MTCoinHistory.with)
+        #endif
         case .media: return messages.filter { $0.imageFile != nil }
         case .video: return messages.filter { $0.videoFile != nil }
         case .files: return messages.filter { $0.docFile != nil && !Self.isMusic($0) }

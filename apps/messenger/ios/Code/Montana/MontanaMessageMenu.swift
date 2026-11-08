@@ -208,8 +208,13 @@ struct MessageContextOverlay: View {
     /// The set's link: the set's own name and its title, and not one address of anybody (22.09).
     var onCopyLink: (() -> Void)? = nil
     var onReport: () -> Void = {}   // Guideline 1.2: the peer's letter can be reported from its menu
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// COINS GIVEN ON THE CORRESPONDENT'S LETTER (the author's word 03.10 13:40): one by default, five or ten by choice.
     var onCoin: ((Int) -> Void)? = nil
+    /// The Protocol's caller sets the coins after the menu's arguments (a postfix #if, SE-0308): the giving row, and whether a
+    /// letter is offered deletion -- a coin letter of mine on its way is not (the coin audit's first point, 05.10.2026 18:4x UTC).
+    func coins(give: ((Int) -> Void)?, canDelete: Bool) -> Self { var menu = self; menu.onCoin = give; menu.canDelete = canDelete; return menu }
+    #endif
     /// The profile's menu (the author's word 15.09): the SAME cloud as the chat's, other rows —
     /// show in chat, forward, delete, select. Set = profile mode.
     var onShowInChat: (() -> Void)? = nil
@@ -218,7 +223,7 @@ struct MessageContextOverlay: View {
     /// style — the person chose blindly. The question stands where the long-press answer stood.
     let canDeleteForEveryone: Bool
     let ladder: Bool
-    /// A coin letter of mine on its way is offered no deletion (the coin audit's first point, 05.10.2026 18:4x UTC: MTCoinSend.travels).
+    /// Whether the letter is offered deletion at all (set by the Protocol's coins, above).
     var canDelete = true
     var onDeleteMine: () -> Void
     var onDeleteEveryone: () -> Void
@@ -457,10 +462,12 @@ struct MessageContextOverlay: View {
                             divider
                         }
                         row("Reply", "arrowshape.turn.up.left", action: onReply)
+                        #if !MONTANA_MESSENGER
                         if let onCoin, !message.isMine, let coins = MTApps.coins {
                             divider
                             coins.giveRow(onCoin: onCoin)   // the coin and the levels of π to give (slice S2b b6)
                         }
+                        #endif
                         if let onEditSticker {
                             divider; row("Edit sticker", "pencil.tip.crop.circle", action: onEditSticker)
                         }

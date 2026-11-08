@@ -140,9 +140,11 @@ struct SettingsTabView: View {
                 Section {
                     // THE QUESTIONS ARE THE COINS' OWN (decision 531 (a), guard 4 of docs/APPS-API.md): their topics speak of the level by
                     // the wallet, the minting and the ticker, so the page stands behind the coin door; an edition without coins draws no row.
+                    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
                     if let coins = MTApps.coins {
                         NavigationLink { coins.questionsPage() } label: { navLabel("Questions", "questionmark.bubble.fill", .green) }   // the answers of this build (17.10.2026)
                     }
+                    #endif
                     NavigationLink { SupportView() } label: { navLabel("Ask a question", "questionmark.circle.fill", .blue) }
                     NavigationLink { MontanaTermsView() } label: { navLabel("Terms of Use", "doc.text.fill", .gray) }
                     // THE POLICY STANDS WHERE THE TERMS STAND (App Review 5.1.1(i), 08.10.2026): reachable from inside the app, not only
@@ -1858,7 +1860,9 @@ struct PrivacyView: View {
     private func forgetSeed() {
         // THE IDENTITY LEAVES THE NODES TOO (App Review 5.1.1(v), 08.10.2026: deleting an account deletes its records): the row of
         // the Montana top -- the coins shown -- is withdrawn from every node while the words still derive its token.
+        #if !MONTANA_MESSENGER
         MTApps.coins?.moment(.seedForgetting)
+        #endif
         Task { @MainActor in
             // Everything the seed can reopen is sealed and on disk FIRST (15.10.4); the wipe follows.
             guard let store = ChatStore.live else { SeedScope.forget(); ui.settingsShown = false; return }
@@ -1957,7 +1961,9 @@ struct PrivacyView: View {
                         .font(.caption).foregroundColor(.gray)
                 }
                 // THE OWNER SHOWS OR HIDES THEIR COINS: the coins' own switch (slice S2b b7c), drawn where the door stands.
+                #if !MONTANA_MESSENGER
                 if let coins = MTApps.coins { coins.showSwitch(icon: AnyView(icon("trophy.fill", .orange))) }
+                #endif
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 12) {
                         icon("checkmark.circle.fill", .green)
@@ -2062,12 +2068,16 @@ struct PrivacyView: View {
             let rest = Text("Your account is deleted: this device erases your 24-word identity. Your history stays here sealed and opens again only from the same 24 words — on this device, or on another one that already holds a copy. Nobody keeps the words for you: write them down first: Settings → Privacy → Seed phrase. Deleting the app erases the history as well.")
             // THE COINS ARE SAID BEFORE THE WORDS GO (the author's word 12.10.2026 12:3x UTC, No.66, after 4 105 470 coins stood on a
             // forgotten account on 11.10): an account that holds coins says how many, and that only its 24 words bring them back.
+            #if MONTANA_MESSENGER   // no coins in Messenger (cut C6)
+            rest
+            #else
             if let held = MTApps.coins?.heldWords() {   // the coins said before the words go (slice S2b b7c)
                 // USER-DATA: two line breaks between the coins' line and the rest
                 held + Text(verbatim: "\n\n") + rest
             } else {
                 rest
             }
+            #endif
         }
         .sheet(isPresented: $showSeed) {
             NavigationStack { SeedShowView() }.preferredColorScheme(.dark).montanaMotionMeter()

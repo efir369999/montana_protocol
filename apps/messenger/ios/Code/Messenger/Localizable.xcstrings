@@ -1604,23 +1604,6 @@
         }
       }
     },
-    "Questions": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вопросы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "常见问题"
-          }
-        }
-      }
-    },
     "Ask the person who sent this set for it.": {
       "localizations": {
         "ru": {
@@ -16232,38 +16215,6 @@
         }
       }
     },
-    "Auto-reactions": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Автореакции"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自动回应"
-          }
-        }
-      }
-    },
-    "Money Flow": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Денежный поток"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "资金流"
-          }
-        }
-      }
-    },
     "Money flow has begun": {
       "localizations": {
         "ru": {
@@ -16292,22 +16243,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "此助记词可解锁对您账户的访问权限"
-          }
-        }
-      }
-    },
-    "Transfer is being confirmed": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перевод подтверждается"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在确认转账"
           }
         }
       }
@@ -16500,54 +16435,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在恢复身份链"
-          }
-        }
-      }
-    },
-    "Open in": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открыть в"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开方式"
-          }
-        }
-      }
-    },
-    "Transactions": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Транзакции"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "交易"
-          }
-        }
-      }
-    },
-    "No transactions yet": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Транзакций пока нет"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂无交易"
           }
         }
       }

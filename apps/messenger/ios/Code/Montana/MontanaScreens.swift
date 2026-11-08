@@ -94,10 +94,12 @@ struct ArchivedChatsView: View {
                     title: store.title(for: c),
                     photoURL: store.avatarFor(c), color: c.color, initial: store.initial(for: c), who: c.convRef,
                     canDeleteForBoth: MontanaConv.holds(c.convId ?? c.name),
-                    coinsTravel: store.coinsTravel(c),
                     onBoth: { store.deleteChat(c, forBoth: true); deletingChat = nil },
                     onMine: { store.deleteChat(c, forBoth: false); deletingChat = nil },
                     onCancel: { deletingChat = nil })
+                #if !MONTANA_MESSENGER
+                .travels(store.coinsTravel(c))
+                #endif
             }
         }
     }
@@ -361,8 +363,10 @@ struct ScanMeetingView: View {
     @State private var done = false
     /// What the meeting answered when it did not open — said to the face, as the link's road says it.
     @State private var verdict: String?
+    #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
     /// A code read, waiting for the person to choose the Montana app that opens it (MTSiblingApps).
     @State private var choosing: String?
+    #endif
     var body: some View {
         ZStack {
             QRScannerView { code in
@@ -375,10 +379,12 @@ struct ScanMeetingView: View {
                     return
                 }
                 done = true
+                #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
                 // WHICH MONTANA OPENS IT (MTSiblingApps, the author's word 11.10.2026 14:13 UTC): with another Montana app on this
                 // phone the code's link is offered to it beside this one; a code that is no link opens here.
                 let link = MontanaCard.text(fromQR: code) ?? code
                 if URL(string: link)?.scheme != nil, !MTSiblingApps.others.isEmpty { choosing = link; return }
+                #endif
                 meetHere(code)
             }.ignoresSafeArea()
             VStack {
@@ -388,6 +394,7 @@ struct ScanMeetingView: View {
             }
         }
         .navigationTitle("Scan code").navigationBarTitleDisplayMode(.inline)
+        #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
         .confirmationDialog(Text("Open in"), isPresented: Binding(
             get: { choosing != nil }, set: { if !$0 { if choosing != nil { done = false }; choosing = nil } }), titleVisibility: .visible) {
             Button { if let c = choosing { choosing = nil; meetHere(c) } } label: {
@@ -400,6 +407,7 @@ struct ScanMeetingView: View {
             }
             Button("Cancel", role: .cancel) { choosing = nil; done = false }
         }
+        #endif
         // Closing the verdict lets the scanner take a code again.
         .alert(Text(LocalizedStringKey(verdict ?? "")), isPresented: Binding(
             get: { verdict != nil }, set: { if !$0 { verdict = nil; done = false } })) {
@@ -434,6 +442,14 @@ struct SeedShowView: View {
     @State private var noDeviceAuth = false
     @State private var ack1 = false
     @State private var ack2 = false
+    /// The seed's line names the wallet only where the coins stand (guard 4 of docs/APPS-API.md); Messenger carries none (cut C6).
+    @MainActor private static var seedLine: String {
+        #if MONTANA_MESSENGER
+        return "This seed phrase unlocks access to your account"
+        #else
+        return MTApps.coins?.said(.seed) ?? "This seed phrase unlocks access to your account"
+        #endif
+    }
     func requestAuth() {
         let ctx = LAContext(); var err: NSError?
         if ctx.canEvaluatePolicy(.deviceOwnerAuthentication, error: &err) {
@@ -470,8 +486,7 @@ struct SeedShowView: View {
                         .font(.system(size: 72)).foregroundColor(Color.accentColor).padding(.top, 36)
                     Label("This information is for you only!", systemImage: "exclamationmark.triangle")
                         .font(.headline).foregroundColor(.primary).padding(.top, 8)
-                    // The seed's line names the wallet only where the coins stand (guard 4 of docs/APPS-API.md).
-                    Text(LocalizedStringKey(MTApps.coins?.said(.seed) ?? "This seed phrase unlocks access to your account"))
+                    Text(LocalizedStringKey(Self.seedLine))
                         .font(.title2.bold()).foregroundColor(.primary)
                         .multilineTextAlignment(.center).padding(.horizontal, 24)
                     Button { ack1.toggle() } label: {

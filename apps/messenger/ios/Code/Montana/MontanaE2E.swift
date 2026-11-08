@@ -606,7 +606,13 @@ final class E2E {
     /// ramp -- T2's word of 01:21:06 reached T1 at 01:22:02. Every presence word now carries it, so the live channel hands it over at
     /// once and the node keeps it as the pair's last word, which an open wallet asks for every few seconds (sweepPresence).
     /// The owner who hid the coins (MTCoinShow) says none: the word about oneself carries the withdrawal.
-    static func coinTail() -> String { MTApps.coins?.balanceTail ?? "" }
+    static func coinTail() -> String {
+        #if MONTANA_MESSENGER
+        return ""   // no coins in Messenger (cut C6): the word tells no balance
+        #else
+        return MTApps.coins?.balanceTail ?? ""
+        #endif
+    }
     /// The balance a peer's word tells stands after the ground's digits; a build before it names nothing.
     static func coinsSaid(in payload: Substring) -> Int? {
         guard let i = payload.firstIndex(of: "N") else { return nil }
@@ -621,8 +627,10 @@ final class E2E {
     }
     /// A word of the peer, live or swept from the node, told its balance: the people's book keeps the newest (MTCoinBoard).
     static func heardCoins(from peer: String, payload: Substring, at: Double) {
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): a peer's balance has no book to land in
         guard let coins = coinsSaid(in: payload) else { return }
         MTApps.coins?.heardBalance(coins, from: peer, at: at)
+        #endif
     }
     /// THE GLOBAL LEVEL RIDES AFTER THE BALANCE (the author's word 11.10.2026 18:2x UTC: «everywhere an avatar is shown, the balance
     /// on the left and the user's global level on the right»): «L» and the level, said only while its owner's switch is on
@@ -653,8 +661,10 @@ final class E2E {
     }
     /// A word of the peer, live or swept from the node, told its Global Level or withdrew it: the people's book keeps the newest.
     static func heardLevel(from peer: String, payload: Substring, at: Double) {
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): a peer's level has no book to land in
         guard let level = levelSaid(in: payload) else { return }
         MTApps.coins?.heardLevel(level, from: peer, at: at)
+        #endif
     }
     /// WHAT A WORD PROVES OF ITS BUILD IS READ FROM EVERY WORD, LATE ONES TOO (25.09, the author's word «on T3 I still do not
     /// see the ground»): the age of a word says when it was said, not what its build reads. Between two phones without a live
@@ -1592,8 +1602,12 @@ final class E2E {
         // 09:39:15Z refused for «no receiver key» while Petros's phone receipted T1's words within 4 s. A key not derived yet
         // is derived off the main thread now, and the whole book hears it when it stands (the coin door's about).
         let now = Date().timeIntervalSince1970
+        #if MONTANA_MESSENGER
+        let keyDue = false, coinsDue = false, keyTold = false   // no coins in Messenger (cut C6): the word carries my words alone
+        #else
         let coin = MTApps.coins?.about(to: peer, askKey: askKey, now: now) ?? MTCoinAbout(at: now)
-        let keyDue = coin.keyDue
+        let keyDue = coin.keyDue, coinsDue = coin.coinsDue, keyTold = coin.key != nil
+        #endif
         // THE KEY WAITS FOR NO PROOF OF THE BUILD: «never inferred» spared the builds that bury the word, and none of them runs
         // below the floor 2254 (the site's min, TestFlight expired), while the key in the word is read since 2193. The proof
         // rides a presence word, which crosses live roads only -- a pair that never stood on one never held each other's key.
@@ -1605,7 +1619,6 @@ final class E2E {
         // minting pair's balance moves every second, and a word on every coin would be the flow's storm again.
         // HIDDEN IS SAID, NOT LEFT UNSAID (04.10, MTCoinShow): an owner who hid the coins tells -1 once, and the pair's rating
         // drops the row; silence would leave the last balance standing on their screen.
-        let coinsDue = coin.coinsDue
         if !wordsHeld, !keyDue { return }
         if held == tag, !coinsDue, !keyDue { return }                 // RECEIPTED with these words and this balance
         if held == nil, tag == "0", !force, !coinsDue, !keyDue { return }   // nothing was ever said, and nothing is said now
@@ -1621,15 +1634,19 @@ final class E2E {
         if MontanaDeliveryEngine.shared.pendingStateTag(kind: .about, to: peer) == tag, !coinsDue, !keyDue { return }   // on their way
         var word: [String: Any] = ["at": now]
         if wordsHeld { word["b"] = bio; word["l"] = link }
+        #if !MONTANA_MESSENGER
         if let coins = MTApps.coins { word.merge(coins.word(coin, to: peer)) { _, c in c } }   // the balance, the coin key, my words' tag
+        #endif
         if askKey { word["q"] = 1 }   // my send found no key of theirs: their phone tells it again (ChatStore, the about word)
         guard let d = try? JSONSerialization.data(withJSONObject: word),
               let body = String(data: d, encoding: .utf8) else { return }
         // A newer value takes the place of an older one still in the queue (LAW S-1, one state — one record).
         MontanaDeliveryEngine.shared.enqueue(to: peer, chat: peer, mid: ChatStore.mintMid().mid,
                                              text: aboutMark + body, silent: true, kind: .about)
+        #if !MONTANA_MESSENGER
         MTApps.coins?.told(coin, to: peer)
-        MontanaTrace.mark("about_tx", "to=\(String(peer.prefix(10))) bio=\(bio.isEmpty ? 0 : 1) link=\(link.isEmpty ? 0 : 1) tag=\(tag) key=\(coin.key == nil ? 0 : 1) ask=\(askKey ? 1 : 0)")
+        #endif
+        MontanaTrace.mark("about_tx", "to=\(String(peer.prefix(10))) bio=\(bio.isEmpty ? 0 : 1) link=\(link.isEmpty ? 0 : 1) tag=\(tag) key=\(keyTold ? 1 : 0) ask=\(askKey ? 1 : 0)")
     }
     /// The balance told now, past the word's ten minutes (MTWalletPull): the pace's mark is let go and the word goes.
     func tellBalance(to peer: String) {

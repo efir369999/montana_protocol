@@ -263,7 +263,15 @@ struct MessageBubble: View, Equatable {
         return b
     }
     #endif
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     var onTapCoin: () -> Void = {}   // a coin letter opens its own move (05.10)
+    /// THE COIN LETTER'S HAND (cut C6): the chat sets it in the Protocol alone.
+    func coin(onTap: @escaping () -> Void) -> MessageBubble {
+        var b = self
+        b.onTapCoin = onTap
+        return b
+    }
+    #endif
     var onTapReply: (MID) -> Void = { _ in }
     var tail: Bool = true     // show the "tail" (on the last one in the group),
     var quoteAuthor: String? = nil   // the quoted letter's author name (heads the quote block)
@@ -279,9 +287,11 @@ struct MessageBubble: View, Equatable {
     @ObservedObject private var transfers = MTTransferBoard.shared
     // The answers under this letter, read live — the row is not rebuilt for them.
     @ObservedObject private var reactionBoard = MTReactionBoard.shared
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// The coins given on letters: the coin total stands under the letter beside its answers (03.10), watched through the coin
     /// door (slice S2b b7) -- the bubble is drawn again when the letters' coins change, never at a coin minted.
     @ObservedObject private var coinWatch = MTApps.letterCoinsWatch
+    #endif
     @ObservedObject private var transcripts = MTVoiceTranscript.shared
     @State private var transcriptOpen = false
     private var mediaFileKey: String {
@@ -357,6 +367,7 @@ struct MessageBubble: View, Equatable {
     static func == (l: MessageBubble, r: MessageBubble) -> Bool {
         #if !MONTANA_MESSENGER
         guard l.chessOpen == r.chessOpen && l.chessStatus == r.chessStatus else { return false }
+        guard MTApps.coins?.coinsOn(l.message.mid) == MTApps.coins?.coinsOn(r.message.mid) else { return false }   // the coins under it
         #endif
         return l.message.id == r.message.id
             && l.message.text == r.message.text
@@ -382,7 +393,6 @@ struct MessageBubble: View, Equatable {
             // otherwise a row could be called unchanged while what stands under it has changed.
             && MTReactionBoard.shared.shown(l.message).plates == MTReactionBoard.shared.shown(r.message).plates
             && MTReactionBoard.shared.shown(l.message).mine == MTReactionBoard.shared.shown(r.message).mine
-            && MTApps.coins?.coinsOn(l.message.mid) == MTApps.coins?.coinsOn(r.message.mid)
             && l.player.playingFile == r.player.playingFile
     }
 
@@ -531,8 +541,8 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         #if !MONTANA_MESSENGER
         if let game = message.gameLetter?.game { if !chessOpen { onTapChess(game) }; return }
         #endif
-        if MTApps.coins?.isLetter(message) == true { onTapCoin(); return }   // a coin letter: its transaction (05.10)
         #if !MONTANA_MESSENGER
+        if MTApps.coins?.isLetter(message) == true { onTapCoin(); return }   // a coin letter: its transaction (05.10)
         if let card = MTWallCard.of(message.text) { onTapWallPost(card); return }   // a post's card: its wall
         #endif
         if message.imageFile != nil { onTapImage(imgFrameBox.rect == .zero ? nil : imgFrameBox.rect); return }
@@ -639,13 +649,19 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
                 // ONE PLATE PER ANSWER, THE FACES ON IT: the same emoji from both sides is one plate
                 // with two faces, never two plates (a ForEach over repeated names drew one twice).
                 let plates = shown.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+                #if MONTANA_MESSENGER
+                let coinsOn = 0   // no coins in Messenger (cut C6)
+                #else
                 let coinsOn = MTApps.coins?.coinsOn(message.mid) ?? 0
+                #endif
                 if !plates.isEmpty || coinsOn > 0 {
                     HStack(spacing: 4) {
+                        #if !MONTANA_MESSENGER
                         // THE COINS ON THE LETTER (the author's word 03.10 13:40): the total given on it, on this phone's book.
                         if coinsOn > 0, let coins = MTApps.coins {
                             coins.letterCoins(coinsOn)   // the coins' own plate (slice S2b b7)
                         }
+                        #endif
                         ForEach(plates, id: \.self) { r in
                             // WHOSE PLATE (the author's word 20.09, [C-1]): the peer's face stands only on
                             // the answer the peer is NAMED on. A plate nobody is named on — an answer
@@ -831,8 +847,11 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
             #endif
         }
     }
-    /// The kinds after a group's letters: the coins', a release, a call, the big glyphs, the media and the words.
+    /// The kinds after a group's letters: the coins' (the Protocol's alone, cut C6), then the rest (wordKinds).
     @ViewBuilder private var letterKinds: some View {
+        #if MONTANA_MESSENGER
+        wordKinds
+        #else
         if MTMoneyFlowRow.of(message.text) {
             // THE MONEY FLOW BEGAN (MTMoneyFlowRow): a card of the chat, our coin turning once as the row appears.
             // NO LETTER MINTS (the author's word 02.11.2026 16:14 UTC, link 14629: «only 1 coin is 1 second, no other way named»):
@@ -857,7 +876,14 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
             .padding(.horizontal, 12).padding(.vertical, 8)
             .background(bubbleFill).foregroundColor(bubbleText)
             .clipShape(bubbleShape).overlay { bubbleOutline }
-        } else if let rel = releaseInfoOf(message.text) {
+        } else {
+            wordKinds
+        }
+        #endif
+    }
+    /// A release, a call, the big glyphs, the media and the words.
+    @ViewBuilder private var wordKinds: some View {
+        if let rel = releaseInfoOf(message.text) {
             releaseBubble(rel)
         } else if let ci = callInfoOf(message.text) {
             callBubble(ci)
@@ -1847,8 +1873,10 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         #if !MONTANA_MESSENGER
         if MTWallCard.of(m.text) != nil { return .above }   // a post's card (cut C6)
         #endif
-        if MTMoneyFlowRow.of(m.text)
-            || MTApps.coins?.isLetter(m) == true || releaseInfoOf(m.text) != nil || callInfoOf(m.text) != nil { return .above }
+        #if !MONTANA_MESSENGER
+        if MTApps.coins?.isLetter(m) == true { return .above }   // a coin letter (cut C6)
+        #endif
+        if MTMoneyFlowRow.of(m.text) || releaseInfoOf(m.text) != nil || callInfoOf(m.text) != nil { return .above }
         let files = m.imageFile != nil || m.videoFile != nil || m.audioFile != nil || m.docFile != nil
         if !files, bigEmojiText(m.text) != nil { return .above }
         if m.audioFile != nil || m.docFile != nil { return .above }

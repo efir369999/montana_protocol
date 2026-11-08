@@ -34,9 +34,11 @@ struct MontanaPeerInfoScreen: View {
     @State private var aboutTick = 0                 // their bio or link arrived (24.09): the face's lines are asked again
     @State private var pageSheet: MTAppSheet? = nil   // what an application shows over the page (MTPagePresenting, 25.09)
     @State private var personPage: MTPageRoute? = nil    // a writer's page, opened from a post or from a group's people
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     @State private var explorer: MTWebLink? = nil   // a transfer's record in the Explorer inside the app (the transactions' tab)
     @State private var coinMove: MTMoveRoute? = nil  // a coin letter's transaction page (the transactions' tab)
     @ObservedObject private var transfersWatch = MTApps.transfersWatch   // the transfers with this person, from the one fold of the coins
+    #endif
     @StateObject private var face = MTFaceDock()   // the face starts at its circle and opens by a press -- the owner's rule for every page (24.09)
     @Environment(\.dismiss) private var dismiss
     private var letterCount: Int { (store.messages[chat.name]?.count ?? 0) + (chat.convId.flatMap { store.messages[$0]?.count } ?? 0) }
@@ -244,10 +246,14 @@ struct MontanaPeerInfoScreen: View {
                                   confirmDissolve: $confirmDissolve, onGone: { dismiss(); ui.closeChat() }))
         .modifier(MTGroupClearAsk(chat: chat, asked: $confirmClear))
         .sheet(item: $roomAsk) { k in MTRoomInviteSheet(chat: chat.name, kind: k, video: roomAskVideo, opening: true) }
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
         .sheet(item: $explorer) { link in MTWebSheet(url: link.url).ignoresSafeArea() }
+        #endif
         .navigationDestination(isPresented: $channelPeople) { MTChannelPeoplePage(key: chat.name) }   // a channel's subscribers (17.10)
         .navigationDestination(isPresented: $channelAdmins) { MTChannelAdminsPage(key: chat.name) }   // a channel's administrators (17.10)
+        #if !MONTANA_MESSENGER
         .navigationDestination(item: $coinMove) { r in MTApps.coins?.movePage(r, peer: data.title) }
+        #endif
         .navigationDestination(item: $adminSeat) { s in   // «Promote» and «Edit Admin Rights» open the admin's rights (G.6)
             MTGroupAdminRightsPage(chat: chat.name, seat: s, name: MTGroup.shared.pagePeople(chat.name).first { p in p.seat == s }?.name ?? MTGroup.memberWord,
                                    isNew: !MTGroup.shared.isAdmin(chat.name, seat: s))
@@ -874,8 +880,8 @@ struct MontanaPeerInfoScreen: View {
             // THE LOOK ASKS (the author's word 25.09: «entering the page must show the wall to everyone, at once»): the page asks
             // for the person's wall as it opens — the held page is drawn at once, the owner's fresh one takes its place (MTBoard.look).
             .onAppear { if data.kind == .person { MTApps.wall?.look(data.conv) } }
-            #endif
             .onChange(of: state.tab) { _, t in if t == .transactions { MTApps.coins?.moment(.transfersAsked) } }   // the coins' fold, once, at the tab's opening
+            #endif
 
         // A GROUP'S «MEDIA» HOLDS ITS PHOTOS AND ITS VIDEOS TOGETHER, as the reference's pane does (the checklist's V.7)
         let items = isGroupPage && state.tab == .media
@@ -895,11 +901,21 @@ struct MontanaPeerInfoScreen: View {
         }
         #endif
     }
-    /// The panes of the letters: the transfers, the empty word, or the letters cut by day.
+    /// The panes of the letters: the transfers (the Protocol's alone, cut C6), then the letters' own (panes).
     @ViewBuilder private func letters(_ data: MTPeerInfoData, _ items: [Message]) -> some View {
+        #if MONTANA_MESSENGER
+        panes(data, items)
+        #else
         if state.tab == .transactions {
             transactions(data)
-        } else if items.isEmpty {
+        } else {
+            panes(data, items)
+        }
+        #endif
+    }
+    /// The empty word, or the letters cut by day.
+    @ViewBuilder private func panes(_ data: MTPeerInfoData, _ items: [Message]) -> some View {
+        if items.isEmpty {
             VStack(spacing: 10) {
                 Image(systemName: state.tab.icon)
                     .font(.system(size: 42)).foregroundColor(.gray)
@@ -916,8 +932,8 @@ struct MontanaPeerInfoScreen: View {
                 switch state.tab {
                 #if !MONTANA_MESSENGER
                 case .wall: EmptyView()
-                #endif
                 case .transactions: EmptyView()
+                #endif
                 case .media:
                     if isGroupPage { mediaGrid(sec.items, data) } else { grid(sec.items, data) { $0.imageFile } }
                 case .video: videoGrid(sec.items, data)
@@ -930,6 +946,7 @@ struct MontanaPeerInfoScreen: View {
         }
     }
 
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// THE TRANSFERS WITH THIS PERSON (the author's word 12.10.2026 12:2x UTC: «on the correspondent's page add ... a section of
     /// transactions, to see only what was sent to and received from the correspondent»): the coins sent to them and received from them,
     /// newest first, cut by day as every pane is, each on the bar's own glass; a transfer opens its record in the Explorer inside the app,
@@ -991,6 +1008,7 @@ struct MontanaPeerInfoScreen: View {
         case .move(let r): coinMove = r
         }
     }
+    #endif
 
     /// THE PROFILE WEARS THE PLAYER'S DRESS (the author's word 22.09): a file, a link, a track and a
     /// voice each stand on the bar's own glass — the square plate with the glyph and the long plate
@@ -1018,8 +1036,8 @@ struct MontanaPeerInfoScreen: View {
         switch t {
         #if !MONTANA_MESSENGER
         case .wall: return MTApps.wall != nil
-        #endif
         case .transactions: return MTApps.coins != nil
+        #endif
         default: return true
         }
     }

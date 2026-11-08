@@ -10,12 +10,16 @@ import UIKit
 @MainActor enum MTSeatTurn {
     private(set) static var now = 0
     static func leaving() {
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): their door is not declared there
         MTApps.coins?.moment(.seatLeaving)   // the coins of the person leaving land in their own folder first
+        #endif
         now &+= 1
     }
     static func seated() {
         now &+= 1
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
         MTApps.coins?.moment(.seated)   // every owner of coins then reads the seated person's own
+        #endif
     }
 }
 
@@ -820,7 +824,9 @@ enum MTShelfPost {
                                                  doors: MontanaWakePush.oneDoorPerNode(MontanaWakePush.orderedBases(for: "box")), silent: true)
             MontanaTrace.mark("shelf_receipt", mid: mid, "seat=\(p.id) boxed=\(k.boxed ? 1 : 0) code=\(k.code)")
         }
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
         await MTApps.coins?.shelfLanded(text, mid: mid, from: conv, words: p.words, seat: p.id)   // a coin letter: credited in their own book
+        #endif
     }
 
     /// THE SHELF RINGS THE PHONE (07.10): the labels of every person on the shelf, signed by their own reference, join the wake

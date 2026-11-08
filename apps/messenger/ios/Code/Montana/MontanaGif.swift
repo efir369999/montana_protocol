@@ -453,7 +453,7 @@ enum MontanaGifSearch {
     /// road -- the doors, the timeout, the reading of the answer are one for every kind.
     private static func ask(_ body: [String: Any]) async -> [[String: Any]] {
         // THE REFUSAL NAMES ITS DOORS (23.09, the critic): «no door with this capability» was written when
-        // every door refused or failed as well — T1 wrote it at 17:16:06 while Moscow answered 200 in that
+        // every door refused or failed as well — T1 wrote it at 17:16:06 while the mow node answered 200 in that
         // very second. Each door's answer is kept, and the line says which it was.
         let doors = await doorsWaited()
         var said: [String] = []

@@ -30,7 +30,9 @@ enum MontanaEntry {
 struct MontanaApp: App {
     @State private var langTick = 0
     @State private var meetVerdict: String?   // the loud outcome of a meeting by link (F-4)
+    #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
     @State private var chooseLink: String?   // an invitation waiting for the person to choose the Montana app that opens it
+    #endif
     @State private var diagAsk = false   // the diagnostics yes, asked at the install and at every update (MontanaDiagConsent)
     @AppStorage("AppLanguage") private var appLang = ""   // "" = follow system
     init() {
@@ -96,6 +98,7 @@ struct MontanaApp: App {
                     get: { meetVerdict != nil }, set: { if !$0 { meetVerdict = nil } })) {
                     Button("OK", role: .cancel) { meetVerdict = nil }
                 }
+                #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
                 // WHICH MONTANA OPENS THE INVITATION (MTSiblingApps, the author's word 11.10.2026 14:13 UTC): with another Montana
                 // app on this phone the platform's own dialog names each; with none the link opens here at once.
                 .onReceive(NotificationCenter.default.publisher(for: .montanaChooseApp)) { n in
@@ -114,6 +117,7 @@ struct MontanaApp: App {
                     }
                     Button("Cancel", role: .cancel) { chooseLink = nil }
                 }
+                #endif
             }
         }
     }
@@ -250,11 +254,15 @@ extension Notification.Name {
     static let montanaMeetVerdict = Notification.Name("montanaMeetVerdict")
     /// A correspondent's daily link arrived (their answer to «share contact»); userInfo["conv"].
     static let montanaPeerLinkArrived = Notification.Name("montanaPeerLinkArrived")
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): no coin's link, no wallet to open
     /// A coin's link was tapped: the tabs open the wallet (03.10).
     static let montanaOpenWallet = Notification.Name("montanaOpenWallet")
+    #endif
     /// The wallet's «Add account»: the tabs open the first screen as the drawer's plus does (03.10).
     static let montanaAddPerson = Notification.Name("montanaAddPerson")
+    #if !MONTANA_MESSENGER   // Messenger names no other app and offers no «Open in» (the author's word 17130; review of build 120, R-7)
     static let montanaChooseApp = Notification.Name("montanaChooseApp")   // an invitation asks which Montana app opens it (MTSiblingApps)
+    #endif
 }
 
 /// The SSOT of entering a conversation from OUTSIDE live screens -- a notification tap and a
@@ -410,7 +418,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             }
         }
         MontanaDiagConsent.apply()   // no yes to the diary: the extensions hold no diary id (5.1.1(ii), 08.10.2026)
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
         MTApps.coins?.moment(.launching)   // whether an earlier build had published this device's top row (5.1.2(i), 08.10.2026)
+        #endif
         MTRowLetter.eventWords = { MTGroup.shared.eventWords($0) }   // a group's event row speaks the group's names (stage R)
         AppDelegate.launchedAt = ProcessInfo.processInfo.systemUptime
         MontanaTelemetry.shared.install()   // crashes/hangs/events → Montana/Diagnostics/telemetry.log

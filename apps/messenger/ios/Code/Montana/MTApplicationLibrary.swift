@@ -9,8 +9,8 @@ extension MTApplication {
         case .chats, .groups, .channels: return 2   // the chats' tile, until the author gives the groups and the channels their own
         #if !MONTANA_MESSENGER
         case .feed: return 4
-        #endif
         case .wallet: return -1   // the platform's wallet glyph in every style (the author's word 18.10.2026 07:3x UTC: «system, as the wallet, everywhere»)
+        #endif
         case .messenger: return 6   // the tile of the author's atlases the contact card wore until it left (decision 601)
         case .music: return 7
         case .gallery: return 8
@@ -28,9 +28,7 @@ extension MTApplication {
         case .calls: return UIState.Glyph.calls
         #if !MONTANA_MESSENGER
         case .feed: return "rectangle.stack.fill"
-        #endif
         case .wallet: return "wallet.pass.fill"
-        #if !MONTANA_MESSENGER
         case .chess: return ""
         #endif
         case .chats: return UIState.Glyph.chats

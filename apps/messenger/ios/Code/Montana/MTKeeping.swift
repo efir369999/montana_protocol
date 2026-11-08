@@ -1060,8 +1060,8 @@ enum MTKeepDerive {
     }
 }
 
-/// THE RING OF KEEPERS (Network «The keepers are correspondents, and they stand on a ring»; the author's word 08.10.2026 20:5x
-/// UTC: «not 4, 8 and so on ... between contacts in a ring, so that if someone is offline the restore is full»): every
+/// THE RING OF KEEPERS (Network «The keepers are correspondents, and they stand on a ring»; the author's word 08.10.2026 20:5x UTC:
+/// «not 4, 8 and so on ... between contacts in a ring, so that if someone is offline the restore is full»): every
 /// correspondent that allows keeping, two at each position at most, and every share at two neighbouring positions.
 enum MTKeepRing {
     static let most = 2 * MTKeepCode.group

@@ -113,12 +113,15 @@ enum MTRowLetter {
         // a game's invitation and end say the game's words; a step of a game rings nothing
         if let games = MTEditionLetters.game, games.read(text) != nil { return games.banner(text) }
         #endif
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): a coin letter is a retired kind there (MTRetired.letter)
         if coinCount(text) != nil { return preview(text) }
+        #endif
         if text.hasPrefix("\u{200B}\u{200B}VC:") { return "🎤 " + String(localized: "Voice message", bundle: MTLanguage.bundle) }
         if text.hasPrefix("\u{200B}\u{200B}MD:") { return mediaWords(letter: text, revealCaption: revealCaption) }
         if let f = text.unicodeScalars.first, f.value == 0x200B || f.value == 0x2063 || f.value == 0x2064 { return nil }
         return text.isEmpty ? String(localized: "New message", bundle: MTLanguage.bundle) : text
     }
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): a coin letter is a retired kind there (MTRetired.letter)
     /// THE COIN LETTER'S NUMBER (MTCoinLetter, 03.10), read here by its shape alone: this file is the extension's too, and the
     /// extension does not carry the coin book. The first line is «🪙 N», the last the coin's machine line.
     static func coinCount(_ text: String) -> Int? {
@@ -127,6 +130,7 @@ enum MTRowLetter {
         guard parts.count == 2, parts[1].hasPrefix("montana://coin/1/") else { return nil }   // NOT-UI: the coin letter's machine line
         return Int(parts[0].dropFirst(2)).flatMap { 0 < $0 ? $0 : nil }
     }
+    #endif
     /// A LETTER OF A RETIRED KIND (MTRetired.letter), read by its machine line alone -- the one place of the rule, for the app
     /// (mtRetiredLetter) and the extension alike: it is buried unread and rings nothing.
     static func retiredLetter(_ text: String) -> Bool { MTRetired.letter(text) }
@@ -142,7 +146,9 @@ enum MTRowLetter {
         #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
         if let games = MTEditionLetters.game, games.read(text) != nil { return games.preview }
         #endif
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
         if let n = coinCount(text) { return "🪙 " + String(n) + " " + String(localized: "coins", bundle: MTLanguage.bundle) }
+        #endif
         if text.hasPrefix(svc + "VC:") { return "\u{1F3A4} " + String(localized: "Voice message", bundle: MTLanguage.bundle) }
         if text.hasPrefix(svc + "MC:") { return "\u{1F4DE} " + String(localized: "Missed call", bundle: MTLanguage.bundle) }
         if text.hasPrefix(svc + "CL:") {

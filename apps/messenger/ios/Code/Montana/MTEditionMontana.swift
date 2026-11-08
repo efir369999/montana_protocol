@@ -14,8 +14,8 @@ enum MTEdition {
     /// NO ROW OF ONE'S OWN NODE (the author's word 16428, 04.11.2026: «the item YOUR NODE -- delete it too»): Settings draw none and the
     /// node sends nothing -- a function the person cannot see never acts for them; a file it already holds still comes back.
     static let ownNode = false
-    /// The Protocol's site: its page and its privacy policy, montana.quest/privacy/.
-    static let site = "https://montana.quest"
+    /// The Protocol's site, the general one (decision 711 = a): its page and its privacy policy, montana.xxx/privacy/.
+    static let site = "https://montana.xxx"
     /// MONTANA PROTOCOL'S FACE (the author's word 15590, 03.11.2026: his coin is this app's icon): the glass icon on the first
     /// screen, the room's face and the icon chooser's first place, and the flat picture a track without a cover wears.
     static let face = "IconGlassPreview"

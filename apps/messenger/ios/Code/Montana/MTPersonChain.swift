@@ -212,14 +212,22 @@ enum MTTimeChain {
     /// My Global Level on a page that reads it live (slice S2b b7c): the wallet's term from my available behind the coin door, and
     /// none where the edition carries no coins (link 14822). A page watches MTApps.balanceWatch to be drawn again.
     @MainActor static func global(person: Int?) -> Int {
+        #if MONTANA_MESSENGER
+        global(person: person, wallet: Int.max)   // no coins in Messenger (cut C6): no wallet term
+        #else
         global(person: person, wallet: MTApps.coins.map { MTFabricRules.walletLevel($0.available) } ?? Int.max)
+        #endif
     }
     /// THE WALLET'S TERM OF THE LEVEL (link 14822: in an edition without coins the balance is no criterion of a level): the wallet's
     /// level of π as the coin door says it where the edition carries coins; Int.max -- no term -- where it carries none; nil while
     /// the book is unread, so the level is not said before it is known.
     nonisolated static var walletTerm: Int? {
+        #if MONTANA_MESSENGER
+        return Int.max   // no coins in Messenger (cut C6)
+        #else
         guard let coins = MTApps.coins else { return Int.max }
         return coins.walletLevel
+        #endif
     }
 
     private struct Kept: Codable { var lane: String; var spans: [Span]; var away: Away? }
@@ -470,6 +478,7 @@ enum MTTimeChainPlace {
         }
         try? fm.createDirectory(at: root, withIntermediateDirectories: true,
                                 attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): no earlier chains of a coin book to lay
         guard let coins = MTApps.coins?.chainsBefore, let names = try? fm.contentsOfDirectory(atPath: coins.path) else { return }
         var moved = 0
         for n in names where n.hasPrefix("chain-") && n.hasSuffix(".jsonl") {
@@ -478,5 +487,6 @@ enum MTTimeChainPlace {
             if (try? fm.moveItem(at: coins.appendingPathComponent(n), to: to)) != nil { moved += 1 }
         }
         if 0 < moved { MontanaTrace.mark("timechain_place", "laid=\(moved)") }
+        #endif
     }
 }

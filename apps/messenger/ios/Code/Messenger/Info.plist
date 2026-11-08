@@ -15,23 +15,10 @@
 			</array>
 		</dict>
 	</array>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>$(MT_SCHEME_PROTOCOL)</string>
-		<string>$(MT_SCHEME_MESSENGER)</string>
-	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-	<key>MTSchemeProtocol</key>
-	<string>$(MT_SCHEME_PROTOCOL)</string>
-	<key>MTSchemeMessenger</key>
-	<string>$(MT_SCHEME_MESSENGER)</string>
-	<key>MTNameProtocol</key>
-	<string>$(MT_NAME_PROTOCOL)</string>
-	<key>MTNameMessenger</key>
-	<string>$(MT_NAME_MESSENGER)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera takes photos and videos for your chats, video messages and video calls, and scans a person's QR code.</string>
 	<key>NSFaceIDUsageDescription</key>

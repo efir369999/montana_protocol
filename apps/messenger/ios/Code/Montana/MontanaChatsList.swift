@@ -1220,11 +1220,13 @@ struct ChatsListView: View {
                         title: store.title(for: c),
                         photoURL: store.avatarFor(c), color: c.color, initial: store.initial(for: c), who: c.convRef,
                         canDeleteForBoth: MontanaConv.holds(c.convId ?? c.name),
-                        coinsTravel: store.coinsTravel(c),
                         // The tombstone-first order and the erasing live in the store's one road (ChatStore.deleteChat).
                         onBoth: { store.deleteChat(c, forBoth: true); deletingChat = nil },
                         onMine: { store.deleteChat(c, forBoth: false); deletingChat = nil },
                         onCancel: { deletingChat = nil })
+                    #if !MONTANA_MESSENGER
+                    .travels(store.coinsTravel(c))
+                    #endif
                 }
             }
     }

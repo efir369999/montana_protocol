@@ -11,6 +11,9 @@ MT_NAME_MESSENGER = Montana
 // (tools/mt-appstore.py), and the names under the icons stay the lines above.
 MT_NAME_PROTOCOL_STORE = Montana Protocol
 MT_NAME_MESSENGER_STORE = Montana Messenger
+// THE DEVELOPER, AS APP STORE CONNECT NAMES THE ACCOUNT (the author's decision 716, link 17592, 06.11.2026 17:32 UTC: «Artur
+// Karajan»): the App Store shows it under both apps' names; the sites' «Provider» reads this line (store.py names_line).
+MT_DEVELOPER = Artur Karajan
 
 // THE APPS' LINK SCHEMES -- ONE OWNER EACH (the author's word 16667, 05.11.2026: «montana:// for the Messenger and mt-protocol://»):
 // each app registers its own, both Info.plists name both to ask whether the other stands, and the «Open in» choice reads them

@@ -9,6 +9,7 @@ import WebRTC
 /// is nil, and what stands on it is not drawn -- no #if names an edition; the target's own MTEdition fills the doors. A static let
 /// is born on its first read, so no launch order reads a door before it stands.
 enum MTApps {
+    #if !MONTANA_MESSENGER   // no coins in Messenger (the author's word 17130; cut C6): their door is not declared there
     static let coins: MTCoinDoor? = MTEdition.coins
     /// The letters' coins, watched (slice S2b b7): one watch for every bubble, as the book was one; silent where no door stands.
     @MainActor static let letterCoinsWatch = MTDoorWatch(coins?.changes(.letters))
@@ -21,6 +22,9 @@ enum MTApps {
     /// A chat's Money Flow (slice S2b b7d2): on only where the coins stand and the chat turned it on; its turn, watched.
     static func flowOn(_ conv: String) -> Bool { coins?.flowOn(conv) == true }
     @MainActor static let flowWatch = MTDoorWatch(coins?.changes(.flow))
+    #else
+    static func flowOn(_ conv: String) -> Bool { false }   // no Money Flow in Messenger: every feed reads oldest-first (cut C6)
+    #endif
     #if !MONTANA_MESSENGER
     static let vpn: MTVPNDoor? = MTEdition.vpn
     static let mesh: MTMeshDoor? = MTEdition.mesh
@@ -134,6 +138,7 @@ extension Notification.Name {
     }
 }
 
+#if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
 /// What a shared view watches behind the coin door (slice S2b b7): the letters' coins, the book's own count by letter; my available
 /// and the owner's switch to show it; the coins and levels the pairs told.
 enum MTCoinWatched { case letters, balance, told, transfers, flow }
@@ -275,6 +280,7 @@ protocol MTCoinDoor: AnyObject {
     /// A coin letter to a person on the shelf: credited in their own book by their own words, the trace naming the seat.
     func shelfLanded(_ text: String, mid: String, from conv: String, words: String, seat: String) async
 }
+#endif
 
 #if !MONTANA_MESSENGER
 /// THE VPN DOOR: what shared code asks of the VPN (slice S3a). Its first member is the VPN wall's page, the pane .vpn, searched by
@@ -529,6 +535,7 @@ extension Message {
 }
 #endif
 
+#if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
 /// A word the coins say in a shared view (MTCoinDoor.said): a title and its reason for each answer of a coin from the field, the
 /// field's hint, a chat's note while a coin letter travels, the seed's line.
 enum MTCoinWord { case short, shortWhy, notSent, noKeyWhy, travel, travelWhy, fieldHint, chatTravels, seed }
@@ -567,6 +574,7 @@ struct MTCoinAbout {
     var coins: Int? = nil, key: String? = nil
     var at: Double = 0
 }
+#endif
 
 /// THE APPLICATION'S MOMENTS an application behind its door answers: shared code says when, the application says what.
 /// The seat's moments (slice S2b b2): the person leaving the seat, the person forgotten with no other seat, a person seated.

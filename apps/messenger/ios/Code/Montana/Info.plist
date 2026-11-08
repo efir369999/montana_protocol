@@ -21,7 +21,7 @@
 		<string>$(MT_SCHEME_MESSENGER)</string>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>MTSchemeProtocol</key>

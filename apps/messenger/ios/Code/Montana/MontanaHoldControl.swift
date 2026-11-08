@@ -7,10 +7,11 @@
 //  ended as «cancel» — the release of the finger was read as a slide away, the tape was thrown
 //  out, and the person tapped the button eight times more into silence. The old button was a
 //  SwiftUI drag with a verdict recomputed on every move from the framework's own velocity
-//  estimate. A UIControl tracks its own touch in its own coordinates (beginTracking /
-//  continueTracking / endTracking / cancelTracking), takes the velocity from the platform's pan
-//  recogniser, decides ONCE when the finger leaves, on the dominant axis only, and never throws
-//  a tape away because the system took the touch: that tape locks and rolls on.
+//  estimate. The control tracks its own touch in its own coordinates through the platform's
+//  press recogniser (08.11.2026: UIControl's beginTracking never ran on T2, iOS 27.0.1), takes the
+//  velocity from the platform's pan recogniser, decides ONCE when the finger leaves, on the
+//  dominant axis only, and never throws a tape away because the system took the touch: that
+//  tape locks and rolls on.
 //
 
 import UIKit
@@ -42,6 +43,12 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
     var onVerdict: (MontanaHoldVerdict) -> Void = { _ in }
 
     private let pan = UIPanGestureRecognizer()
+    /// THE PRESS IS THE CONTROL'S OWN RECOGNISER (08.11.2026, the author's word 17811 «on T2 the button does not press»):
+    /// T2 (iOS 27.0.1, both apps, every build since 01.11) wrote not one hold_down -- the touch never reached
+    /// UIControl's beginTracking, while the send arrow in the same slot, a platform control, answered. A recogniser on the
+    /// view takes the touch where the view is hit, before and apart from the view's own touch methods; it delays nothing
+    /// and cancels nothing. ONE OWNER of the press: the recogniser; UIControl's tracking is refused (beginTracking).
+    private let press = UILongPressGestureRecognizer()
     private var touchLocation = CGPoint.zero
     private var lastVelocity = CGPoint.zero
     private var processing = false
@@ -55,12 +62,30 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
         isMultipleTouchEnabled = false
         pan.cancelsTouchesInView = false
         pan.delegate = self
-        addGestureRecognizer(pan)   // reads the velocity only; the control tracks the touch itself
+        addGestureRecognizer(pan)   // reads the velocity only; the press below tracks the finger
+        press.minimumPressDuration = 0
+        press.allowableMovement = .greatestFiniteMagnitude
+        press.cancelsTouchesInView = false
+        press.delaysTouchesBegan = false
+        press.delaysTouchesEnded = false
+        press.delegate = self
+        press.addTarget(self, action: #selector(pressed(_:)))
+        addGestureRecognizer(press)
     }
     required init?(coder: NSCoder) { nil }
 
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool { true }
+
+    /// THE HIT IS WRITTEN (08.11.2026): a finger the platform hands to this control leaves a line before any
+    /// recogniser runs -- a press that never arrives is then told apart from one that arrives and is lost.
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let v = super.hitTest(point, with: event)
+        if v === self, event?.type == .touches {
+            MontanaTrace.markFolded("hold_hit", "x=\(Int(point.x)) y=\(Int(point.y)) enabled=\(isEnabled ? 1 : 0)", window: 2, key: "hit")
+        }
+        return v
+    }
 
     override var isHighlighted: Bool {
         didSet { if isHighlighted != oldValue { onPressed(isHighlighted) } }
@@ -74,53 +99,60 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
         CGRect(x: -10, y: -8, width: bounds.width + 10 + 40, height: bounds.height + 16).contains(point)
     }
 
-    override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        guard super.beginTracking(touch, with: event) else { return false }
+    /// UIControl's own tracking stays off: the press recogniser is the one owner of the finger.
+    override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool { false }
+
+    @objc private func pressed(_ g: UILongPressGestureRecognizer) {
+        let p = g.location(in: self)
+        switch g.state {
+        case .began: down(at: p)
+        case .changed: moved(to: p)
+        case .ended: up(at: p)
+        case .cancelled, .failed: systemTook()
+        default: break
+        }
+    }
+
+    private func down(at: CGPoint) {
         // The touch's arrival is written before any verdict: a tap that never reaches the control
         // is then a missing line, not a guess (measured 19.09: six locked taps, no line at all).
-        let at = touch.location(in: self)
         MTHoldOverlayState.shared.follow()   // where the slot IS, before anything is drawn over it
-        MontanaTrace.mark("hold_down", "x=\(Int(at.x)) y=\(Int(at.y)) w=\(Int(bounds.width)) h=\(Int(bounds.height)) mount=\(MTHoldOverlayWindow.mountKind) ay=\(Int(MTHoldOverlayState.shared.anchor.y))")
+        MontanaTrace.mark("hold_down", "x=\(Int(at.x)) y=\(Int(at.y)) w=\(Int(bounds.width)) h=\(Int(bounds.height)) mount=\(MTHoldOverlayWindow.mountKind) ay=\(Int(MTHoldOverlayState.shared.anchor.y)) by=press enabled=\(isEnabled ? 1 : 0)")
         lastVelocity = .zero
-        if abs(CFAbsoluteTimeGetCurrent() - lastTouchTime) < 0.4 {
-            processing = false   // a second press right after the first is a bounce, not a hold
-            return false
-        }
+        processing = false
+        guard isEnabled else { return }   // a locked tape: the crown's own controls take the finger
+        if abs(CFAbsoluteTimeGetCurrent() - lastTouchTime) < 0.4 { return }   // a second press right after the first is a bounce, not a hold
         processing = true
         began = false
+        isHighlighted = true
         lastTouchTime = CFAbsoluteTimeGetCurrent()
-        touchLocation = touch.location(in: self)
+        touchLocation = at
         modeTimer?.invalidate()
         modeTimer = Timer.scheduledTimer(withTimeInterval: Self.modeTimeout, repeats: false) { [weak self] _ in
             guard let self, self.processing else { return }
             self.began = true
             self.onBegan()
         }
-        return true
     }
 
-    override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-        guard super.continueTracking(touch, with: event) else { return false }
+    private func moved(to p: CGPoint) {
         lastVelocity = pan.velocity(in: self)
-        guard processing, began else { return true }   // before the mode timeout nothing rides yet
-        let p = touch.location(in: self)
+        guard processing, began else { return }   // before the mode timeout nothing rides yet
         let dx = min(0, p.x - touchLocation.x), dy = min(0, p.y - touchLocation.y)
-        if dx < -Self.cancelWayLive { settle(.cancel, dx: dx, dy: dy, why: "live"); return false }
-        if dy < -Self.lockWayLive { settle(.lock, dx: dx, dy: dy, why: "live"); return false }
+        if dx < -Self.cancelWayLive { settle(.cancel, dx: dx, dy: dy, why: "live"); return }
+        if dy < -Self.lockWayLive { settle(.lock, dx: dx, dy: dy, why: "live"); return }
         onMove(min(1, max(0, -dy / lockWay)), dx < -Self.cancelWay)
-        return true
     }
 
-    override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
-        super.endTracking(touch, with: event)
+    private func up(at p: CGPoint) {
         modeTimer?.invalidate(); modeTimer = nil
+        isHighlighted = false
         guard processing else { return }
         guard began else { processing = false; onVerdict(.tap); return }
-        let p = touch?.location(in: self) ?? touchLocation
         var dx = min(0, p.x - touchLocation.x), dy = min(0, p.y - touchLocation.y)
         // ONE AXIS DECIDES (the reference): a thumb rolling off the button diagonally is judged
         // by its dominant way, never as «left» and «up» at once.
-        if abs(dx) > abs(dy) { dy = 0 } else { dx = 0 }
+        if abs(dy) < abs(dx) { dy = 0 } else { dx = 0 }
         let v = lastVelocity
         let verdict: MontanaHoldVerdict
         if v.x < -Self.flick || dx < -Self.cancelWay { verdict = .cancel }
@@ -129,9 +161,9 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
         settle(verdict, dx: dx, dy: dy, why: "end")
     }
 
-    override func cancelTracking(with event: UIEvent?) {
-        super.cancelTracking(with: event)
+    private func systemTook() {
         modeTimer?.invalidate(); modeTimer = nil
+        isHighlighted = false
         guard processing else { return }
         processing = false
         guard began else { return }   // a tap the system took back: nothing recorded, nothing to say
@@ -143,6 +175,7 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
 
     private func settle(_ v: MontanaHoldVerdict, dx: CGFloat, dy: CGFloat, why: String) {
         processing = false
+        isHighlighted = false
         MontanaTrace.mark("hold_end", "verdict=\(v.rawValue) why=\(why) dx=\(Int(dx)) dy=\(Int(dy)) vx=\(Int(lastVelocity.x)) vy=\(Int(lastVelocity.y)) mount=\(MTHoldOverlayWindow.mountKind)")
         onVerdict(v)
     }
@@ -153,7 +186,7 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
 /// owner's. It holds ONLY the finger that never left the button: a locked tape's arrow, pause
 /// and bin are the crown's own controls, in the crown's window — this one sleeps until the
 /// recording is over. NATIVE-CHECKED: the platform has no hold-to-record control of its own;
-/// UIControl's touch tracking is the mechanism the reference builds on.
+/// the reference builds on UIControl's touch tracking; here the press recogniser carries the finger (08.11.2026).
 struct MontanaHoldButton: UIViewRepresentable {
     var enabled: Bool
     var lockWay: CGFloat
