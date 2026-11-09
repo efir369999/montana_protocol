@@ -7,7 +7,7 @@ the source of the protocol core and of the two Montana applications, laid out fo
 [![iPhone and iPad on TestFlight](https://img.shields.io/badge/iPhone%20·%20iPad-TestFlight-D4AF37?style=for-the-badge&logo=apple&logoColor=white)](https://testflight.apple.com/join/BHaSYWkz)
 [![Releases](https://img.shields.io/badge/IPA-Releases-C9A227?style=for-the-badge&logo=github&logoColor=white)](https://github.com/efir369999/montana_protocol/releases/latest)
 
-[montana.quest](https://montana.quest) · [Whitepaper](WHITEPAPER.md) · [Audit package](AUDIT.md) · [13-item status](Audit/Protocol-13/README.md) · [Security](SECURITY.md)
+[montana.xxx](https://montana.xxx) · [Whitepaper](WHITEPAPER.md) · [Audit package](AUDIT.md) · [13-item status](Audit/Protocol-13/README.md) · [Security](SECURITY.md)
 
 **Protocol closure is open: 5 of 13 acceptance criteria are closed** -- items 1 to 4: the window proof and its
 verifier, closing only a verified canonical Proposal, redemption bound to authorized issuance, and admission witnesses
@@ -41,7 +41,7 @@ publication and remain in the history of this repository; nothing in the current
 | Platform | Install | Files |
 |---|---|---|
 | iPhone, iPad, Mac | [TestFlight](https://testflight.apple.com/join/BHaSYWkz) | [IPA](https://github.com/efir369999/montana_protocol/releases/latest/download/Montana-Messenger.ipa) |
-| Android 8 or later | [montana.quest](https://montana.quest/messenger/) | APK from the site: [`latest.json`](https://montana.quest/download/android/latest.json) names its build, commit and SHA-256 |
+| Android 8 or later | [montana.xxx](https://montana.xxx/messenger/) | APK from the site: [`latest.json`](https://montana.xxx/download/android/latest.json) names its build, commit and SHA-256 |
 
 The IPA is the export uploaded to the App Store and is published to be read and compared with the source; it installs
 through TestFlight. Which build it is, and its SHA-256, is in the notes of each release. The APK is signed with the
