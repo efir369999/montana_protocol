@@ -3,6 +3,9 @@
 // under the icon, on the share sheet, in the «Open in» choice between the two apps (the author's word 16049) -- is this file's line;
 // the project, both Info.plists and the code only read it. The project's base configuration (Debug and Release) is this file;
 // tools/mt-names-check.py keeps every other place a reader.
+// THE BUILD'S NUMBER AND VERSION have their own owner beside the names (constitution article 15, the author's word 19159):
+#include "../Version.xcconfig"
+
 MT_NAME_PROTOCOL = MT Protocol
 // The Mac product is MT Protocol too (decision 829 = a, 11.11.2026: the site and the releases mac-v1.0-N name it so); its
 // bundle, volume, files and release read this line through tools/mt_names.py.
