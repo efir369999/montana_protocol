@@ -4,7 +4,7 @@ Every build of Montana for iPhone, iPad and Mac, newest first. The version is th
 
 ## 1.0 (2370) - 2026-11-11
 
-Source commit `025ddbfdcaae`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2370.md).
+Source commit `6ec745a04aca`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2370.md).
 
 - The Montana Protocol icon fills the whole icon on the home screen: the white frame and the square inside the square are gone, the coin stands at full size.
 - The pages of signing in and creating an identity stand on black, and every word on them is white and larger, so everything reads easily: no grey text from the first screen to the chats. Black is the default background.
