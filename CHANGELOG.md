@@ -4,7 +4,7 @@ Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version i
 
 ## 1.0 (2371) - 2026-11-11
 
-Source commit `d600afe7e451`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2371.md).
+Source commit `58d0bd282e71`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2371.md).
 
 - Nothing changes on the phone. This build's source is published in its own folder of the public repository, apps/protocol/ios, under the Protocol's name; the Messenger keeps its own repository.
 - Please check: chats, groups, calls and Settings as usual.
