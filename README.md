@@ -24,7 +24,7 @@ statements or passing primitive tests as evidence of these properties.
 |---|---|
 | [`core/`](core/) | The protocol core: the normative specification (`core/docs`), its reference implementation (`core/Montana-Core`) and the client core the applications link (`core/Code`), in Rust. See [`core/README.md`](core/README.md) |
 | [`apps/protocol/ios/`](apps/protocol/ios/) | MT Protocol for iPhone, iPad and Mac (Swift). From build 2180 it carries the VPN client that was published separately as MT VPN |
-| [`apps/messenger/android/`](apps/messenger/android/) | MT Protocol for Android (Kotlin, with a Rust JNI library over the client core) |
+| [`apps/protocol/android/`](apps/protocol/android/) | MT Protocol for Android (Kotlin, with a Rust JNI library over the client core) |
 | [`AUDIT.md`](AUDIT.md) | The audit package: scope, builds, vectors, the catalogue of open findings, what can and cannot be verified from this repository |
 | [`Audit/`](Audit/) | Current reports for the 13 protocol closure requirements, with explicit open status and source evidence |
 | [`WHITEPAPER.md`](WHITEPAPER.md) | The protocol and what the applications implement of it today |
@@ -100,7 +100,7 @@ The last engine script writes `Frameworks/HevSocks5Tunnel.xcframework` beside `C
 `Code/Frameworks/`: move it there before `xcodebuild`. The two engine scripts are in the folder from build 2180; a folder of an
 earlier build has no VPN and needs the first three steps and `xcodebuild` only.
 
-**MT Protocol for Android.** In `apps/messenger/android`, `python3 scripts/setup.py` installs the toolchain pinned in
+**MT Protocol for Android.** In `apps/protocol/android`, `python3 scripts/setup.py` installs the toolchain pinned in
 `scripts/toolchain.json` (JDK 17, Android SDK 35, NDK, Kotlin, the call engine, each checked against its digest), and
 `python3 scripts/build.py --check` compiles the resources and the Kotlin. The full build (`python3 scripts/build.py`) also
 builds the JNI library from the core, and it expects the core as a git checkout of one exact commit in a folder named
