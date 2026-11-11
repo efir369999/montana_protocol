@@ -2,9 +2,22 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2372) - 2026-11-11
+
+Source commit `fc8e37444fef`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2372.md).
+
+- Groups and Channels open from the side panel, each on its own page. The strip of folders under the time panel on the chats page is gone.
+- A swipe on the chats page turns the time panel's pages, as on every page.
+- Settings no longer has Chat Folders: the folders' page is gone with the strip.
+- Please check: open Groups and Channels from the side panel; swipe left and right on the chats page.
+
+**Security and anonymity**
+
+- No algorithm, key or network change: the chats page's folder tabs, their swipe and the folders' page in Settings are removed; the kept folders are only read, by the Groups and Channels pages.
+
 ## 1.0 (2371) - 2026-11-11
 
-Source commit `58d0bd282e71`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2371.md).
+Source commit `d600afe7e451`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2371.md).
 
 - Nothing changes on the phone. This build's source is published in its own folder of the public repository, apps/protocol/ios, under the Protocol's name; the Messenger keeps its own repository.
 - Please check: chats, groups, calls and Settings as usual.
