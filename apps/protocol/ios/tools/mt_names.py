@@ -13,13 +13,23 @@ import sys
 NAMES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Code", "Names.xcconfig")
 
 
-def name(key, path=NAMES):
+def table(path=NAMES):
+    """Every line of the owner, KEY to value: the one reading of the file -- a comment (//) is no part of a value. Every tool
+    that needs a name asks here; none opens the file itself (constitution article 15; OZ 2, the author's word 19229)."""
+    out = {}
     with open(path, encoding="utf-8") as fh:
         for line in fh:
-            k, sep, value = line.partition("=")
-            if sep and k.strip() == key:
-                return value.strip()
-    raise SystemExit("Code/Names.xcconfig states no " + key)
+            k, sep, value = line.split("//")[0].partition("=")
+            if sep:
+                out[k.strip()] = value.strip()
+    return out
+
+
+def name(key, path=NAMES):
+    value = table(path).get(key)
+    if value is None:
+        raise SystemExit("Code/Names.xcconfig states no " + key)
+    return value
 
 
 def mac():

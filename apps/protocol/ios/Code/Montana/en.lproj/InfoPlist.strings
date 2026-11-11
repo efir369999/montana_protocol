@@ -8,6 +8,6 @@
    daemon keeps that name per language and takes each language's name from THIS file only (read
    in its own code, 23.09): without this line the container carried a name in no language at all,
    while Apple's storage page called it "app", the tail of the container's identifier. The
-   name is the product's own, Code/Names.xcconfig MT_NAME_PROTOCOL, in every language: tools/mt-names-check.py holds this
-   line equal to it (rule 8). */
+   name is the product's own, Code/Names.xcconfig MT_NAME_PROTOCOL, in every language: tools/mt-owners-check.py holds this
+   line equal to it. */
 "NSUbiquitousContainerName" = "MT Protocol";
