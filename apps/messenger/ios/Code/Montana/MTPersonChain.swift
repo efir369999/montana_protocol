@@ -12,8 +12,9 @@ import MontanaBindings
 /// and a move joins its chain once, by its name. Local today; the core's key from the seed signs their heads next.
 enum MTTimeChain {
     struct Link: Codable { let n: Int; let at: Int64; let k: String; let c: Int; let ref: String; let prev: String; let hash: String }
-    struct Head: Equatable { let n: Int; let hash: String; let whole: Bool }
     static let genesis = String(repeating: "0", count: 64)
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): it keeps no chain of a coin's source -- the link, the genesis and the seal alone
+    struct Head: Equatable { let n: Int; let hash: String; let whole: Bool }
     /// ONE MOMENT, THE SAME ON EVERY DEVICE TO THE MILLISECOND (the author's word 06.10.2026 08:2x UTC: «everything to the millisecond,
     /// exact on all nodes, the sender and the receivers above all»): a move is born at a whole millisecond, and every road writes that
     /// millisecond as it is -- the lane, the chains, the book of another device of the words. `Int64(at * 1000)` cut the fraction:
@@ -29,11 +30,7 @@ enum MTTimeChain {
     static let sources = ["pi", "chess", "pantheon"] + protocolOwn + protocolPay + ["timer", "chats", "groups", "channels", "comments"] + protocolPosts + ["received", "spent", "sent", "calls", "letters", "system"]
     /// The chains of the Protocol's own applications are the Protocol's alone (decision 651 = a, decision 685): Montana Messenger
     /// names none.
-    #if MONTANA_MESSENGER
-    private static let protocolOwn: [String] = [], protocolPay: [String] = [], protocolPosts: [String] = []
-    #else
     private static let protocolOwn = ["vpnwall"], protocolPay = ["vpnpay"], protocolPosts = ["wall"]
-    #endif
     private static let q = DispatchQueue(label: "montana.TimeChains", qos: .utility)
     private struct Held { var n: Int; var hash: String; var refs: Set<String> }
     private static var held: [String: Held] = [:]   // each chain read once, on q
@@ -42,11 +39,13 @@ enum MTTimeChain {
     /// The person lifted into the seat: the chains held in memory belong to the person who left, and the lifted person's chains of
     /// the builds before are laid into their TimeChain folder at the next ask.
     static func forget() { q.async { held = [:]; MTTimeChainPlace.settle() } }
+    #endif
     /// The seal: SHA-256 over the link's fields, one per line, the previous seal last.
     static func seal(n: Int, at: Int64, k: String, c: Int, ref: String, prev: String) -> String {
         let body = [String(n), String(at), k, String(c), ref, prev].joined(separator: "\n")
         return SHA256.hash(data: Data(body.utf8)).map { String(format: "%02x", $0) }.joined()
     }
+    #if !MONTANA_MESSENGER   // the chains of the coins' sources: their files, their one seam of writing, their reading (cut C6)
     private static func links(_ chain: String) -> [Link] {
         guard let u = file(chain), let text = try? String(contentsOf: u, encoding: .utf8) else { return [] }
         let decoder = JSONDecoder()
@@ -67,7 +66,6 @@ enum MTTimeChain {
     static func note(_ chain: String, kind: String, coins: Int, ref: String, at moment: Double = Date().timeIntervalSince1970) {
         q.async { write(chain, kind: kind, coins: coins, ref: ref, at: moment) }
     }
-    #if !MONTANA_MESSENGER
     /// THE WALL'S CHAIN (the author's word 03.10.2026 23:38 UTC): my wall's posts as they stand -- a post not yet chained joins as
     /// born (post), one whose words or files moved as changed (edit), one chained and no longer standing as taken down (gone); the
     /// births in the order the posts were born. One queue, so every link keeps its place.
@@ -94,7 +92,6 @@ enum MTTimeChain {
             }
         }
     }
-    #endif
     /// Queue-only: one link joins its chain, once by its name.
     private static func write(_ chain: String, kind: String, coins: Int, ref: String, at moment: Double) {
         let at = ms(moment)
@@ -153,6 +150,7 @@ enum MTTimeChain {
             DispatchQueue.main.async { done(h) }
         }
     }
+    #endif
 }
 
 // MARK: - THE CHAIN OF THE PERSON (the author's words 10.10.2026 10:4x UTC, 12:0x UTC and 12:2x UTC)
@@ -197,6 +195,14 @@ enum MTTimeChain {
         for k in 1...62 where level(Int64(1) << k) != k || level((Int64(1) << k) - 1) != k - 1 { return false }
         return level(Int64.max) == 62
     }
+    #if MONTANA_MESSENGER
+    /// THE GLOBAL LEVEL OF THE PERSON, THE ONE READING OF IT IN MESSENGER (link 14822: in an edition without coins the balance is no
+    /// criterion of a level; cut C6): the lower of the person's level and the level of the fabric of time this turn. A fabric this
+    /// life has not read yet adds no term.
+    nonisolated static func global(person: Int?) -> Int {
+        MTFabricRules.levelOfPerson(person ?? 0, Int.max, MTFabricLevel.now ?? Int.max)
+    }
+    #else
     /// THE GLOBAL LEVEL OF THE PERSON, THE ONE READING OF IT (the author's words 10.10.2026 12:0x UTC: «the lowest level among the
     /// chain of the person and the chain of the wallet becomes the Global Level of the person»; 17.10.2026 19:24 UTC and 19:41 UTC: the
     /// third level, the Fabric of Time, «bears on the Global level by the rule of the minimum», «under the word level we mean only the
@@ -212,21 +218,25 @@ enum MTTimeChain {
     /// My Global Level on a page that reads it live (slice S2b b7c): the wallet's term from my available behind the coin door, and
     /// none where the edition carries no coins (link 14822). A page watches MTApps.balanceWatch to be drawn again.
     @MainActor static func global(person: Int?) -> Int {
-        #if MONTANA_MESSENGER
-        global(person: person, wallet: Int.max)   // no coins in Messenger (cut C6): no wallet term
-        #else
         global(person: person, wallet: MTApps.coins.map { MTFabricRules.walletLevel($0.available) } ?? Int.max)
-        #endif
     }
     /// THE WALLET'S TERM OF THE LEVEL (link 14822: in an edition without coins the balance is no criterion of a level): the wallet's
     /// level of π as the coin door says it where the edition carries coins; Int.max -- no term -- where it carries none; nil while
     /// the book is unread, so the level is not said before it is known.
     nonisolated static var walletTerm: Int? {
-        #if MONTANA_MESSENGER
-        return Int.max   // no coins in Messenger (cut C6)
-        #else
         guard let coins = MTApps.coins else { return Int.max }
         return coins.walletLevel
+    }
+    #endif
+    /// MY GLOBAL LEVEL, ONCE THIS LIFE KNOWS IT: nil until the seconds are read and, where the edition carries coins, the book -- an
+    /// unknown level is never said as none. Whoever says or keeps my own level asks this (MTLevelAccess).
+    nonisolated static var known: Int? {
+        guard let person = MTPersonLevel.now else { return nil }
+        #if MONTANA_MESSENGER
+        return global(person: person)
+        #else
+        guard let wallet = walletTerm else { return nil }
+        return global(person: person, wallet: wallet)
         #endif
     }
 
@@ -456,7 +466,15 @@ enum MTTimeChainPlace {
         }
         return root
     }
-    static func file(_ chain: String) -> URL? { dir()?.appendingPathComponent("wallet-" + chain + ".jsonl") }
+    /// A chain's own file. The Protocol's wear the wallet's name (the author's word 04.10.2026 10:42 UTC); Messenger carries no wallet
+    /// (cut C6; the folder stands open in Files) and names them by the chain alone.
+    static func file(_ chain: String) -> URL? {
+        #if MONTANA_MESSENGER
+        dir()?.appendingPathComponent("chain-" + chain + ".jsonl")
+        #else
+        dir()?.appendingPathComponent("wallet-" + chain + ".jsonl")
+        #endif
+    }
     /// A seat's move: the lifted person's folder is laid again at the next ask.
     static func settle() { lock.lock(); laid = false; lock.unlock() }
     private static func lay(_ root: URL, before old: URL) {
@@ -478,7 +496,16 @@ enum MTTimeChainPlace {
         }
         try? fm.createDirectory(at: root, withIntermediateDirectories: true,
                                 attributes: [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
-        #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): no earlier chains of a coin book to lay
+        #if MONTANA_MESSENGER
+        // THE CHAINS OF THE BUILDS BEFORE 128 wore another name. A chain's file is written again only when its head moves
+        // (MTPersonChain.recount, MTFabric.refresh), so the file an earlier build left takes the new name and stands in Files
+        // meanwhile; where the new one is already written it holds everything the old one did, and the old one goes.
+        for n in (try? fm.contentsOfDirectory(atPath: root.path)) ?? [] where !n.hasPrefix("chain-") {
+            guard let tail = ["-person.jsonl", "-fabric.jsonl"].first(where: { n.hasSuffix($0) }) else { continue }
+            let from = root.appendingPathComponent(n), to = root.appendingPathComponent("chain" + tail)
+            if fm.fileExists(atPath: to.path) { try? fm.removeItem(at: from) } else { try? fm.moveItem(at: from, to: to) }
+        }
+        #else   // the earlier chains of a coin book are laid in
         guard let coins = MTApps.coins?.chainsBefore, let names = try? fm.contentsOfDirectory(atPath: coins.path) else { return }
         var moved = 0
         for n in names where n.hasPrefix("chain-") && n.hasSuffix(".jsonl") {

@@ -772,6 +772,33 @@ struct CopyQuickLook: UIViewControllerRepresentable {
         leave([u], "by the person's choice: iCloud had no room for two")
     }
 
+    /// THE PERSON'S ACT: «DELETE ACCOUNT» (Guideline 5.1.1(v); the author's decision (a), 10.11.2026). Every copy whose name
+    /// proves it these words' -- or that opened as theirs (legacy) -- leaves iCloud through the one remover here; another
+    /// person's copy, or one whose name proves nothing, stands. The switch turns off first, so no copy follows. Run while the
+    /// words are here: the proof is keyed by them. iCloud's own answer is awaited `within` seconds at most -- a phone with no
+    /// iCloud answers nothing -- and `done` says, on main, how many left.
+    func leaveAllOwn(within: Double, _ done: @escaping (Int) -> Void) {
+        UserDefaults.standard.set(false, forKey: MontanaBackupCloud.switchKey)
+        var once = false
+        let finish: (Int) -> Void = { n in if !once { once = true; done(n) } }
+        MontanaBackupCloud.ready { [self] r in
+            guard r else { return finish(0) }
+            start()
+            DispatchQueue.main.asyncAfter(deadline: .now() + within) { finish(0) }
+            whenAnswered { [self] in
+                guard let q = query, let entropy = entropyNow() else { return finish(0) }
+                let owner = MontanaBackup.ownerKey(entropy: entropy)
+                var urls: [URL] = []
+                for case let item as NSMetadataItem in q.results {
+                    guard let name = item.value(forAttribute: NSMetadataItemFSNameKey) as? String,
+                          let u = item.value(forAttribute: NSMetadataItemURLKey) as? URL else { continue }
+                    if MontanaBackup.owned(name: name, by: owner) ?? legacy[name] ?? false { urls.append(u) }
+                }
+                leave(urls, "by the person's word: the account was deleted") { finish($0) }
+            }
+        }
+    }
+
     /// A COPY ASKED BACK FROM iCLOUD, answered by iCloud (the critic, 23.09: a fixed three-minute wait failed any
     /// copy of gigabytes on an ordinary network). How much has come is iCloud's own count; a wait for its
     /// servers is shown as a wait; a refusal carries its code; only the person stops it — never a clock.
@@ -826,9 +853,10 @@ struct CopyQuickLook: UIViewControllerRepresentable {
         if gathered { f() } else { answered.append(f) }
     }
 
-    private func leave(_ urls: [URL], _ why: String) {
+    /// The one remover of copies in iCloud; `done`, when given, hears on main how many left.
+    private func leave(_ urls: [URL], _ why: String, _ done: ((Int) -> Void)? = nil) {
         let fresh = urls.filter { !leaving.contains($0) }
-        guard !fresh.isEmpty else { return }
+        guard !fresh.isEmpty else { done?(0); return }
         leaving.formUnion(fresh)
         DispatchQueue.global(qos: .utility).async {
             var gone = 0
@@ -838,7 +866,8 @@ struct CopyQuickLook: UIViewControllerRepresentable {
                     if (try? FileManager.default.removeItem(at: v)) != nil { gone += 1 }
                 }
             }
-            MontanaTrace.mark("backup_cloud", "older copies removed n=" + String(gone) + " " + why)
+            MontanaTrace.mark("backup_cloud", "copies removed n=" + String(gone) + " " + why)
+            if let done { DispatchQueue.main.async { done(gone) } }
         }
     }
 

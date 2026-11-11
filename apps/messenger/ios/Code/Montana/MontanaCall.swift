@@ -7141,10 +7141,6 @@ enum MontanaCallWiring {
         }
         MontanaCall.watchRoute()   // 15.28: the audio route is measured for the whole call
         MontanaLog.holdRotation = { ch in ch == .trace && MontanaCall.stateSnapshot != "idle" }   // 29.09: the call's trace outlives the call
-        // The VPN recovery's hooks (29.09): the call's word and the diary, through the VPN's door (slice S3b b1).
-        #if !MONTANA_MESSENGER
-        MTApps.vpn?.wire(callBusy: { MontanaCall.isBusy }, diary: { MontanaTrace.markChanged("vpn_ui", $0, every: 60) })
-        #endif
         c.onCallLog = { peer, video, incoming, dur, missed, declined, seed, rang, refused, call in
             E2E.shared.logCall(peer: peer, video: video, incoming: incoming, durationSec: dur, missed: missed, call: call)
             if !missed { E2E.shared.notePeerSeen(peer) }   // 15.7: a call that connected is the freshest proof
@@ -9027,6 +9023,13 @@ enum MTCallUpright {
 enum MTProximity {
     private static var holders = Set([String]())
     private static var listening: NSObjectProtocol?
+    /// THE SENSOR'S LAST «NEAR», read by the ear's reply (09.11.2026, the author's word 17930): one owner of the reading, here.
+    private static var lastNearAt: CFAbsoluteTime = 0
+    /// The ear within a window: the sensor says «near» now, or said it within the last `s` seconds.
+    static func nearWithin(_ s: TimeInterval) -> Bool {
+        if UIDevice.current.proximityState { return true }
+        return CFAbsoluteTimeGetCurrent() - lastNearAt < s
+    }
     /// A hand holds the sensor (true) or lets it go (false); from any thread.
     static func hold(_ who: String, _ on: Bool) {
         guard Thread.isMainThread else { DispatchQueue.main.async { MTProximity.hold(who, on) }; return }
@@ -9053,6 +9056,7 @@ enum MTProximity {
         listening = NotificationCenter.default.addObserver(forName: UIDevice.proximityStateDidChangeNotification,
                                                            object: nil, queue: .main) { _ in
             let dev = UIDevice.current
+            if dev.proximityState { MTProximity.lastNearAt = CFAbsoluteTimeGetCurrent() }
             MTProximity.note(dev.proximityState ? "near" : "far", "sensor")
             if !dev.proximityState, MTProximity.holders.isEmpty, dev.isProximityMonitoringEnabled {
                 dev.isProximityMonitoringEnabled = false

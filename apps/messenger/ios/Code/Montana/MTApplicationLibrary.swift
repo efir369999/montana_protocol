@@ -12,9 +12,9 @@ extension MTApplication {
         case .wallet: return -1   // the platform's wallet glyph in every style (the author's word 18.10.2026 07:3x UTC: «system, as the wallet, everywhere»)
         #endif
         case .messenger: return 6   // the tile of the author's atlases the contact card wore until it left (decision 601)
-        case .music: return 7
         case .gallery: return 8
         #if !MONTANA_MESSENGER
+        case .music: return 7
         case .chess: return 9
         case .vpnWall, .meshWall: return 10
         case .p2pWall: return 10   // the network's one tile of the author's atlases, until the author gives each wall its own
@@ -34,9 +34,9 @@ extension MTApplication {
         case .chats: return UIState.Glyph.chats
         case .groups: return "person.3.fill"
         case .channels: return "megaphone.fill"
-        case .music: return UIState.Glyph.music
         case .gallery: return UIState.Glyph.gallery
         #if !MONTANA_MESSENGER
+        case .music: return UIState.Glyph.music
         case .vpnWall, .meshWall: return ""
         case .p2pWall: return ""
         #endif
@@ -77,7 +77,9 @@ struct MTFeedMark: View {
 }
 #endif
 
-/// The author's original artwork is bundled unchanged. Each window shows one tile, without its poster caption.
+/// The author's original artwork rides unchanged in the Protocol (ProtocolAssets.xcassets). The Messenger carries its derivation
+/// under the same names: the cells its artworkIndex names, pixel for pixel, every other cell the atlas's ground (decision 775 a;
+/// tools/mt-messenger-atlas.py reads this grid and derives). Each window shows one tile, without its poster caption.
 private struct MTLibraryGoldTile: View {
     let app: MTApplication
     let side: CGFloat

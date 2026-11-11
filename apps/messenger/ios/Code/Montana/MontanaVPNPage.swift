@@ -144,7 +144,7 @@ struct MontanaVPNPage: View {
         var out = [p(c.id)] + Array(repeating: 0, count: Self.printNames.count - 1)
         if c.id == Self.headMark {
             out[2] = p([tunnel.status.rawValue, tunnel.isOn ? 1 : 0, Int(tunnel.connectedAt?.timeIntervalSince1970 ?? 0)])
-            out[3] = p([tunnel.lastError, tunnel.backgroundError, String(describing: vpnNote), vpnBusy ? "1" : "0", road.line ?? ""])
+            out[3] = p([tunnel.lastError, String(describing: vpnNote), vpnBusy ? "1" : "0", road.line ?? ""])
             out[4] = p([vpnServers.count, plans.count])
             out[8] = p(vpnServers.isEmpty && plans.isEmpty)
         } else if let plan = plan(c) {
@@ -334,10 +334,6 @@ struct MontanaVPNPage: View {
             // person's language -- the node it raised from the wall, the ten minutes the person's choice stands, or no live node.
             if let line = road.line {
                 Text(line).font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity).padding(.horizontal)
-            }
-            if !tunnel.backgroundError.isEmpty {
-                Text(tunnel.backgroundError).font(.caption).foregroundColor(.red).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity).padding(.horizontal)
             }
 
@@ -739,31 +735,20 @@ final class MTVPNAppDoor: MTVPNDoor {
         case .launched: MontanaVPNStore.warm()
         case .shown: MontanaVPNFreshener.shared.appActive(true)   // the quiet beats of the VPN page live while the app stands on the screen (29.09)
         case .hidden: MontanaVPNFreshener.shared.appActive(false)
-        // The tunnel is read at every return, not only when its page opens: a tunnel that stands is asked what its reconnect
-        // says, and what the extension wrote while the app was away (a death, a raise by the system) rides.
+        // The tunnel is read at every return, not only when its page opens: what the extension wrote while the app was away (a
+        // death, the panel's switch) rides, and a reconnect an older build left on the profile is lifted.
         case .returned: Task { await MontanaVPNTunnel.shared.load() }
         default: break
         }
     }
-    @MainActor func ranAsAgent() -> Bool {
-        #if targetEnvironment(macCatalyst)
-        if MTMacVPNService.isAgent { MTMacVPNService.run(); return true }
-        #endif
-        return false
-    }
     @MainActor func installRoad() -> Bool {
         guard MTInstallPrepare.asked else { return false }
-        MTInstallPrepare.run()   // the install road: lift the reconnect, stop, leave (MontanaVPNTunnel.swift)
+        MTInstallPrepare.run()   // the install road: stop the tunnel, leave (MontanaVPNTunnel.swift)
         return true
     }
     func path(satisfied: Bool, tunnel: Bool) { MontanaVPNTunnel.notePath(satisfied: satisfied, tunnel: tunnel) }
     @MainActor func foreignTunnel(present: Bool, satisfied: Bool) {
         MontanaVPNTunnel.shared.foreignTunnelChanged(present: present, satisfied: satisfied)
-    }
-    func wire(callBusy: @escaping () -> Bool, diary: @escaping (String) -> Void) {
-        MTVPNRecoveryHooks.callBusy = callBusy
-        MTVPNRecoveryHooks.diary = diary
-        MTVPNRecoveryHooks.markStop = { await MontanaVPNTunnel.shared.markRecoveryStop() }
     }
     func storeReplaced() {
         MontanaVPNStore.forgetHeld()

@@ -79,12 +79,21 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
 
     /// THE HIT IS WRITTEN (08.11.2026): a finger the platform hands to this control leaves a line before any
     /// recogniser runs -- a press that never arrives is then told apart from one that arrives and is lost.
+    /// THE HIT ARMS THE CONTROL (09.11.2026, the author's word 17930): the touch's first moment is here, not in the recogniser.
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let v = super.hitTest(point, with: event)
         if v === self, event?.type == .touches {
             MontanaTrace.markFolded("hold_hit", "x=\(Int(point.x)) y=\(Int(point.y)) enabled=\(isEnabled ? 1 : 0)", window: 2, key: "hit")
+            arm(at: point, by: "hit")
         }
         return v
+    }
+    /// THE SLOT LEFT THE SCREEN UNDER THE FINGER (11.11.2026): a control taken out of its window gets no more of its touch,
+    /// and the press would end unsaid -- the tape rolling with no finger and no lock. It is the system taking the touch:
+    /// the tape locks and rolls on, and the crown's controls stand by.
+    override func willMove(toWindow newWindow: UIWindow?) {
+        super.willMove(toWindow: newWindow)
+        if newWindow == nil { systemTook() }
     }
 
     override var isHighlighted: Bool {
@@ -105,7 +114,7 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
     @objc private func pressed(_ g: UILongPressGestureRecognizer) {
         let p = g.location(in: self)
         switch g.state {
-        case .began: down(at: p)
+        case .began: arm(at: p, by: "press")
         case .changed: moved(to: p)
         case .ended: up(at: p)
         case .cancelled, .failed: systemTook()
@@ -113,11 +122,23 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
         }
     }
 
-    private func down(at: CGPoint) {
+    /// THE PRESS IS COUNTED FROM THE FINGER'S ARRIVAL (T1 09.11.2026, the author's word 17930: «the voice button does not press,
+    /// everything went crooked»). The press recogniser's .began reached this control 156-164 ms after the hit (T1 01:22:04.722 to
+    /// .878 and 12:30:03.516 to .680 UTC), and the 190 ms mode timeout ran from .began: a tape rolled only from the 350th
+    /// millisecond of a press, and a press of 200-340 ms -- a hold by any hand's reckoning -- was read as a tap and swapped the
+    /// glyph for the camera. The reference counts from beginTracking, the touch's first moment (TGModernConversationInputMicButton.m:712-743);
+    /// here that moment is the hit (hitTest), so the hit arms the control and the timeout runs from it. The recogniser's .began
+    /// only confirms the finger and writes how late it came; when no hit was seen it arms as before.
+    private var hitAt: CFAbsoluteTime = 0
+    private func arm(at: CGPoint, by: String) {
+        if processing {
+            if by == "press" { MontanaTrace.mark("hold_press", "late=\(Int((CFAbsoluteTimeGetCurrent() - hitAt) * 1000))ms began=\(began ? 1 : 0)") }
+            return   // the hit armed this press already (or a second hit-test of the same touch)
+        }
         // The touch's arrival is written before any verdict: a tap that never reaches the control
         // is then a missing line, not a guess (measured 19.09: six locked taps, no line at all).
         MTHoldOverlayState.shared.follow()   // where the slot IS, before anything is drawn over it
-        MontanaTrace.mark("hold_down", "x=\(Int(at.x)) y=\(Int(at.y)) w=\(Int(bounds.width)) h=\(Int(bounds.height)) mount=\(MTHoldOverlayWindow.mountKind) ay=\(Int(MTHoldOverlayState.shared.anchor.y)) by=press enabled=\(isEnabled ? 1 : 0)")
+        MontanaTrace.mark("hold_down", "x=\(Int(at.x)) y=\(Int(at.y)) w=\(Int(bounds.width)) h=\(Int(bounds.height)) mount=\(MTHoldOverlayWindow.mountKind) ay=\(Int(MTHoldOverlayState.shared.anchor.y)) by=\(by) enabled=\(isEnabled ? 1 : 0)")
         lastVelocity = .zero
         processing = false
         guard isEnabled else { return }   // a locked tape: the crown's own controls take the finger
@@ -126,6 +147,7 @@ final class MontanaHoldControl: UIControl, UIGestureRecognizerDelegate {
         began = false
         isHighlighted = true
         lastTouchTime = CFAbsoluteTimeGetCurrent()
+        hitAt = lastTouchTime
         touchLocation = at
         modeTimer?.invalidate()
         modeTimer = Timer.scheduledTimer(withTimeInterval: Self.modeTimeout, repeats: false) { [weak self] _ in

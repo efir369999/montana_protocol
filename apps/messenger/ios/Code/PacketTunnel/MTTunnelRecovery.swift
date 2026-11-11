@@ -63,8 +63,9 @@ struct MTTunnelRetry {
 ///    and every candidate the recovery tries) -- counted from the first such beat through every raise of the engine and every
 ///    candidate -- for `upstreamLimit`: the session is released;
 ///  · the system carries nothing into the tunnel when the app's own path -- the system's word for every app -- has stood
-///    unsatisfied for `blockedAfter` while the phone's own network is up: the session is restarted once, and blocked
-///    again within `blockedRepeat` of that restart it is released.
+///    unsatisfied for `blockedAfter` while the phone's own network is up: the session is released. (Until 09.11.2026 it was
+///    restarted once by a technical stop and the system raised it anew; the author's word of that day ended every raise that
+///    is not the person's hand, so a dead session is released and stays down until a finger.)
 /// Zero packets alone is never a verdict: healthy sessions of the fleet stood two to seven minutes without one (29 such
 /// stretches in 7365 minutes, measured 29.09), so idleness and a block look the same from inside the tunnel -- only a
 /// witness that tried to go out can tell them apart. With the phone's own network down nothing is judged: the tunnel is
@@ -74,21 +75,16 @@ struct MTTunnelDeath {
     static let upstreamLimit: TimeInterval = 90
     /// Above the longest block that healed by itself (8 s, T1 27.09 after a profile save) with room for a handover.
     static let blockedAfter: TimeInterval = 20
-    /// A fresh session blocked again this soon was not healed by the restart.
-    static let blockedRepeat: TimeInterval = 180
-    enum Verdict: Equatable { case alive, restart, release(String) }
+    enum Verdict: Equatable { case alive, release(String) }
     private(set) var silentSince: TimeInterval?
 
     mutating func reset() { silentSince = nil }
 
-    mutating func judge(now: TimeInterval, phonePath: Bool, answered: Bool, unanswered: Bool,
-                        blocked: TimeInterval, lastBlockedRestart: TimeInterval?) -> Verdict {
+    mutating func judge(now: TimeInterval, phonePath: Bool, answered: Bool, unanswered: Bool, blocked: TimeInterval) -> Verdict {
         guard phonePath else { silentSince = nil; return .alive }
         if answered { silentSince = nil } else if unanswered, silentSince == nil { silentSince = now }
         if let since = silentSince, Self.upstreamLimit <= now - since { return .release("upstream") }
-        guard Self.blockedAfter <= blocked else { return .alive }
-        if let at = lastBlockedRestart, now - at < Self.blockedRepeat { return .release("blocked") }
-        return .restart
+        return Self.blockedAfter <= blocked ? .release("blocked") : .alive
     }
 }
 

@@ -2,5 +2,13 @@
   "An anonymous messenger. Your identity comes from your secret phrase, and your chats are encrypted on your device.": {
     "ru": "Анонимный мессенджер. Личность — из вашей секретной фразы, переписка зашифрована на вашем устройстве.",
     "zh-Hans": "匿名通讯工具。您的身份源自您的助记词，聊天内容在您的设备上加密。"
+  },
+  "Your account is deleted from this device: your 24-word identity, your history and its attachments are erased here, the people who keep parts of your copy are asked to drop them, and your copies in iCloud are removed. A contact who is offline keeps a sealed part that nothing but your 24 words can open. Your other devices keep what they hold. This cannot be undone.": {
+    "ru": "Аккаунт удаляется с этого устройства: здесь стираются ваша личность из 24 слов, история и вложения, собеседников, хранящих части вашей копии, просят их удалить, а ваши копии в iCloud удаляются. Собеседник не в сети сохранит запечатанную часть, которую не открыть без ваших 24 слов. Ваши другие устройства сохраняют то, что на них есть. Отменить это нельзя.",
+    "zh-Hans": "您的账户将从此设备删除：此处的 24 个单词身份、历史记录及其附件将被清除，保管您副本部分的联系人会被要求删除这些部分，您在 iCloud 中的副本也会被删除。不在线的联系人会保留一个加密的部分，只有您的 24 个单词才能打开。您的其他设备会保留其上已有的内容。此操作无法撤销。"
+  },
+  "Deleting…": {
+    "ru": "Удаление…",
+    "zh-Hans": "正在删除…"
   }
 }

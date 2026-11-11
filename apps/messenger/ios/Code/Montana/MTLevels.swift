@@ -29,8 +29,7 @@ enum MTPersonLevel {
 enum MTLevelAccess {
     static let lastKey = "levelAccess.last"                    // NOT-UI: the last Global Level this phone knew of this person
     static var level: Int? {
-        guard let p = MTPersonLevel.now, let w = MTPersonChain.walletTerm else { return UserDefaults.standard.object(forKey: lastKey) as? Int }
-        let g = MTPersonChain.global(person: p, wallet: w)
+        guard let g = MTPersonChain.known else { return UserDefaults.standard.object(forKey: lastKey) as? Int }
         if UserDefaults.standard.object(forKey: lastKey) as? Int != g { UserDefaults.standard.set(g, forKey: lastKey) }
         return g
     }

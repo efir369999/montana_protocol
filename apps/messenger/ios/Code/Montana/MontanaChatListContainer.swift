@@ -603,12 +603,12 @@ struct MTChatListView: UIViewRepresentable {
         context.coordinator.rowHold = hold
         hold.delegate = context.coordinator   // the hold asks the page which rows it may begin on (holdsRow)
         // Our own pull-to-refresh: the coin sits in the gap above the first row, the list measures the pull.
-        let coin = MontanaHost.make(MontanaCoinSpinner(pull: 0, released: nil))
-        coin.view.backgroundColor = .clear
-        coin.view.frame = CGRect(x: 0, y: 0, width: MontanaCoinSpinner.side, height: MontanaCoinSpinner.side)
-        coin.view.layer.zPosition = 1
-        cv.addSubview(coin.view)
-        context.coordinator.spinner = coin
+        let spin = MontanaHost.make(MontanaPullSpinner(pull: 0, released: nil))
+        spin.view.backgroundColor = .clear
+        spin.view.frame = CGRect(x: 0, y: 0, width: MontanaPullSpinner.side, height: MontanaPullSpinner.side)
+        spin.view.layer.zPosition = 1
+        cv.addSubview(spin.view)
+        context.coordinator.spinner = spin
         context.coordinator.attach(cv, view: self)
         let host = MTChatListFrame(cv: cv)
         context.coordinator.host = host
@@ -752,7 +752,7 @@ struct MTChatListView: UIViewRepresentable {
         }
         /// The pull, in points past the feed's own top; the held gap does not count as a pull.
         private func pull(_ sv: UIScrollView) -> CGFloat {
-            -(sv.contentOffset.y + sv.adjustedContentInset.top - (held ? MontanaCoinSpinner.hold : 0))
+            -(sv.contentOffset.y + sv.adjustedContentInset.top - (held ? MontanaPullSpinner.hold : 0))
         }
         /// A TAP ON THE STATUS BAR WITH THE CALL FOLDED IS THE WAY BACK TO THE CALL (the author's word 24.09: «on the
         /// iPhone 13 a tap on the clock's green bubble does nothing -- it must return to the call»). The platform hands a
@@ -768,15 +768,15 @@ struct MTChatListView: UIViewRepresentable {
             guard let spinner else { return }
             let pull = max(0, self.pull(sv))
             // Finishing, the coin keeps the middle of the held gap; in the hand, the middle of the pull.
-            let y = released != nil ? -MontanaCoinSpinner.hold / 2 : -pull / 2
+            let y = released != nil ? -MontanaPullSpinner.hold / 2 : -pull / 2
             spinner.view.center = CGPoint(x: sv.bounds.width / 2, y: y)
             // Ordinary scrolling keeps pull at zero; no hosted-root update is needed.
             if pull != spinnerPull || released?.at != spinnerRelease {
                 spinnerPull = pull; spinnerRelease = released?.at
-                MontanaHost.reroot(spinner, MontanaCoinSpinner(pull: pull, released: released), why: "coin")
+                MontanaHost.reroot(spinner, MontanaPullSpinner(pull: pull, released: released), why: "pull")
             }
             if released == nil, sv.isDragging {
-                let over = pull >= MontanaCoinSpinner.pullTrigger
+                let over = pull >= MontanaPullSpinner.pullTrigger
                 if over != armed {
                     armed = over
                     if over { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
@@ -784,14 +784,14 @@ struct MTChatListView: UIViewRepresentable {
             }
         }
         private func beginRefresh(_ sv: UIScrollView) {
-            released = (Date(), MontanaCoinSpinner.angle(forPull: pull(sv)))
+            released = (Date(), MontanaPullSpinner.angle(forPull: pull(sv)))
             held = true
-            UIView.animate(withDuration: 0.25) { self.host?.hold = MontanaCoinSpinner.hold }
+            UIView.animate(withDuration: 0.25) { self.host?.hold = MontanaPullSpinner.hold }
             // The bar answers the hand, not the network (the author's word 11.09): the toggle is
             // immediate; the fetch runs on its own and shows itself as letters arriving.
             view.onSettled()
             Task { @MainActor [weak self] in await self?.view.onRefresh() }
-            DispatchQueue.main.asyncAfter(deadline: .now() + MontanaCoinSpinner.finish + 0.15) { [weak self, weak sv] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + MontanaPullSpinner.finish + 0.15) { [weak self, weak sv] in
                 guard let self, let sv else { return }
                 self.released = nil
                 self.held = false
@@ -914,7 +914,7 @@ struct MTChatListView: UIViewRepresentable {
             MTFrameMeter.shared.begin(rows: view.rows.count, on: sv)
         }
         func scrollViewDidEndDragging(_ sv: UIScrollView, willDecelerate: Bool) {
-            if released == nil, pull(sv) >= MontanaCoinSpinner.pullTrigger { beginRefresh(sv) }
+            if released == nil, pull(sv) >= MontanaPullSpinner.pullTrigger { beginRefresh(sv) }
             armed = false
             view.onPull(dragFrom - sv.contentOffset.y)
             if !willDecelerate { MTFrameMeter.shared.end(view.page.isEmpty ? "list" : view.page) }   // the page's own name (the critic 24.09)

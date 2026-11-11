@@ -20,9 +20,6 @@ import MetricKit
 @main
 enum MontanaEntry {
     @MainActor static func main() {
-        #if targetEnvironment(macCatalyst)
-        if MTApps.vpn?.ranAsAgent() == true { return }   // the Mac's VPN supervisor, a process of its own (MTMacVPNService)
-        #endif
         MontanaApp.main()
     }
 }
@@ -404,7 +401,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         #if !MONTANA_MESSENGER
-        if MTApps.vpn?.installRoad() == true { return true }   // the install road: lift the reconnect, stop, leave (MTInstallPrepare)
+        if MTApps.vpn?.installRoad() == true { return true }   // the install road: stop the tunnel, leave (MTInstallPrepare)
         #endif
         MontanaTrace.mark("launch_begin")
         SeedScope.forgetRetired()
@@ -611,9 +608,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // release that requirement for delayed pushes, foreground delivery and active calls.
         // A RING AT ONE OF MY CARDS (11.10.2026, No.63): a caller in first contact rings where my card listens; the pipe is begotten from
         // the encapsulation the ring carries, as from a first letter, and the ring opens with it (MontanaWakePush.openCardRing).
+        // The node's stamp of the sending is read once: it chooses the minute a late ring opens by (openRingEnvelope), and
+        // it is the push's age below.
+        let sentAt = payload.dictionaryPayload["at"] as? Int
         let ring = (payload.dictionaryPayload["env"] as? String)
             .flatMap { Data(base64Encoded: $0) }
-            .flatMap { MontanaWakePush.openRingEnvelope($0) ?? MontanaWakePush.openCardRing($0) }
+            .flatMap { MontanaWakePush.openRingEnvelope($0, sent: sentAt) ?? MontanaWakePush.openCardRing($0) }
         // The relay pass the node minted for this very wake (29.09): in hand before any screen rises.
         if let t = payload.dictionaryPayload["turn"] as? [String: Any] {
             MontanaTrace.mark("turn_cred", MontanaWakePush.adoptTurnPass(t) ? "carried by the wake" : "carried by the wake — refused")
@@ -675,7 +675,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // clock judged it -- a phone whose clock runs ahead by more than a call's life buries every live call as stale, one
         // behind rings ghosts.
         // Every other age gate of a call reads the node's clock (K-11); this one does too.
-        let sentAt = payload.dictionaryPayload["at"] as? Int
         let wakeID = (payload.dictionaryPayload["wid"] as? String).flatMap(UUID.init(uuidString:))?.uuidString ?? "-"
         let inviteAge = ring?.bornAtMS.map { Int(MontanaWakePush.nodeNow() - Double($0) / 1000) } ?? -1
         MontanaTrace.mark("voip_arrival", "wake=\(wakeID) sent_age_s=\(sentAt.map { Int(MontanaWakePush.nodeNow()) - $0 } ?? -1) invite_age_s=\(inviteAge)")
@@ -684,11 +683,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             // Only a late offer was a call from a person to miss. A stale push with no offer -- an answer, an
             // end, or an envelope this install cannot open (02.10 14:51Z on T1, held 825 s across a
             // reinstall) -- ends failed: «unanswered» wrote a missed call from «Montana» into Recents.
-            MontanaTrace.mark("ring_dead", "stale-push invite_age_s=\(inviteAge) offer=\(ring?.offer == nil ? 0 : 1)")
-            MontanaCall.shared.reportDummyAndEnd(from: ring?.conv ?? "Montana", reason: ring?.offer == nil ? .failed : .unanswered, required: mustReport)
+            // One call is missed once (MTVoipReport.missedOnce): the late wakes of one call come in a burst.
+            let missed = MTVoipReport.missedOnce(seed: ring?.callSeed, offer: ring?.offer != nil)
+            MontanaTrace.mark("ring_dead", "stale-push invite_age_s=\(inviteAge) offer=\(ring?.offer == nil ? 0 : 1) missed=\(missed ? 1 : 0)")
+            MontanaCall.shared.reportDummyAndEnd(from: ring?.conv ?? "Montana", reason: missed ? .unanswered : .failed, required: mustReport)
             return mustReport
         }
-        MontanaWakeDoor.arrived("voip", at: payload.dictionaryPayload["at"] as? Int)
+        MontanaWakeDoor.arrived("voip", at: sentAt)
         if let ring, !ring.conv.isEmpty {
             // A call is led under MY pipe key (the one the envelope opened with), not under the caller
             // address: the sides share one secret and one daily label -- the signal queue is common,
@@ -777,7 +778,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     // The app's folder in «Files» → «On My iPhone» → Montana (app icon). iOS shows the Documents folder
-    // with UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace, if it has content.
+    // with UIFileSharingEnabled + LSSupportsOpeningDocumentsInPlace, if it has content -- the Protocol's edition alone: Messenger
+    // carries neither key and shows no folder in Files (the author's word 18855, 11.11.2026; mt-apple-rules-check.py holds it).
     static func ensureMontanaFolder() {
         guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         let fm = FileManager.default
@@ -2037,6 +2039,17 @@ enum MTVoipReport {
     static func expired(bornAtMS: Int?, sentAt: Int?, now: TimeInterval, life: TimeInterval) -> Bool {
         let born = bornAtMS.map { Double($0) / 1000 } ?? sentAt.map(Double.init)
         return born.map { now - $0 >= life } ?? false
+    }
+    /// ONE CALL IS MISSED ONCE (11.11.2026, iPhone 15 10.11.2026 15:03:36Z). The system handed over seven late wakes of one call
+    /// at once; each now opens by the minute it was sent in (openRingEnvelope) and names its caller, and each would end
+    /// «unanswered» -- seven missed lines in the phone's list for one call. The first late wake of a call that carries its
+    /// offer is the missed call; every later wake of the same call ends failed. The wakes of one call are sent within its
+    /// life and handed over to one process, so the set lives with the process: one seed for each late call of a run.
+    private static var missedSeeds: Set<String> = []   // BOUND-OK: one seed for each late call of this run
+    static func missedOnce(seed: String?, offer: Bool) -> Bool {
+        guard offer else { return false }
+        guard let seed, !seed.isEmpty else { return true }
+        return missedSeeds.insert(seed).inserted
     }
     /// The metadata may waive the report; only a call the system itself lists as ours lets the waiver stand (receiveVoip).
     static func mustReport(required: Bool, listed: MTListedCall?) -> Bool { required || listed == nil }

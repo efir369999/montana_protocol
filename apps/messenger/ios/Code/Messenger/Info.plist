@@ -17,8 +17,6 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera takes photos and videos for your chats, video messages and video calls, and scans a person's QR code.</string>
 	<key>NSFaceIDUsageDescription</key>
@@ -65,8 +63,6 @@
 		<string>audio</string>
 		<string>remote-notification</string>
 	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

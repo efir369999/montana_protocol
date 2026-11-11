@@ -12,12 +12,13 @@ enum MontanaSafety {
     /// The version of the terms the person agreed to; a new version asks anew.
     static let termsVersion = 1
     // ONE address for now (the author's word 15.09): questions and reports go to the contact
-    // mailbox the review knows; two names below, one mailbox behind them.
-    static let contactMail = "contact@montana.quest"
+    // mailbox the review knows; two names below, one mailbox behind them. On montana.one since 10.11.2026 (the author's words
+    // 18154 and 18155; Cloudflare Email Routing of montana.one, MX route1-3).
+    static let contactMail = "contact@montana.one"
     static let abuseMail = contactMail
     static let supportMail = contactMail
     /// THE EDITION'S OWN SITE (App Review 5.1.1(i), audit blocker 3): each edition names its own site, and its policy is the one on
-    /// it -- montana.xxx/privacy/ is MT Protocol's (quest.montana.app), montana.quest/privacy/ is Montana Messenger's
+    /// it -- montana.xxx/privacy/ is MT Protocol's (quest.montana.app), montana.one/privacy/ is Montana Messenger's
     /// (xxx.montana.business; decision 711 = a); one app never opens the other's.
     static let site = MTEdition.site
     static let privacy = site + "/privacy/"   // the policy on the site, in the languages the site speaks
@@ -161,6 +162,8 @@ struct MontanaReportSheet: View {
     @State private var composing = false
     @State private var copied = false
     @State private var blockToo = true
+    @State private var sending = false   // the doors are being asked
+    @State private var sent = false      // a door took the report
     private let reasons: [(String, LocalizedStringKey)] = [("spam", "Spam"), ("abuse", "Harassment or threats"), ("hate", "Hate speech"), ("illegal", "Illegal content"), ("other", "Other")]
     private var body_: String {
         var s = "Report (\(reasonKey))\nReporter: \(MontanaPhoneNode.myRef())\nReported: \(report.peer)"
@@ -169,6 +172,25 @@ struct MontanaReportSheet: View {
         if !report.text.isEmpty { s += "\n\n---\n\(report.text)\n---" }
         s += "\n\nBuild: \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "")"
         return s
+    }
+    /// THE REPORT GOES TO MONTANA'S NODE FIRST (Guideline 1.2; the author's word 10.11.2026: «a report goes to a node, not only by
+    /// mail»): a phone with no mail account sent nothing before -- the review's phones among them. Any door takes it and carries it
+    /// to the reports machine (montana-node-store.py, /report-put), where the operators read it (tools/mt-reports.py); the mail
+    /// road below stands in only when no door answers. The fields and their bounds are the node's (report_of).
+    private var nodeBody: [String: Any] {
+        ["reason": reasonKey, "reporter": MontanaPhoneNode.myRef(), "reported": report.peer,
+         "name": String(report.peerName.prefix(200)), "mid": String(report.mid.prefix(128)), "text": String(report.text.prefix(8000)),
+         "build": String((Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "").prefix(16))]
+    }
+    /// The mail road, when no door took the report: the system composer, else another mail app, else the words copied.
+    private func sendByMail() {
+        if MFMailComposeViewController.canSendMail() { composing = true; return }
+        let copy = {
+            UIPasteboard.general.string = "\(MontanaSafety.abuseMail)\n\n\(body_)"
+            copied = true
+        }
+        guard let u = MontanaSafety.mailto(MontanaSafety.abuseMail, subject: "Montana report (\(reasonKey))", body: body_) else { return copy() }
+        UIApplication.shared.open(u) { opened in if opened { dismiss() } else { copy() } }
     }
     var body: some View {
         NavigationStack {
@@ -201,16 +223,23 @@ struct MontanaReportSheet: View {
                     Button {
                         MontanaTrace.mark("report", "reason=\(reasonKey) letter=\(report.mid.isEmpty ? 0 : 1)")
                         if blockToo && offersBlock { onBlock() }
-                        if MFMailComposeViewController.canSendMail() { composing = true }
-                        else if let u = MontanaSafety.mailto(MontanaSafety.abuseMail, subject: "Montana report (\(reasonKey))", body: body_),
-                                UIApplication.shared.canOpenURL(u) {
-                            UIApplication.shared.open(u); dismiss()
-                        } else {
-                            UIPasteboard.general.string = "\(MontanaSafety.abuseMail)\n\n\(body_)"
-                            copied = true
+                        sending = true
+                        Task { @MainActor in
+                            let doors = MontanaWakePush.orderedBases()
+                            let (code, _) = await MTNodeWire.post("/report-put", body: nodeBody, doors: doors, attempts: max(1, doors.count))
+                            sending = false
+                            MontanaTrace.mark("report", "node code=\(code)")
+                            if code == 200 { sent = true } else { sendByMail() }
                         }
-                    } label: { Text("Send report").foregroundColor(.accentColor) }
-                    Text("Reports go to \(MontanaSafety.abuseMail) and are reviewed within 24 hours.")
+                    } label: {
+                        HStack {
+                            if sending { Text("Sending…").foregroundColor(.gray) } else { Text("Send report").foregroundColor(.accentColor) }
+                            if sending { Spacer(); ProgressView() }
+                        }
+                        .contentShape(Rectangle())   // the whole row takes the touch
+                    }
+                    .disabled(sending)
+                    Text("Reports reach Montana and are reviewed within 24 hours.")
                         .font(.footnote).foregroundColor(.gray)
                 }.listRowBackground(MTGlassRowPlate())
             }
@@ -222,6 +251,11 @@ struct MontanaReportSheet: View {
             }
             .alert("No mail account on this phone. The report and our address are copied — paste them into any mail.", isPresented: $copied) {
                 Button("OK") { dismiss() }
+            }
+            .alert("Report sent", isPresented: $sent) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text("Your report reached Montana. It is reviewed within 24 hours.")
             }
         }
         .preferredColorScheme(.dark)

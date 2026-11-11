@@ -228,7 +228,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private var appBlocked: (seconds: Int, at: Date)?
     private var releasing = false
     private static let witnessFresh: TimeInterval = 45          // a witness older than a beat and a half says nothing
-    private static let blockedRestartKey = "ext.blocked.restartAt"   // this extension's store: the last restart for a block
 
     override init() {
         super.init()
@@ -244,7 +243,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                                 userInfo: [NSLocalizedDescriptionKey: "Tunnel startup timed out"])
             if run.finish(error) {
                 run.stop()
-                ExtLog.write("startup deadline reached; On Demand keeps the requested connection")
+                ExtLog.write("startup deadline reached; the session ends -- the tunnel rises by the hand alone")
                 self?.cancelTunnelWithError(error)
             }
         }
@@ -260,11 +259,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         os_log("Montana tunnel start", log: log, type: .info); NSLog("[montana-vpn-ext] startTunnel enter"); ExtLog.write("startTunnel enter")
         // Written out now, not only at a clean stop. A session that is killed never reaches stopTunnel,
         // and the ring died with it — which is how three hours of a soak test left no record at all.
-        // Who raised it: the app names itself in the options; the system -- the reconnect, or the switch in
-        // its own panel -- passes none.
+        // Who raised it: the app names itself in the options; the switch in the system's own panel passes none. No reconnect
+        // of ours exists to raise a session (MontanaVPNTunnel.noReconnect, 09.11.2026): by=system is the person's finger in Settings.
         let by = (options?["mt.by"] as? String) ?? "system"
         ExtLog.write("── session start by=\(by) build=\(ExtSession.build) ──")
-        ExtReconnect.arm(run) // ON is kept even when this attempt fails before the tunnel stands.
+        ExtDeadMark.clear()   // a session the hand raised takes a standing dead mark away: a later off never reads as a death
         guard let proto = protocolConfiguration as? NETunnelProviderProtocol,
               let pconf = proto.providerConfiguration,
               let b64 = pconf["xray"] as? String, let outboundData = Data(base64Encoded: b64),
@@ -332,12 +331,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 }
                 // THE SESSION IS BORN BY THE ROAD'S ANSWER (the critic, 17.10.2026, finding 3: on 85938459, 12.10 18:54, a session was
                 // born on a dead server and held the phone 1 h 26 min with nothing in). An engine that stood is asked through its own
-                // outbound before the tunnel is said to stand; a road that does not answer on the phone's own network lifts the
-                // reconnect -- or the system would raise the same dead session at once -- and the start is refused with its reason.
+                // outbound before the tunnel is said to stand; a road that does not answer on the phone's own network leaves its
+                // dead mark for the app, and the start is refused with its reason -- nothing raises it again.
                 if initialError == nil, self.phonePathUp, MontanaXrayBridge.probeRunning() == nil {
                     MontanaXrayBridge.stop()
-                    ExtLog.write("birth refused: the engine stood and the road did not answer its probe -- the reconnect is lifted")
-                    ExtReconnect.lift(dead: Date().timeIntervalSince1970) {
+                    ExtLog.write("birth refused: the engine stood and the road did not answer its probe -- the start is refused")
+                    ExtDeadMark.write(at: Date().timeIntervalSince1970) {
                         completionHandler(NSError(domain: "montana.tunnel", code: 7,
                                                   userInfo: [NSLocalizedDescriptionKey: "The VPN carried nothing: VPN off"]))
                     }
@@ -464,15 +463,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             }
             return
         }
-        if messageData == Data("restart".utf8) {
-            completionHandler?(Data([1]))
-            cancelTunnelWithError(NSError(domain: "montana.tunnel", code: 8,
-                userInfo: [NSLocalizedDescriptionKey: "Unresponsive engine restart"]))
-            return
-        }
-        if messageData == Data("health".utf8) {
-            completionHandler?(lifetime.isAlive ? Data([1]) : nil); return
-        }
         if messageData.starts(with: Data("plan:".utf8)),
            let plan = try? JSONSerialization.jsonObject(with: messageData.dropFirst(5)) as? [String: Any] {
             engineLine.async {
@@ -504,11 +494,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // cannot read, so every failure of the tunnel was unnamed by construction (22.09).
         if messageData == Data("diary".utf8) {
             completionHandler?(Data(Self.diaryTail().utf8)); return
-        }
-        // The app's question about the reconnect: what this session's arm said. The answer waits for the arm on its
-        // line, so the question never overtakes it (ExtReconnect).
-        if messageData == Data("reconnect?".utf8) {
-            ExtReconnect.answer { completionHandler?(Data($0.utf8)) }; return
         }
         // The app polls tunnel throughput while connected; the door's atoms ride the SAME beat. A
         // measurement costs a minute of silence and cannot be the answer to a message; a second timer
@@ -644,47 +629,38 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         UserDefaults.standard.set(living.total, forKey: MTTunnelAlive.totalKey)
     }
 
-    /// The dead session's judge (MTTunnelDeath), on the engine's line: true when the session was restarted or released.
-    /// The app's witness counts no further back than this session: a block carried over a restart is judged afresh.
+    /// The dead session's judge (MTTunnelDeath), on the engine's line: true when the session was released.
+    /// The app's witness counts no further back than this session.
     private func judgeDeath(now: Date, road word: MTTunnelRoad.Word) -> Bool {
         guard !releasing else { return true }
         let reported = appBlocked.flatMap { now.timeIntervalSince($0.at) <= Self.witnessFresh ? $0.seconds : nil } ?? 0
         let witness = min(reported, max(0, Int(now.timeIntervalSince(sessionStart))))
-        let store = UserDefaults.standard
         let verdict = death.judge(now: now.timeIntervalSince1970, phonePath: phonePathUp,
                                   answered: word == .answered, unanswered: word == .unanswered,
-                                  blocked: TimeInterval(witness),
-                                  lastBlockedRestart: store.object(forKey: Self.blockedRestartKey) as? Double)
+                                  blocked: TimeInterval(witness))
         switch verdict {
         case .alive:
             return false
-        case .restart:
-            store.set(now.timeIntervalSince1970, forKey: Self.blockedRestartKey)
-            appBlocked = nil
-            ExtLog.write("the system carries nothing into the tunnel: the app's path unsatisfied for \(witness)s with the phone's own network up -- the session restarts once")
-            cancelTunnelWithError(NSError(domain: "montana.tunnel", code: 8,
-                userInfo: [NSLocalizedDescriptionKey: "Restart: the system carried nothing into the tunnel"]))
-            return true
         case .release(let why):
             releaseDeadSession(why: why, witness: witness)
             return true
         }
     }
 
-    /// THE DEAD SESSION LETS THE PHONE GO (the author's word 29.09: «let a dead session release itself»). The reconnect is
-    /// lifted first -- or the system would raise the same dead session at once -- and then the session ends with its reason,
-    /// which the app says to the person under the switch. The phone is back on its own network; the VPN stays off until the
-    /// person turns it on again.
+    /// THE DEAD SESSION LETS THE PHONE GO (the author's word 29.09: «let a dead session release itself»). Its moment is written
+    /// into the profile first (ExtDeadMark), then the session ends with its reason, which the app says to the person under the
+    /// switch. The phone is back on its own network; the VPN stays off until the person turns it on again -- nothing of ours
+    /// raises it (the author's word 09.11.2026).
     private func releaseDeadSession(why: String, witness: Int) {
         guard lifetime.isAlive, !releasing else { return }
         releasing = true
         let run = lifetime
         let silent = death.silentSince.map { Int(Date().timeIntervalSince1970 - $0) } ?? 0
-        ExtLog.write("session dead (\(why)): silent=\(silent)s blocked=\(witness)s -- the reconnect is lifted and the phone released")
+        ExtLog.write("session dead (\(why)): silent=\(silent)s blocked=\(witness)s -- the phone is released")
         ExtSession.note("dead=\(why)")
-        // The moment rides the lift's own save (ExtReconnect.deadKey): the app reads it as this tunnel's verdict, at the fall or
-        // at its next return, and the VPN wall's road decides what rises under the permitted list (MTVPNWhitelistRoad).
-        ExtReconnect.lift(dead: Date().timeIntervalSince1970) { [weak self] in
+        // The moment rides its own save (ExtDeadMark.deadKey): the app reads it as this tunnel's verdict, at the fall or at its
+        // next return, and the VPN wall's road says its word under the permitted list (MTVPNWhitelistRoad).
+        ExtDeadMark.write(at: Date().timeIntervalSince1970) { [weak self] in
             guard let self, run.isAlive else { return }
             self.cancelTunnelWithError(NSError(domain: "montana.tunnel", code: 7,
                 userInfo: [NSLocalizedDescriptionKey: "The VPN carried nothing: VPN off"]))
@@ -696,7 +672,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         let deadline = MTTunnelLifetime { [weak self] error in
             guard let error, run.isAlive else { return }
             run.stop()
-            ExtLog.write("engine operation timed out; requesting a system restart")
+            ExtLog.write("engine operation timed out; the session ends")
             self?.cancelTunnelWithError(error)
         }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 45) {
@@ -756,14 +732,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         reasserting = false
         lifeLast = nil; lifeSilentSince = nil; lifeInAfterRaise = false; death.reset()
         lifeNextRaise = Date().addingTimeInterval(30)
-        let run = lifetime
-        let replacing = profileRow
-        ExtReconnect.remember(candidate, replacing: replacing, run: run) { [weak self] saved in
-            guard let self, saved else { return }
-            self.engineLine.async {
-                if run.isAlive, self.profileRow == replacing { self.profileRow = candidate.row }
-            }
-        }
+        // One installed outbound is one explicitly selected server: a candidate that carried is never saved as the row
+        // (automatic server switch suppressed); the profile keeps the person's choice.
         ExtLog.write("recovery connected: candidate=\(next) delay_ms=\(delay)")
     }
 
@@ -925,75 +895,46 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         // Return to iOS at once so the toggle flips off at once. Tearing Xray/tun2socks down here
         // blocked for ~25s (iOS grace window) which hung disconnect and made the system toggle need a
         // second tap. The process is killed right after the handler, so the teardown is best-effort async.
-        // A stop by the person's hand waits for one thing first -- the reconnect lifted -- or the system would
-        // raise at once what the person has just switched off (ExtReconnect).
-        let finish = {
-            ExtLog.write("── session end: \(Self.stopReasonName(reason)) ──")
-            completionHandler()
-            self.engineLine.async {
-                MontanaPacketPump.shared.stop()
-                MontanaXrayBridge.stop()
-            }
+        // Nothing is lifted first: no reconnect stands on the profile (MontanaVPNTunnel.noReconnect, 09.11.2026), so a stop for
+        // any reason -- the person's off, an update of the app, a death -- leaves the phone on its own road until a hand.
+        ExtLog.write("── session end: \(Self.stopReasonName(reason)) ──")
+        completionHandler()
+        engineLine.async {
+            MontanaPacketPump.shared.stop()
+            MontanaXrayBridge.stop()
         }
-        // AN UPDATE OF THE APP LIFTS IT TOO (the author's word 28.09, T1 at 17:25: «after a reinstall you give an error -- the VPN
-        // fails after it; do not try to raise it»). The system stops this tunnel to replace it; with the reconnect standing it
-        // raises the new one at once, and the new one may not start before the system has verified the new app -- a
-        // verification that needs the network which this very tunnel holds (includeAllNetworks): «Unable to verify app ...
-        // requires a network connection». Lifted here, the phone comes back on its own road; the person turns the VPN on.
-        guard reason == .userInitiated || reason == .configurationDisabled || reason == .configurationRemoved
-                || reason == .providerDisabled || reason == .appUpdate else { finish(); return }
-        // A STOP BY THE APP'S RECOVERY IS NOT THE PERSON'S OFF (29.09): the recovery marks its stop in the tunnel's own
-        // configuration a moment before it stops; the lift below reads the mark and keeps the reconnect standing.
-        ExtReconnect.lift(then: finish)
     }
 }
 
-// Preference operations run in one async line. A stop invalidates its lifetime synchronously,
-// before joining that line, and waits for the saved OFF before completing the system's stop.
+/// THE DEAD MARK (30.09, the author's word: the VPN wall must tell when it stands under the white lists). A session this tunnel
+/// released as dead leaves its moment in its own configuration; the app reads it, at the fall or at its next return, as the
+/// tunnel's own verdict and never a guess. The next session's start takes it away, so a later off by the person never reads as
+/// a death. Preference writes run in one async line, and a release waits for the mark before ending the session. Nothing else
+/// of the profile is written from this process: no reconnect stands on it (MontanaVPNTunnel.noReconnect, 09.11.2026 -- before
+/// that day this enum armed On Demand at every start and lifted it at every stop, and the system raised each dead session anew).
 @MainActor
-enum ExtReconnect {
+enum ExtDeadMark {
+    static let deadKey = "deadAt"
     private static var tail: Task<Void, Never>?
-    private static var said = "none"
 
     private static func enqueue(_ work: @escaping @MainActor () async -> Void) {
         let previous = tail
         tail = Task { await previous?.value; await work() }
     }
 
-    nonisolated static func arm(_ run: MTTunnelLifetime) {
-        Task { @MainActor in
-            enqueue {
-                guard run.isAlive else { return }
-                said = await write(true, run: run)
-                ExtLog.write("reconnect: " + said)
-            }
-        }
+    /// A session raised takes a standing mark away.
+    nonisolated static func clear() {
+        Task { @MainActor in enqueue { ExtLog.write("dead mark: " + (await save(nil))) } }
     }
 
-    /// THE DEAD MARK (30.09, the author's word: the VPN wall must tell when it stands under the white lists and raise a live node
-    /// of the wall by itself). A session this tunnel released as dead leaves its moment in its own configuration, in the very save
-    /// that lifts the reconnect; the app reads it, at the fall or at its next return, as the tunnel's own verdict and never a
-    /// guess. The next session's arm takes it away, so a later off by the person never reads as a death.
-    static let deadKey = "deadAt"
-
-    nonisolated static func lift(dead: Double? = nil, then done: @escaping () -> Void) {
+    /// A released session writes its moment, then goes on to its end.
+    nonisolated static func write(at dead: Double, then done: @escaping () -> Void) {
         Task { @MainActor in
             enqueue {
-                said = await write(false, run: nil, dead: dead)
-                ExtLog.write("reconnect: " + said)
+                ExtLog.write("dead mark: " + (await save(dead)))
                 done()
             }
         }
-    }
-
-    nonisolated static func answer(_ reply: @escaping (String) -> Void) {
-        Task { @MainActor in enqueue { reply(said) } }
-    }
-
-    nonisolated static func remember(_ candidate: MTTunnelCandidate, replacing row: String,
-                                     run: MTTunnelLifetime, done: @escaping (Bool) -> Void) {
-        ExtLog.write("automatic server switch suppressed")
-        done(false)
     }
 
     private static func manager() async throws -> NETunnelProviderManager? {
@@ -1002,40 +943,21 @@ enum ExtReconnect {
         }
     }
 
-    private static func write(_ on: Bool, run: MTTunnelLifetime?, dead: Double? = nil) async -> String {
+    /// nil takes the mark away; a moment writes it. The profile is saved only when the mark moves.
+    private static func save(_ dead: Double?) async -> String {
         for attempt in 0..<3 {
             do {
-                guard let manager = try await manager() else { return "refused missing configuration" }
-                if on {
-                    guard run?.isAlive == true, manager.isEnabled,
-                          manager.connection.status != .disconnecting else { return "skipped stopped session" }
-                    guard !(manager.onDemandRules ?? []).isEmpty else { return "refused missing rule" }
-                }
-                let proto = manager.protocolConfiguration as? NETunnelProviderProtocol
-                // The arm takes a standing dead mark away and a dead release writes one: either moves the profile even when the
-                // reconnect already reads as asked.
-                let marks = on ? proto?.providerConfiguration?[deadKey] != nil : dead != nil
-                if manager.isOnDemandEnabled == on, !marks { return on ? "armed" : "lifted" }
-                // THE RECOVERY'S OWN STOP KEEPS THE RECONNECT (29.09, T1 28.09: nine stops by the app's recovery in a day,
-                // each read as the person's off, each lifting the reconnect -- and the recovery could not raise what it had
-                // stopped, since it asks for a standing reconnect; the tunnel lay until a finger). The app writes the moment
-                // of its stop into this configuration (MTVPNSystemControl.markStop); a mark under ninety seconds old is the
-                // recovery's hand, and the reconnect stands for the system to raise the tunnel anew. No entitlement is
-                // needed: both sides read and write this configuration already.
-                if !on, let at = proto?.providerConfiguration?["recoveryStop"] as? Double,
-                   Date().timeIntervalSince1970 - at < 90 {
-                    return "kept for the recovery"
-                }
-                if marks, let proto {
-                    var config = proto.providerConfiguration ?? [:]
-                    if on { config[deadKey] = nil } else if let dead { config[deadKey] = dead }
-                    proto.providerConfiguration = config
-                    manager.protocolConfiguration = proto
-                }
-                manager.isOnDemandEnabled = on
+                guard let manager = try await manager(),
+                      let proto = manager.protocolConfiguration as? NETunnelProviderProtocol else { return "refused missing configuration" }
+                var config = proto.providerConfiguration ?? [:]
+                let standing = config[deadKey] as? Double
+                if dead == nil, standing == nil { return "none to take away" }
+                if let dead, standing == dead { return "already written" }
+                config[deadKey] = dead
+                proto.providerConfiguration = config
+                manager.protocolConfiguration = proto
                 try await manager.saveToPreferences()
-                if marks { ExtLog.write(on ? "dead mark: taken away by this session" : "dead mark: written for the app") }
-                return on ? "armed" : "lifted"
+                return dead == nil ? "taken away by this session" : "written for the app"
             } catch {
                 let e = error as NSError
                 if attempt == 2 { return "refused preferences \(e.domain)#\(e.code)" }

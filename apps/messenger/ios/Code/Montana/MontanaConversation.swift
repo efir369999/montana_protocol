@@ -572,6 +572,8 @@ extension ChatInputBar {
     func takesCoins(_ on: Bool, picks: Bool, send: @escaping (Int) -> Void) -> ChatInputBar {
         var b = self; b.coins = on; b.coinPicks = picks; b.onSendCoin = send; return b
     }
+    /// The Money Flow is on in this chat (cut C6): the bar wears its ring and its plate the finger's size.
+    func flowing(_ on: Bool) -> ChatInputBar { var b = self; b.minting = on; return b }
 }
 #endif
 
@@ -640,12 +642,12 @@ struct ChatInputBar: View {
     /// hosts the words at the top (.field) and the open bar's row of buttons on the keys (.row), two nodes of one model.
     enum Part { case whole, field, row }
     var part: Part = .whole
+    #if !MONTANA_MESSENGER   // no coins, nor their Money Flow, in Messenger (cut C6): the chat sets them by takesCoins and flowing
     /// THE MONEY FLOW IS ON IN THIS CHAT (the author's words 03.10.2026 13:45 UTC: «in minting mode make the send button a little
     /// bigger, the finger's size, like the call button, in its style»; «the field with the system's highlight, and below all the
     /// buttons in the system's blue circle»): the send plate stands at the bar marks' 44 (MTBarRoundMark), and the field and
     /// every button of the row wear the platform's blue ring -- the coin's own ring (MTMiniFace.playingRing).
     var minting = false
-    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): the chat sets them by takesCoins
     /// THE COIN, THE BUTTON'S THIRD MODE (the author's word 06.10.2026 20:2x UTC: «the button switches the voice message, then the
     /// video message, then the coin -- to write just a number and press send coin; the field lit up as enter the sum of coins»): a
     /// pair's chat that may take coins (MTCoinSend.canPay) goes microphone, camera, coin; the coin's key sends the number written
@@ -662,16 +664,12 @@ struct ChatInputBar: View {
         guard !digits.isEmpty, digits.count <= 15, digits.allSatisfy({ ch in ch.isASCII && ch.isNumber }) else { return 0 }
         return Int(digits) ?? 0
     }
-    #endif
     /// The button in the coin's mode: the Protocol's alone (cut C6) -- Messenger's button goes microphone, camera.
     private var coinMode: Bool {
-        #if MONTANA_MESSENGER
-        return false
-        #else
         if meshRoom { return false }   // the mesh wall carries no coin
         return coins && mediaMode == Self.coinMode && !textOnly
-        #endif
     }
+    #endif
     /// The words where the placeholder stands: the coin's hint in its mode, «hold to record» after a short press, a channel's
     /// broadcast, a letter.
     private var placeholder: LocalizedStringKey {
@@ -680,14 +678,16 @@ struct ChatInputBar: View {
         #endif
         return hint ? "Hold to record" : channel ? (silent ? "Silent Broadcast..." : "Broadcast...") : "Message..."
     }
+    #if !MONTANA_MESSENGER   // the Money Flow's ring and its plate's size are the Protocol's alone (cut C6)
     private static var mintScale: CGFloat { montanaTouchTarget / MontanaOctagon.composeHeight }
     @ViewBuilder private var mintRing: some View {
         if minting {
-            Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: 1.5)
+            Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: MTBlueRing.width)
                 .frame(width: MontanaOctagon.composeHeight, height: MontanaOctagon.composeHeight)
                 .allowsHitTesting(false)
         }
     }
+    #endif
     @State private var holding = false
     @State private var held = false        // the hold outlived the tap threshold: recording
     @State private var slidAway = false
@@ -773,7 +773,9 @@ struct ChatInputBar: View {
                 .font(.system(size: 20, weight: .medium)).foregroundColor(MontanaOctagon.barGlyph)
         }
         .buttonStyle(.montanaOctagon(square: true, bar: true, height: MontanaOctagon.composeHeight))
+        #if !MONTANA_MESSENGER
         .overlay { mintRing }
+        #endif
         .frame(width: montanaTouchTarget, height: montanaTouchTarget)
         .contentShape(Rectangle())
         .padding(-Self.fingerRoom)   // the finger keeps its 44; the layout keeps the tier's 36
@@ -876,7 +878,9 @@ struct ChatInputBar: View {
                 .font(.system(size: 20, weight: .medium)).foregroundColor(MontanaOctagon.barGlyph)
         }
         .buttonStyle(.montanaOctagon(square: true, bar: true, height: MontanaOctagon.composeHeight))
+        #if !MONTANA_MESSENGER
         .overlay { mintRing }
+        #endif
         .frame(width: montanaTouchTarget, height: montanaTouchTarget)
         .contentShape(Rectangle())
         .padding(-Self.fingerRoom)   // the finger keeps its 44; the layout keeps the tier's 36
@@ -899,7 +903,9 @@ struct ChatInputBar: View {
                              extraRight: (composeOpen ? MTInputField.inset.left - MTInputField.inset.right : 0) + (channel ? MTInputField.minH : 0),
                              restingBar: MTInputField.restingBar(open: composeOpen))   // the field answers its own height (sizeThatFits); its insets ARE the tier (MTInputField.inset)
                     .montanaFieldGlass(maxCut: 18)   // the plate's own glass (the author's word 21.09)
-                    .overlay { if minting || coinMode { MontanaLongOctagon(maxCut: 18).stroke(MTMiniFace.playingRing, lineWidth: 1.5).allowsHitTesting(false) } }
+                    #if !MONTANA_MESSENGER
+                    .overlay { if minting || coinMode { MontanaLongOctagon(maxCut: 18).stroke(MTMiniFace.playingRing, lineWidth: MTBlueRing.width).allowsHitTesting(false) } }
+                    #endif
                     .background(MTFrameMark("bar-field"))   // it must span the player's own plate
                     .overlay(alignment: .leading) {
                         if model.text.isEmpty {
@@ -950,9 +956,13 @@ struct ChatInputBar: View {
             // THE WAVE'S ROOM MAKES WAY FOR THE EAR (the author's word 23.09): a standing voice
             // tape keeps TWO columns at the strip's head — the bin and the listen button — and the
             // wave begins after them, so nothing is drawn over the lines.
-            let binColumn = montanaTouchTarget + 14 + ((isLocked && !note) ? montanaTouchTarget : 0)
+            // THE WAVE'S ROOM IS THE SEATS' (11.11.2026, the author's words 18526 and 18545): the crown's seats and this room
+            // read one owner (MTTapeSeats) -- the head keeps its seats and one gap, the tail under the lock keeps the arrow's
+            // face, the pause's seat and one gap before the slot's centre; the strip ends half a tier before that centre
+            // (and the row's gap more in the folded bar).
+            let headSeats = (isLocked && !note) ? 2 : 1
             let swellEdge = Self.holdClear - 12 + 8 - (MontanaOctagon.composeHeight / 2 + 10)   // the swell at its loudest, a gap, less the row's own end
-            let pauseColumn: CGFloat = isLocked ? montanaTouchTarget + 16 : 0
+            let lockedTail = MTTapeSeats.tailRoom - MontanaOctagon.composeHeight / 2 - (composeOpen ? 0 : 10)
             return HStack(spacing: 10) {
                 // The live wave of the voice (the author's word 14.09): the seconds stand under the circle.
                 // The video note's strip holds only the way to cancel (drawn in the top window, MTNoteChrome).
@@ -961,8 +971,8 @@ struct ChatInputBar: View {
                         .frame(height: 30)
                 }
             }
-            .padding(.leading, binColumn)
-            .padding(.trailing, swellEdge + pauseColumn)
+            .padding(.leading, MTTapeSeats.headRoom(headSeats))
+            .padding(.trailing, isLocked ? lockedTail : swellEdge)
             .frame(maxWidth: .infinity)
             .frame(height: MontanaOctagon.composeHeight)
             .contentShape(Rectangle())
@@ -990,12 +1000,22 @@ struct ChatInputBar: View {
     // so the plate's right edge is the arrow's and the player's close to the pixel.
     private var sendColumn: some View {
         VStack(spacing: 6) {
-        // empty → microphone, has text (or an attachment above) → send arrow; the coin's mode → the coin (coinKey)
-        if coinMode && !recording && !hasAttachment {
-            #if !MONTANA_MESSENGER
-            coinKey
-            #endif
-        } else if !textOnly && ((model.text.trimmingCharacters(in: .whitespaces).isEmpty && !hasAttachment) || recording) {
+        // empty → microphone, has text (or an attachment above) → send arrow (plainKeys); the coin's mode → the coin (coinKey)
+        #if MONTANA_MESSENGER
+        plainKeys
+        #else
+        if coinMode && !recording && !hasAttachment { coinKey } else { plainKeys }
+        #endif
+        }
+        .frame(width: montanaTouchTarget, height: montanaTouchTarget)   // the row's cell: the plate centred in the finger's target
+        .contentShape(Rectangle())
+        .padding(-Self.fingerRoom)   // the finger keeps its 44; the layout keeps the tier's 36
+        .background(MTFrameMark("bar-send"))   // it must end where the player's close ends
+    }
+    /// THE BAR'S OWN KEY (every edition's): the microphone or the camera while the field is empty, the send arrow once it holds
+    /// words or an attachment stands above. The coin's key (coinKey) stands before it in the Protocol alone (cut C6).
+    @ViewBuilder private var plainKeys: some View {
+        if !textOnly && ((model.text.trimmingCharacters(in: .whitespaces).isEmpty && !hasAttachment) || recording) {
             // A single tap switches the mode (microphone ↔ camera); press and HOLD records in the
             // current mode — released to send, slid left to cancel (the author's word 10.09).
             #if MONTANA_MESSENGER
@@ -1005,9 +1025,9 @@ struct ChatInputBar: View {
             #endif
             // Press and HOLD records in the current mode — released to send, slid left to cancel,
             // carried up to the lock and let go to record hands-free (the author's word 10.09);
-            // a single tap switches microphone and camera. LOCKED, the swollen button STAYS at
-            // its size (the author's word 14.09) and becomes the send button: one tap ends and
-            // sends; above it the pause at the bar's native tier.
+            // a single tap switches microphone and camera. LOCKED, the button becomes the send
+            // button, a seat of the crown's row at the row's one size (MTTapeSeats, 11.11.2026): one tap
+            // ends and sends; the pause stands a seat before it on the same line.
             let big = held || isLocked
             // The swollen shape is drawn ABOVE THE KEYBOARD in a window of its own
             // (MTHoldOverlayWindow, the author's word 14.09): here stays the slot, the small
@@ -1015,18 +1035,18 @@ struct ChatInputBar: View {
             ZStack {
                 if !big {
                     MTComposeMark(kind: video ? .video : .voice)
+                        #if MONTANA_MESSENGER
+                        .scaleEffect(holding ? 0.94 : 1)
+                        #else
                         .scaleEffect((holding ? 0.94 : 1) * (minting ? Self.mintScale : 1))
+                        #endif
                 }
             }
             .frame(width: MontanaOctagon.composeHeight, height: MontanaOctagon.composeHeight)   // the row keeps the button's slot; the swell overflows it
             // THE SLOT'S PLACE IS THE CONTROL'S TO TELL (21.09): MTHoldOverlayState.follow() reads it from the
             // hold control through the window — no layout-time snapshot here, which stood a keyboard's height
             // off once the bar's node was lifted by its layer without a layout.
-            .onChange(of: big) { _, on in
-                MTHoldOverlayState.shared.big = on
-                if on { MTHoldOverlayWindow.show() } else { MTHoldOverlayWindow.hide() }
-            }
-            .onChange(of: isLocked) { _, v in MTHoldOverlayState.shared.locked = v }
+            .onChange(of: held) { _, on in MTHoldOverlayState.shared.hold(on) }   // the finger's half; the tape's half the crown hears from the machine
             .onChange(of: slidAway) { _, v in MTHoldOverlayState.shared.away = v }
             .onChange(of: lift) { _, v in MTHoldOverlayState.shared.lift = v }
             .onChange(of: voiceNow) { _, v in MTHoldOverlayState.shared.voice = v }
@@ -1037,8 +1057,14 @@ struct ChatInputBar: View {
                 st.video = crownIsNote; st.side = Self.holdSide; st.lockWay = Self.lockWay; st.maxScale = Self.holdMaxScale
                 st.holdClear = Self.holdClear; st.paused = recordingPaused
                 MTHoldOverlayWindow.prepare()   // born now, shown later: nothing is made under the finger (21.09)
+                st.hold(held)   // a slot born under a rolling tape says where its finger is, and the crown settles anew
+                MontanaTrace.mark("crown_slot", "born held=\(held ? 1 : 0) locked=\(isLocked ? 1 : 0)")
             }
-            .onDisappear { MTHoldOverlayWindow.hide(); MTHoldOverlayState.shared.big = false }
+            // THE SLOT'S LEAVING HIDES NOTHING (11.11.2026, the author's word 18547: «these buttons must never vanish»): this
+            // line used to hide the crown's window and drop its `big` -- a piece of the bar leaving the tree for a moment under
+            // a locked tape took every control with it, and nothing raised them again. The crown settles from the machine
+            // (MTHoldOverlayState.attend); the leaving is only said, so the diary names the moment.
+            .onDisappear { MontanaTrace.mark("crown_slot", "gone held=\(held ? 1 : 0) locked=\(isLocked ? 1 : 0)") }
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: big)
                 // THE LOCK PLATE IS THE CROWN'S (the author's word 21.09): drawn in the top window at the
                 // crown's seat, for the voice as for the note — the bar keeps only the slot.
@@ -1093,7 +1119,9 @@ struct ChatInputBar: View {
                 Button { MontanaTrace.mark("send_hold", "later"); onSendLongPress() } label: { Label("Send later", systemImage: "clock") }
             } label: {
                 MTComposeMark(kind: .send)
+                    #if !MONTANA_MESSENGER
                     .scaleEffect(minting ? Self.mintScale : 1)
+                    #endif
                     .frame(width: 56, height: 56)
                     .contentShape(Rectangle())
                     .accessibilityLabel(Text("Send"))
@@ -1104,11 +1132,6 @@ struct ChatInputBar: View {
             .menuStyle(.button)
             .buttonStyle(.plain)
         }
-        }
-        .frame(width: montanaTouchTarget, height: montanaTouchTarget)   // the row's cell: the plate centred in the finger's target
-        .contentShape(Rectangle())
-        .padding(-Self.fingerRoom)   // the finger keeps its 44; the layout keeps the tier's 36
-        .background(MTFrameMark("bar-send"))   // it must end where the player's close ends
     }
     #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// THE COIN'S KEY (coinMode): our coin at rest while the field is empty -- a tap takes the button back to the microphone -- and
@@ -1270,17 +1293,19 @@ struct ChatConversationView: View {
 
     /// The last voice ended at the ear: a tone in the ear, and the reply records at the ear.
     func beginEarReply() {
-        guard !rec.isRecording else { return }
+        // EVERY WAY OUT IS A LINE (T1 09.11.2026, the author's word 17930): a reply that did not come left no trace but «nothing».
+        guard !rec.isRecording else { MontanaTrace.mark("voice_ear_reply", "busy -- a tape already rolls"); return }
         earReply = true
         MTProximity.hold("ear-reply", true)   // the sensor stays with the chat now (its one owner, 24.09)
         MontanaEarTone.play()   // through the session: the receiver at the ear, silent switch or not
+        MontanaTrace.mark("voice_ear_reply", "tone")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            guard earReply else { return }   // SILENT-OK: the phone already left the ear
+            guard earReply else { MontanaTrace.mark("voice_ear_reply", "left before the tone ended"); return }
             if UIDevice.current.proximityState {
                 MTHoldOverlayState.shared.previewFile = nil   // a new tape was never heard
                 rec.begin(.voice, why: "ear"); MontanaTrace.mark("voice_ear_reply", "record")
             }
-            else { endEarReply() }
+            else { MontanaTrace.mark("voice_ear_reply", "far after the tone"); endEarReply() }
         }
     }
     func endEarReply() {
@@ -1471,8 +1496,8 @@ struct ChatConversationView: View {
                 // The recorder's chrome lives in the top window (MTHoldOverlayWindow, the author's
                 // word 15.09); it centres the note in the visible feed measured here.
                 .background(GeometryReader { g -> Color in MTHoldOverlayState.shared.feed = g.frame(in: .global); return Color.clear })
-                .onAppear { MTHoldOverlayState.shared.cam = rec.note; MTHoldOverlayState.shared.voiceTape = rec.voice }
-                .onDisappear { MTHoldOverlayState.shared.cam = nil; MTHoldOverlayState.shared.voiceTape = nil }
+                .onAppear { MTHoldOverlayState.shared.attend(rec) }
+                .onDisappear { MTHoldOverlayState.shared.leave(rec) }
                 .overlay {
                     // The open note (the author's word 15.09): the note that plays in THIS chat rises
                     // to the visible feed's centre at the screen's width; the bar below keeps its
@@ -1502,10 +1527,14 @@ struct ChatConversationView: View {
                     // number the «down» button rides — through the one small observer of the pin.
                     MTPlayerRider(pin: pin) {
                         VStack(spacing: 0) {
+                            #if MONTANA_MESSENGER   // no music page to leave for (decision 793, 11.11.2026): the bar goes to the letter alone
+                            MontanaPlayerBar(onGoTo: { c, f in goToLetter(chat: c, file: f) })
+                            #else
                             // The unfolded mini's number and search leave the chat for the music page (the author's word 01.10 00:13).
                             MontanaPlayerBar(onPlace: { t in ui.closeChat(); ui.askMusic(); MTMusicFocus.shared.show(t) },
                                              onSearch: { ui.closeChat(); ui.askMusic() },
                                              onGoTo: { c, f in goToLetter(chat: c, file: f) })
+                            #endif
                         }
                             .mtMeasureSize($playerBarSize)
                     }
@@ -1956,7 +1985,7 @@ struct ChatConversationView: View {
             // over it.
             chatTitleDoor.frame(minWidth: room)
                         .padding(.horizontal, (44 - round) / 2)
-            if coinStands {
+            if pairStands {
                 #if !MONTANA_MESSENGER   // no coins, nor their Money Flow, nor a game in Messenger (cuts C5 and C6)
                 if MTApps.coins != nil { walletMark(round) }   // the wallet's mark only where the coins stand (guard 4)
                 flipMark(round)
@@ -2148,10 +2177,10 @@ struct ChatConversationView: View {
         .sheet(isPresented: $autoReactShown, onDismiss: { flowHeld = false }) { MTApps.coins?.autoReactPage() }
     }
     #endif
-    /// The chat that wears the coin: a pair's own conversation (the bar shows the coin there and nowhere else).
-    private var coinStands: Bool { !chat.isGroup && MontanaConv.holds(chat.convId ?? chat.name) }
+    /// A pair's own conversation: its bar carries the handset, and in the Protocol the coin (there and nowhere else).
+    private var pairStands: Bool { !chat.isGroup && MontanaConv.holds(chat.convId ?? chat.name) }
     /// The ribbon of time: the coin of this chat is on.
-    private var ribbon: Bool { newestFirst && coinStands }
+    private var ribbon: Bool { newestFirst && pairStands }
 
     private var chatCoreM3: some View {
         chatCoreM2
@@ -3159,7 +3188,7 @@ struct ChatConversationView: View {
         #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
         // THE RED MINUS STANDS OVER THE WAY TO THE NEWEST (05.10.2026, MTPayPop): in a pair's ordinary feed, where a bubble pays.
         .overlay(alignment: .bottomTrailing) {
-            if !newestFirst, coinStands, let coins = MTApps.coins {
+            if !newestFirst, pairStands, let coins = MTApps.coins {
                 coins.payPop(chat: chat.name, pin: pin)
                     .padding(.trailing, 16 - (montanaTouchTarget - MontanaOctagon.composeHeight) / 2)
             }
@@ -3800,9 +3829,9 @@ struct ChatConversationView: View {
                          channel: isChannel,
                          silent: isChannel && 0 <= channelSilentTick && MTGroup.shared.silent(chat.name),
                          onSilent: { MTGroup.shared.setSilent(chat.name, on: !MTGroup.shared.silent(chat.name)); channelSilentTick += 1 },
-                         part: part,
-                         minting: ribbon)
+                         part: part)
                          #if !MONTANA_MESSENGER
+                         .flowing(ribbon)
                          .takesCoins(MTApps.coins?.canPay(chat, store: store) == true || groupCoin, picks: groupCoin, send: { n in sendCoin(n) })
                          .meshWall(ChatStore.isMeshRoom(chat.name))
                          #endif
@@ -3844,6 +3873,7 @@ struct ChatConversationView: View {
             rec.voiceSent = { sendVoice() }
             rec.noteSent = { sendVideoNote($0) }
             let st = MTHoldOverlayState.shared
+            st.attend(rec)   // the crown hears this machine itself -- its big and locked are no mirror of the bar's tree (11.11.2026)
             st.onSend = { VoicePlayer.shared.stop(); st.previewFile = nil; rec.send(why: "crown-tap") }
             st.onPause = { rec.pauseToggle() }
             st.onCancel = { VoicePlayer.shared.stop(); st.previewFile = nil; rec.cancel(why: "bin") }
@@ -5263,7 +5293,7 @@ struct MTBarRoundMark<Glyph: View>: View {
             glyph()
                 .frame(width: side, height: side)
                 .background(MTGlassCirclePlate())
-                .overlay { if ringed { Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: 1.5) } }
+                .overlay { if ringed { Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: MTBlueRing.width) } }
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         } else {
@@ -5271,7 +5301,7 @@ struct MTBarRoundMark<Glyph: View>: View {
             glyph()
                 .montanaOctagonFace(square: true, bar: true, height: h, mark: true)
                 .frame(width: 44, height: 44)
-                .overlay { if ringed { Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: 1.5).frame(width: h, height: h) } }
+                .overlay { if ringed { Circle().strokeBorder(MTMiniFace.playingRing, lineWidth: MTBlueRing.width).frame(width: h, height: h) } }
                 .contentShape(Rectangle())
         }
     }

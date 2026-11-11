@@ -85,8 +85,8 @@ enum MTRowLetter {
     // difference; a letter has one text and one place that says so.
     static func words(_ text: String) -> String {
         if text.hasPrefix(svc + "GE:") { return eventWords(text) ?? "" }
-        if MTMoneyFlowRow.of(text) { return String(localized: "Money flow has begun", bundle: MTLanguage.bundle) }
         #if !MONTANA_MESSENGER
+        if MTMoneyFlowRow.of(text) { return String(localized: "Money flow has begun", bundle: MTLanguage.bundle) }
         if let card = MTWallCard.of(text) { return card.words }   // a post's card: the post's words, never its record
         #endif
         return text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,8 +95,9 @@ enum MTRowLetter {
     static func ownRow(_ text: String) -> Bool {
         #if !MONTANA_MESSENGER
         if MTWallCard.of(text) != nil { return true }   // a post's card (cut C6: the Protocol's alone)
+        if MTMoneyFlowRow.of(text) { return true }   // the money flow's beginning (cut C6)
         #endif
-        return MTMoneyFlowRow.of(text) || text.hasPrefix(svc + "GE:")
+        return text.hasPrefix(svc + "GE:")
     }
 
     #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
@@ -139,8 +140,8 @@ enum MTRowLetter {
     static func preview(_ text: String) -> String {
         if retiredLetter(text) { return "" }   // a letter of a retired kind names nothing in a list (MTRetired.letter)
         if text.hasPrefix(svc + "GE:") { return eventWords(text) ?? "" }
-        if MTMoneyFlowRow.of(text) { return "🪙 " + String(localized: "Money flow has begun", bundle: MTLanguage.bundle) }
         #if !MONTANA_MESSENGER
+        if MTMoneyFlowRow.of(text) { return "🪙 " + String(localized: "Money flow has begun", bundle: MTLanguage.bundle) }
         if let c = MTWallCard.of(text) { return String(localized: "Wall post", bundle: MTLanguage.bundle) + (c.words.isEmpty ? "" : " · " + c.words) }
         #endif
         #if !MONTANA_MESSENGER   // no game in Messenger (cut C5)
@@ -215,6 +216,7 @@ enum MTRowLetter {
     }
 }
 
+#if !MONTANA_MESSENGER   // no coins, nor their Money Flow, in Messenger (cut C6)
 /// THE MONEY FLOW BEGAN, A ROW OF THE CHAT (the author's word 03.10.2026 13:49 UTC: «when the money flow is switched on, an
 /// active animation and a system message, [...] that the game of money flow has begun, with one turn of the coin»). This
 /// phone's own row, as a call's is: laid the moment the coin comes on (ChatStore.appendMoneyFlow) and drawn as a card
@@ -224,6 +226,7 @@ enum MTMoneyFlowRow {
     static let mark = "\u{200B}\u{200B}MF:"   // COMPAT-LOCAL: this phone's own row, never on the wire
     static func of(_ text: String) -> Bool { text.hasPrefix(mark) }
 }
+#endif
 
 #if !MONTANA_MESSENGER   // a post's card is the Protocol's alone (cut C6)
 /// A POST ON A WALL OF THE PAIR, A ROW OF THEIR CHAT (the author's word 30.09: «if I publish on a friend's wall, let this post

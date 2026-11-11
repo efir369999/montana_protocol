@@ -650,11 +650,12 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
                 // with two faces, never two plates (a ForEach over repeated names drew one twice).
                 let plates = shown.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
                 #if MONTANA_MESSENGER
-                let coinsOn = 0   // no coins in Messenger (cut C6)
+                let plated = !plates.isEmpty   // the answers alone stand under a letter in Messenger (cut C6)
                 #else
                 let coinsOn = MTApps.coins?.coinsOn(message.mid) ?? 0
+                let plated = !plates.isEmpty || coinsOn > 0
                 #endif
-                if !plates.isEmpty || coinsOn > 0 {
+                if plated {
                     HStack(spacing: 4) {
                         #if !MONTANA_MESSENGER
                         // THE COINS ON THE LETTER (the author's word 03.10 13:40): the total given on it, on this phone's book.
@@ -1875,8 +1876,9 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
         #endif
         #if !MONTANA_MESSENGER
         if MTApps.coins?.isLetter(m) == true { return .above }   // a coin letter (cut C6)
+        if MTMoneyFlowRow.of(m.text) { return .above }
         #endif
-        if MTMoneyFlowRow.of(m.text) || releaseInfoOf(m.text) != nil || callInfoOf(m.text) != nil { return .above }
+        if releaseInfoOf(m.text) != nil || callInfoOf(m.text) != nil { return .above }
         let files = m.imageFile != nil || m.videoFile != nil || m.audioFile != nil || m.docFile != nil
         if !files, bigEmojiText(m.text) != nil { return .above }
         if m.audioFile != nil || m.docFile != nil { return .above }

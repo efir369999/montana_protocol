@@ -91,28 +91,28 @@ struct MTSearchField: UIViewRepresentable {
     }
 }
 
-/// THE COIN (the author's word 10.09; its own pull 11.09): a pull on the whole feed, as on a web
-/// page, refreshes — and what turns while it does is the Montana coin, face and back, the size of
-/// a row's avatar. The list measures the pull itself, so everything about the feel of it lives in
-/// the numbers below and nowhere else. NATIVE-CHECKED: the system's refresh control fires at a
+/// THE PULL'S TURN (the author's word 10.09; its own pull 11.09): a pull on the whole feed, as on a web
+/// page, refreshes -- and what turns while it does is the edition's own face and back (MTEdition.pullFace,
+/// pullBack), the size of a row's avatar. The list measures the pull itself, so everything about the feel of it
+/// lives in the numbers below and nowhere else. NATIVE-CHECKED: the system's refresh control fires at a
 /// distance it does not name and appears from the first point; the author asked for a longer pull.
-struct MontanaCoinSpinner: View {
+struct MontanaPullSpinner: View {
     static let side: CGFloat = 58          // the row's avatar circle
-    static let pullStart: CGFloat = 40     // the coin is not there before the feed is drawn this far
+    static let pullStart: CGFloat = 40     // the face is not there before the feed is drawn this far
     static let pullTrigger: CGFloat = 140  // let go past this and the feed refreshes; short of it, nothing
     static let hold: CGFloat = 82          // the gap the feed keeps open while the round completes
-    static let pullFull: CGFloat = 240     // drawn this far the coin has made its whole round — never more than one
+    static let pullFull: CGFloat = 240     // drawn this far the face has made its whole round — never more than one
     static let finish: TimeInterval = 0.35 // let go: the round it has begun completes this fast
 
     /// How far the feed is drawn down, in points.
     var pull: CGFloat
-    /// The moment of letting go past the trigger and the angle the coin stood at; nil while the
+    /// The moment of letting go past the trigger and the angle the face stood at; nil while the
     /// finger still holds it.
     var released: (at: Date, angle: Double)?
 
-    /// 0 at `pullStart`, 1 at `pullTrigger`: the coin fills in along the way.
+    /// 0 at `pullStart`, 1 at `pullTrigger`: the face fills in along the way.
     var fraction: CGFloat { min(1, max(0, (pull - Self.pullStart) / (Self.pullTrigger - Self.pullStart))) }
-    /// THE ROUND IS THE PULL (the author's word 11.09): how far the coin turns is how hard it was
+    /// THE ROUND IS THE PULL (the author's word 11.09): how far the face turns is how hard it was
     /// drawn — the back is up at the trigger, the whole round at `pullFull`, and never a second one.
     static func angle(forPull p: CGFloat) -> Double {
         360 * Double(min(1, max(0, (p - pullStart) / (pullFull - pullStart))))
@@ -137,7 +137,7 @@ struct MontanaCoinSpinner: View {
     private func face(_ angle: Double) -> some View {
         let a = angle.truncatingRemainder(dividingBy: 360)
         let front = a < 90 || a > 270
-        return Image(front ? "CoinFace" : "CoinBack")
+        return Image(front ? MTEdition.pullFace : MTEdition.pullBack)
             .resizable().scaledToFill()
             .frame(width: Self.side, height: Self.side)
             .clipShape(Circle())
@@ -422,7 +422,7 @@ struct ChatsListView: View {
             // THE DYNAMIC GLYPH, between the chats and the globe (the author's word 19.09): the last opened of the
             // player and the gallery; a tap opens that one again. Both are pages under the bar (the music 23.09, the
             // gallery 25.09), one of them in the row at a time, and the puck goes under the glyph for either.
-            barSlot(Self.mediaSlot) { ui.mediaIsMusic ? ui.askMusic() : ui.askGallery() } label: {
+            barSlot(Self.mediaSlot) { ui.askMedia() } label: {
                 Image(systemName: ui.mediaIsMusic ? UIState.Glyph.music : UIState.Glyph.gallery)
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(MontanaOctagon.barGlyph)
@@ -520,9 +520,9 @@ struct ChatsListView: View {
     /// them, no pin.
     private static func searchesItself(_ p: UIState.Pane) -> Bool {
         switch p {
-        case .music, .p2p, .gallery: return true
+        case .p2p, .gallery: return true
         #if !MONTANA_MESSENGER
-        case .feed, .vpn, .mesh: return true
+        case .music, .feed, .vpn, .mesh: return true
         #endif
         default: return false
         }
@@ -531,9 +531,10 @@ struct ChatsListView: View {
     private static func slot(of pane: UIState.Pane) -> Int? {
         switch pane {
         case .chats, .groups, .channels: return chatsSlot; case .contacts: return contactsSlot; case .calls: return callsSlot
-        case .music, .gallery: return mediaSlot
+        case .gallery: return mediaSlot
         case .p2p: return pane == UIState.globePane ? globeSlot : nil
         #if !MONTANA_MESSENGER
+        case .music: return mediaSlot
         case .feed: return logoSlot
         case .vpn, .mesh: return pane == UIState.globePane ? globeSlot : nil
         #endif
@@ -851,7 +852,7 @@ struct ChatsListView: View {
                              #endif
                              await pullRefresh()
                          },
-                         onSettled: { turnPanel(open: !barOpen, by: "coin") },
+                         onSettled: { turnPanel(open: !barOpen, by: "pull") },
                          pinTop: ownSearch ? false : searchActive,
                          overlay: { ownSearch ? AnyView(EmptyView()) : AnyView(searchOverlay) })
     }
@@ -866,13 +867,18 @@ struct ChatsListView: View {
         // now stands on the measured cover — the keys' height less the room already under it.
         MTKeyboardLift {
             VStack(spacing: 0) {
+                #if MONTANA_MESSENGER   // no music page to leave for (decision 793, 11.11.2026): the bar goes to the letter alone
+                MontanaPlayerBar(onGoTo: { c, f in goToLetter(chat: c, file: f) })
+                #else
                 MontanaPlayerBar(onPlace: { t in showPlace(t) }, onSearch: { showMusic(search: true) },
                                  onGoTo: { c, f in goToLetter(chat: c, file: f) })
+                #endif
             }
                 .mtMeasureSize($playerBarSize)
         }
     }
 
+    #if !MONTANA_MESSENGER   // the music page is the Protocol's alone (decision 793)
     /// THE UNFOLDED MINI'S NUMBER AND SEARCH (the author's word 01.10 00:13): the music page, where the track stands in its list, and
     /// the page's own search with the keys.
     private func showMusic(search: Bool = false) {
@@ -887,6 +893,7 @@ struct ChatsListView: View {
         showMusic()
         MTMusicFocus.shared.show(t)
     }
+    #endif
 
     /// The search's results over the rows — the chats', the contacts' and the calls' alike ([C-1]).
     @ViewBuilder private var searchOverlay: some View {
@@ -944,12 +951,14 @@ struct ChatsListView: View {
                     .overlay(alignment: .bottom) { playerBar }
             }
         #endif
+        #if !MONTANA_MESSENGER
         case .music:
             // THE MINI PLAYER STANDS ON THE MUSIC PAGE TOO (the author's word 29.09: «the mini player there must come up, our
             // native one, and everything pinned at the bottom as on every page»; it replaces the word of 24.09 that kept the bar
             // off this page): the chats page's one floating bar, floated the same way, the rows reserving its height.
             MusicTabView(panel: timePanel(.music, ownSearch: true), query: searchText, reserve: playerReserve)
                 .overlay(alignment: .bottom) { playerBar }
+        #endif
         case .gallery:
             // THE GALLERY UNDER THE BAR (the author's word 25.09): the dynamic glyph's other page; it searches itself by the
             // conversations' names; a tile asks the feed at its moment, hosted by this page over everything (viewing).

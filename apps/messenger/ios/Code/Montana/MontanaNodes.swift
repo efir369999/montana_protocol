@@ -154,6 +154,23 @@ enum MontanaNodes {
         MontanaTrace.mark("doors_learned", "n=\(parse(raw).count)")
     }
 
+    // THE LIST'S AGE (the author's word 17887, 08.11.2026: no race in adding a node). The door machines are laid one
+    // after another, so for a moment two doors hand out two lists, and a phone took the word of whichever door answered
+    // last -- the old list could come back after the new one. Every list now names its epoch (Code/Node/fleet.json
+    // doors_epoch, the node's "epoch"); the phone keeps the highest it has seen and learns no list older than that. An
+    // answer without an epoch -- an older node, a person's own node -- is epoch 0: it teaches a phone that never saw an
+    // epoch and never undoes a newer list.
+    static let epochKey = "mt.nodes.epoch"
+    static func admits(epoch: Int) -> Bool {
+        let mine = UserDefaults.standard.integer(forKey: epochKey)
+        guard mine <= epoch else {
+            MontanaTrace.mark("doors_stale", "epoch=\(epoch) mine=\(mine)")
+            return false
+        }
+        if mine < epoch { UserDefaults.standard.set(epoch, forKey: epochKey) }
+        return true
+    }
+
     // THE MACHINES BEHIND THE DOORS (15.22). The door book learns which door leads to which
     // node only by a handshake through that door — so a door that never shook hands stood
     // alone in a flat list while its twin stood under a node, and two phones of one build drew

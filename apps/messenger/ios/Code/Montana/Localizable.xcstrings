@@ -10457,22 +10457,6 @@
         }
       }
     },
-    "Reports go to %@ and are reviewed within 24 hours.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Жалобы уходят на %@ и рассматриваются в течение 24 часов."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "举报将发送至 %@，并在 24 小时内处理。"
-          }
-        }
-      }
-    },
     "Reports of objectionable content are reviewed within 24 hours.": {
       "localizations": {
         "ru": {
@@ -11271,6 +11255,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "发送举报"
+          }
+        }
+      }
+    },
+    "Report sent": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жалоба отправлена"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "举报已发送"
+          }
+        }
+      }
+    },
+    "Your report reached Montana. It is reviewed within 24 hours.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша жалоба дошла до Montana. Её рассмотрят в течение 24 часов."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的举报已送达 Montana，将在 24 小时内处理。"
+          }
+        }
+      }
+    },
+    "Reports reach Montana and are reviewed within 24 hours.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жалобы доходят до Montana и рассматриваются в течение 24 часов."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "举报将送达 Montana，并在 24 小时内处理。"
           }
         }
       }
@@ -19232,22 +19264,6 @@
         }
       }
     },
-    "Your copy is sealed with your 24 words and cut into parts. The people you write to keep the parts around a ring, each part with two of them: they see only its size and when it changes, and cannot open it. With your words on a new phone, the parts come back from them, and each of them gives back the conversation you share.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Копия запечатана вашими 24 словами и разрезана на части. Ваши собеседники хранят части по кругу, каждую — двое: они видят только её размер и когда она меняется, а открыть её не могут. С вашими словами на новом телефоне части возвращаются от них, и каждый отдаёт вашу общую переписку."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的副本用您的 24 个单词加密并切分成若干部分。与您通信的人按环形保管这些部分，每部分由两人保管：他们只能看到它的大小和更新时间，无法打开。在新手机上输入您的单词后，这些部分会从他们那里取回，每个人还会交还你们之间的对话。"
-          }
-        }
-      }
-    },
     "Asking the people you write to…": {
       "localizations": {
         "ru": {
@@ -19388,54 +19404,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "副本未能取回"
-          }
-        }
-      }
-    },
-    "Parts of other people's copies are sealed: this phone cannot open them, and each goes back only to its owner's words.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Части чужих копий запечатаны: этот телефон не может их открыть, и каждая возвращается только к словам своего владельца."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "他人副本的部分已加密：此手机无法打开，每一部分只会回到其主人的单词。"
-          }
-        }
-      }
-    },
-    "Keeping a copy": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Хранение копии"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保管副本"
-          }
-        }
-      }
-    },
-    "%@ keeps a sealed part of their copy on this phone (%@). Nobody can open it here.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ хранит на этом телефоне запечатанную часть своей копии (%2$@). Открыть её здесь нельзя."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 在此手机上保管其副本的一个加密部分（%2$@）。此处无人能打开它。"
           }
         }
       }
@@ -20739,22 +20707,6 @@
         }
       }
     },
-    "stake %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ставка %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "赌注 %@"
-          }
-        }
-      }
-    },
     "The coins are on their way": {
       "localizations": {
         "ru": {
@@ -21867,38 +21819,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "手动添加"
-          }
-        }
-      }
-    },
-    "Allow Montana to run in the background in System Settings": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Разрешите Montana работать в фоне в настройках системы"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请在系统设置中允许 Montana 在后台运行"
-          }
-        }
-      }
-    },
-    "Background VPN recovery is unavailable": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Фоновое восстановление VPN недоступно"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "后台 VPN 恢复不可用"
           }
         }
       }
@@ -27702,6 +27622,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "视频请求已发送"
+          }
+        }
+      }
+    },
+    "Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша копия живёт только на телефонах, а не в облаке: так Montana хранит её по-своему. Она запечатана вашими 24 словами и разрезана на части, а части хранят для вас ваши собеседники: каждый видит лишь размер, ни одного слова. На новом телефоне ваши 24 слова возвращают части — и вашу переписку с ними."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的副本只存在于手机上，而不在云端：这是 Montana 自己的保管方式。它用您的 24 个单词加密并切分成若干部分，由与您通信的人为您保管：每个人只能看到大小，看不到任何一个字。在新手机上，您的 24 个单词会取回这些部分，以及你们之间的对话。"
+          }
+        }
+      }
+    },
+    "Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them. In the same way this phone keeps sealed parts for your contacts, up to 1 GB, and cannot open them. Both switches are in Settings → Data and Storage.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша копия живёт только на телефонах, а не в облаке: так Montana хранит её по-своему. Она запечатана вашими 24 словами и разрезана на части, а части хранят для вас ваши собеседники: каждый видит лишь размер, ни одного слова. На новом телефоне ваши 24 слова возвращают части — и вашу переписку с ними. Так же и этот телефон хранит запечатанные части ваших собеседников — до 1 ГБ — и открыть их не может. Оба переключателя — в Настройки → Данные и память."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的副本只存在于手机上，而不在云端：这是 Montana 自己的保管方式。它用您的 24 个单词加密并切分成若干部分，由与您通信的人为您保管：每个人只能看到大小，看不到任何一个字。在新手机上，您的 24 个单词会取回这些部分，以及你们之间的对话。同样，此手机也为您的联系人保管加密的部分，最多 1 GB，且无法打开它们。两个开关都在“设置 → 数据和存储”中。"
+          }
+        }
+      }
+    },
+    "The parts your contacts leave with you are sealed the same way: this phone cannot open them, and only their own 24 words can. This is how Montana keeps copies with no cloud in between: people hold each other's sealed parts, and no one but the owner can ever read them.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Части, которые собеседники оставляют у вас, запечатаны так же: этот телефон не может их открыть, откроют только их собственные 24 слова. Так Montana хранит копии без облака посередине: люди держат друг у друга запечатанные части, и прочитать их не может никто, кроме владельца."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "联系人留在您这里的部分也以同样方式加密：此手机无法打开，只有他们自己的 24 个单词才能打开。Montana 就是这样在不经过云端的情况下保管副本：人们互相保管加密的部分，除了主人，没有人能读取。"
           }
         }
       }

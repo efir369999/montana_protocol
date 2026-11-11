@@ -117,7 +117,7 @@ struct SettingsTabView: View {
             // every section a List section, its rows the list's own rows on the one-tone glass, with the list's own separators,
             // insets and chevrons, exactly as the notifications page stands.
             List {
-                // THE 24 WORDS AT THE HEAD (the author's word 08.10.2026: «bring the seed up to the top of Settings, as in Business»):
+                // THE 24 WORDS AT THE HEAD (the author's word 08.10.2026: «bring the seed up to the top of Settings»):
                 // the one thing nobody can give back stands first; Privacy keeps its own row beside the account's deletion.
                 Section {
                     NavigationLink { SeedShowView().montanaMotionMeter() } label: { navLabel("Save 24 words", "key.horizontal.fill", .gray) }
@@ -1854,9 +1854,9 @@ enum MTSystemAccess {
 }
 
 struct PrivacyView: View {
-    /// The device forgets the person. Nothing is asked of anyone: this person exists nowhere
-    /// else, and the forgetting is wholly local — content, identity and seed leave as one.
-    /// The settings sheet lowers with it: the first-run page stands under it otherwise.
+    /// The device forgets the person: content, identity and seed leave as one. In Montana the forgetting is
+    /// wholly local; in the Messenger the keepers are asked to drop my parts and my iCloud copies leave too
+    /// (the author's decision (a), 10.11.2026). The settings sheet lowers with it: the first-run page stands under it otherwise.
     private func forgetSeed() {
         // THE IDENTITY LEAVES THE NODES TOO (App Review 5.1.1(v), 08.10.2026: deleting an account deletes its records): the row of
         // the Montana top -- the coins shown -- is withdrawn from every node while the words still derive its token.
@@ -1864,9 +1864,26 @@ struct PrivacyView: View {
         MTApps.coins?.moment(.seedForgetting)
         #endif
         Task { @MainActor in
+            #if MONTANA_MESSENGER
+            // DELETE ERASES (Guideline 5.1.1(v); the author's decision (a), 10.11.2026, over the word of 07.09 that kept the history
+            // sealed for the same words): the keepers are told to drop my parts, my copies leave iCloud, the copies on this shelf and
+            // the archive leave this device -- each while the words are still here, since each is found by them -- then the identity.
+            erasing = true
+            await MTKeeping.shared.releaseAllForDeletion(within: 15)
+            let _: Int = await withCheckedContinuation { c in CloudWatch.shared.leaveAllOwn(within: 15) { c.resume(returning: $0) } }
+            MontanaBackup.sweep(all: true)
+            let store = ChatStore.live
+            let convs = store.map { Array($0.messages.keys) } ?? []
+            await withCheckedContinuation { c in MontanaArchive.eraseForDeletion(convRefs: convs, alone: !MTSeats.anyParked) { c.resume() } }
+            store?.wipeLocal()
+            SeedScope.forget()
+            erasing = false
+            ui.settingsShown = false
+            #else
             // Everything the seed can reopen is sealed and on disk FIRST (15.10.4); the wipe follows.
             guard let store = ChatStore.live else { SeedScope.forget(); ui.settingsShown = false; return }
             store.sealForForget { SeedScope.forget(); ui.settingsShown = false }
+            #endif
         }
     }
     @AppStorage("readReceiptsEnabled") private var readReceipts = true
@@ -1884,6 +1901,7 @@ struct PrivacyView: View {
     // act taught the person that one of them was reversible. The button stands here, on the
     // Privacy page, next to the seed phrase it erases (the author's word 18.09).
     @State private var confirmForget = false
+    @State private var erasing = false   // the Messenger's deletion is on its way (forgetSeed)
     @State private var showSeed = false
     @Environment(UIState.self) private var ui
 
@@ -2065,12 +2083,12 @@ struct PrivacyView: View {
             Button("Delete account", role: .destructive) { forgetSeed() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            let rest = Text("Your account is deleted: this device erases your 24-word identity. Your history stays here sealed and opens again only from the same 24 words — on this device, or on another one that already holds a copy. Nobody keeps the words for you: write them down first: Settings → Privacy → Seed phrase. Deleting the app erases the history as well.")
             // THE COINS ARE SAID BEFORE THE WORDS GO (the author's word 12.10.2026 12:3x UTC, No.66, after 4 105 470 coins stood on a
             // forgotten account on 11.10): an account that holds coins says how many, and that only its 24 words bring them back.
-            #if MONTANA_MESSENGER   // no coins in Messenger (cut C6)
-            rest
+            #if MONTANA_MESSENGER   // no coins in Messenger (cut C6); deleting erases (the author's decision (a), 10.11.2026)
+            Text(MTEdition.deletion)   // Messenger's own words (own-strings.json)
             #else
+            let rest = Text("Your account is deleted: this device erases your 24-word identity. Your history stays here sealed and opens again only from the same 24 words — on this device, or on another one that already holds a copy. Nobody keeps the words for you: write them down first: Settings → Privacy → Seed phrase. Deleting the app erases the history as well.")
             if let held = MTApps.coins?.heldWords() {   // the coins said before the words go (slice S2b b7c)
                 // USER-DATA: two line breaks between the coins' line and the rest
                 held + Text(verbatim: "\n\n") + rest
@@ -2081,6 +2099,16 @@ struct PrivacyView: View {
         }
         .sheet(isPresented: $showSeed) {
             NavigationStack { SeedShowView() }.preferredColorScheme(.dark).montanaMotionMeter()
+        }
+        .overlay {
+            #if MONTANA_MESSENGER   // the Messenger's deletion on its way (forgetSeed)
+            if erasing {
+                ZStack {
+                    Color.black.opacity(0.6).ignoresSafeArea()
+                    ProgressView { Text(MTEdition.deleting) }.tint(.white).foregroundColor(.white)
+                }
+            }
+            #endif
         }
         .foregroundColor(.primary)
         .scrollContentBackground(.hidden)

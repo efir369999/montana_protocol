@@ -978,40 +978,6 @@
         }
       }
     },
-    "In": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Пришло"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收入"
-          }
-        }
-      }
-    },
-    "Out": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ушло"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支出"
-          }
-        }
-      }
-    },
     " Missed call": {
       "localizations": {
         "ru": {
@@ -3289,22 +3255,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "对话者"
-          }
-        }
-      }
-    },
-    "Could not open the track": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Не удалось открыть трек"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法打开曲目"
           }
         }
       }
@@ -7664,22 +7614,6 @@
         }
       }
     },
-    "Receive": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приём"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "接收"
-          }
-        }
-      }
-    },
     "Receiving…": {
       "localizations": {
         "ru": {
@@ -8104,22 +8038,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "被举报的信件"
-          }
-        }
-      }
-    },
-    "Reports go to %@ and are reviewed within 24 hours.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Жалобы уходят на %@ и рассматриваются в течение 24 часов."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "举报将发送至 %@，并在 24 小时内处理。"
           }
         }
       }
@@ -8811,6 +8729,54 @@
         }
       }
     },
+    "Report sent": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жалоба отправлена"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "举报已发送"
+          }
+        }
+      }
+    },
+    "Your report reached Montana. It is reviewed within 24 hours.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша жалоба дошла до Montana. Её рассмотрят в течение 24 часов."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的举报已送达 Montana，将在 24 小时内处理。"
+          }
+        }
+      }
+    },
+    "Reports reach Montana and are reviewed within 24 hours.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Жалобы доходят до Montana и рассматриваются в течение 24 часов."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "举报将送达 Montana，并在 24 小时内处理。"
+          }
+        }
+      }
+    },
     "Send to Montana": {
       "localizations": {
         "ru": {
@@ -9099,22 +9065,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在聊天中显示"
-          }
-        }
-      }
-    },
-    "Show in playlist": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Показать в плейлисте"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在播放列表中显示"
           }
         }
       }
@@ -10525,22 +10475,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "合计：附件 %@，记录 %lld 条。备份由您的 24 个助记词所对应的密钥封存；助记词本身不在其中。"
-          }
-        }
-      }
-    },
-    "Transfer": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Передать"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "转移"
           }
         }
       }
@@ -12674,22 +12608,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的消息"
-          }
-        }
-      }
-    },
-    "Your music will appear here": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Здесь появится ваша музыка"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的音乐将显示在这里"
           }
         }
       }
@@ -15717,22 +15635,6 @@
         }
       }
     },
-    "Your copy is sealed with your 24 words and cut into parts. The people you write to keep the parts around a ring, each part with two of them: they see only its size and when it changes, and cannot open it. With your words on a new phone, the parts come back from them, and each of them gives back the conversation you share.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Копия запечатана вашими 24 словами и разрезана на части. Ваши собеседники хранят части по кругу, каждую — двое: они видят только её размер и когда она меняется, а открыть её не могут. С вашими словами на новом телефоне части возвращаются от них, и каждый отдаёт вашу общую переписку."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您的副本用您的 24 个单词加密并切分成若干部分。与您通信的人按环形保管这些部分，每部分由两人保管：他们只能看到它的大小和更新时间，无法打开。在新手机上输入您的单词后，这些部分会从他们那里取回，每个人还会交还你们之间的对话。"
-          }
-        }
-      }
-    },
     "Asking the people you write to…": {
       "localizations": {
         "ru": {
@@ -15873,54 +15775,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "副本未能取回"
-          }
-        }
-      }
-    },
-    "Parts of other people's copies are sealed: this phone cannot open them, and each goes back only to its owner's words.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Части чужих копий запечатаны: этот телефон не может их открыть, и каждая возвращается только к словам своего владельца."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "他人副本的部分已加密：此手机无法打开，每一部分只会回到其主人的单词。"
-          }
-        }
-      }
-    },
-    "Keeping a copy": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Хранение копии"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保管副本"
-          }
-        }
-      }
-    },
-    "%@ keeps a sealed part of their copy on this phone (%@). Nobody can open it here.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ хранит на этом телефоне запечатанную часть своей копии (%2$@). Открыть её здесь нельзя."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ 在此手机上保管其副本的一个加密部分（%2$@）。此处无人能打开它。"
           }
         }
       }
@@ -16199,38 +16053,6 @@
         }
       }
     },
-    "stake %@": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ставка %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "赌注 %@"
-          }
-        }
-      }
-    },
-    "Money flow has begun": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Денежный поток начался"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "资金流已开始"
-          }
-        }
-      }
-    },
     "This seed phrase unlocks access to your account": {
       "localizations": {
         "ru": {
@@ -16343,22 +16165,6 @@
         }
       }
     },
-    "Your account is deleted: this device erases your 24-word identity. Your history stays here sealed and opens again only from the same 24 words — on this device, or on another one that already holds a copy. Nobody keeps the words for you: write them down first: Settings → Privacy → Seed phrase. Deleting the app erases the history as well.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ваш аккаунт удаляется: это устройство стирает вашу личность из 24 слов. История остаётся здесь запечатанной и открывается снова только теми же 24 словами — на этом устройстве или на другом, где уже есть копия. Никто не хранит слова за вас: сначала запишите их: Настройки → Приватность → Сид-фраза. Удаление приложения стирает и историю."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的账户将被删除：此设备会抹去你的 24 词身份。你的历史记录会加密留在这里，只有用同样的 24 个词才能再次打开——在此设备上，或在已持有副本的另一台设备上。没有人替你保管这些词：请先写下来：设置 → 隐私 → 助记词。删除应用也会抹去历史记录。"
-          }
-        }
-      }
-    },
     "Share diagnostics?": {
       "localizations": {
         "ru": {
@@ -16451,22 +16257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在参与"
-          }
-        }
-      }
-    },
-    "Received": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Получено"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已收到"
           }
         }
       }
@@ -18766,6 +18556,54 @@
         }
       }
     },
+    "Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша копия живёт только на телефонах, а не в облаке: так Montana хранит её по-своему. Она запечатана вашими 24 словами и разрезана на части, а части хранят для вас ваши собеседники: каждый видит лишь размер, ни одного слова. На новом телефоне ваши 24 слова возвращают части — и вашу переписку с ними."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的副本只存在于手机上，而不在云端：这是 Montana 自己的保管方式。它用您的 24 个单词加密并切分成若干部分，由与您通信的人为您保管：每个人只能看到大小，看不到任何一个字。在新手机上，您的 24 个单词会取回这些部分，以及你们之间的对话。"
+          }
+        }
+      }
+    },
+    "Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them. In the same way this phone keeps sealed parts for your contacts, up to 1 GB, and cannot open them. Both switches are in Settings → Data and Storage.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша копия живёт только на телефонах, а не в облаке: так Montana хранит её по-своему. Она запечатана вашими 24 словами и разрезана на части, а части хранят для вас ваши собеседники: каждый видит лишь размер, ни одного слова. На новом телефоне ваши 24 слова возвращают части — и вашу переписку с ними. Так же и этот телефон хранит запечатанные части ваших собеседников — до 1 ГБ — и открыть их не может. Оба переключателя — в Настройки → Данные и память."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的副本只存在于手机上，而不在云端：这是 Montana 自己的保管方式。它用您的 24 个单词加密并切分成若干部分，由与您通信的人为您保管：每个人只能看到大小，看不到任何一个字。在新手机上，您的 24 个单词会取回这些部分，以及你们之间的对话。同样，此手机也为您的联系人保管加密的部分，最多 1 GB，且无法打开它们。两个开关都在“设置 → 数据和存储”中。"
+          }
+        }
+      }
+    },
+    "The parts your contacts leave with you are sealed the same way: this phone cannot open them, and only their own 24 words can. This is how Montana keeps copies with no cloud in between: people hold each other's sealed parts, and no one but the owner can ever read them.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Части, которые собеседники оставляют у вас, запечатаны так же: этот телефон не может их открыть, откроют только их собственные 24 слова. Так Montana хранит копии без облака посередине: люди держат друг у друга запечатанные части, и прочитать их не может никто, кроме владельца."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "联系人留在您这里的部分也以同样方式加密：此手机无法打开，只有他们自己的 24 个单词才能打开。Montana 就是这样在不经过云端的情况下保管副本：人们互相保管加密的部分，除了主人，没有人能读取。"
+          }
+        }
+      }
+    },
     "An anonymous messenger. Your identity comes from your secret phrase, and your chats are encrypted on your device.": {
       "localizations": {
         "ru": {
@@ -18778,6 +18616,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "匿名通讯工具。您的身份源自您的助记词，聊天内容在您的设备上加密。"
+          }
+        }
+      }
+    },
+    "Your account is deleted from this device: your 24-word identity, your history and its attachments are erased here, the people who keep parts of your copy are asked to drop them, and your copies in iCloud are removed. A contact who is offline keeps a sealed part that nothing but your 24 words can open. Your other devices keep what they hold. This cannot be undone.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аккаунт удаляется с этого устройства: здесь стираются ваша личность из 24 слов, история и вложения, собеседников, хранящих части вашей копии, просят их удалить, а ваши копии в iCloud удаляются. Собеседник не в сети сохранит запечатанную часть, которую не открыть без ваших 24 слов. Ваши другие устройства сохраняют то, что на них есть. Отменить это нельзя."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的账户将从此设备删除：此处的 24 个单词身份、历史记录及其附件将被清除，保管您副本部分的联系人会被要求删除这些部分，您在 iCloud 中的副本也会被删除。不在线的联系人会保留一个加密的部分，只有您的 24 个单词才能打开。您的其他设备会保留其上已有的内容。此操作无法撤销。"
+          }
+        }
+      }
+    },
+    "Deleting…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удаление…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在删除…"
           }
         }
       }

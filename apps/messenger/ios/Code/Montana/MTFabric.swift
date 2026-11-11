@@ -25,11 +25,13 @@ enum MTFabricRules {
     static let testimonyLength = 3352        // Canon, testimony_len
     static let mostLevels = 19               // Canon: the most levels the wallet holds, which no ceiling exceeds
 
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): no level of a balance
     /// The level of the wallet (Canon: the count of the prefixes of π the balance reaches), its one reading: nineteen digits of π,
     /// the most a count of coins holds. The coins' levels (MTPiLevels) read the same prefixes and this reading (slice S2b b7e).
     static let piDigits = "3141592653589793238"
     static let piPrefixes: [Int] = (1...piDigits.count).map { Int(piDigits.prefix($0)) ?? 0 }
     static func walletLevel(_ balance: Int) -> Int { piPrefixes.filter { $0 <= balance }.count }
+    #endif
     /// H: the greatest g for which at least g of the values stand at g or above. It counts people, not weight, in any order.
     static func fabricLevel(_ values: [Int]) -> Int {
         var level = 0
@@ -43,8 +45,9 @@ enum MTFabricRules {
     /// saturates, so a testimony one window ahead of the reading stands in 0.
     static func half(_ now: UInt64, _ window: UInt64) -> UInt64 { (window < now ? now - window : 0) / halfWindows }
     static func segment(_ window: UInt64) -> UInt64 { window / segmentWindows }
-    /// The level of a person: the lowest of the three, never a sum or a mean of them.
-    static func levelOfPerson(_ person: Int, _ wallet: Int, _ fabric: Int) -> Int { min(person, wallet, fabric) }
+    /// The level of a person (Canon: min(p, w, f)): the lowest of the three -- the person's, the wallet's, the fabric's -- never a
+    /// sum or a mean of them. An edition without coins hands Int.max at w, which is no term (link 14822).
+    static func levelOfPerson(_ p: Int, _ w: Int, _ f: Int) -> Int { min(p, w, f) }
     static func weaves(_ heard: Int) -> Bool { callSeconds <= heard }
     /// A LIVE ACT (App, «The fabric of time a client weighs»): what stands in a conversation -- words, voice and video messages,
     /// photographs, files and media, stickers and animations, transfers, a game's moves -- never a receipt, a sign of typing or of
@@ -73,7 +76,17 @@ enum MTFabricRules {
 
     /// What a correspondent signs on a live act received from the person (Canon, «The testimony of an exchange»; levels.rs, Testimony).
     struct Testimony: Equatable {
-        enum Refusal: String { case ceilingBeyondTheWallet }
+        /// The one refusal (levels.rs): a ceiling past the most levels. The Canon names it by the wallet, whose levels the most are;
+        /// Messenger carries no coins (cut C6) and names it by the most. `beyond` is the case, whichever the edition calls it.
+        enum Refusal: String {
+            #if MONTANA_MESSENGER
+            case ceilingBeyondTheMost
+            static let beyond = Refusal.ceilingBeyondTheMost
+            #else
+            case ceilingBeyondTheWallet
+            static let beyond = Refusal.ceilingBeyondTheWallet
+            #endif
+        }
         var suite: UInt16
         var addressee: Data
         var window: UInt64
@@ -90,7 +103,7 @@ enum MTFabricRules {
         /// testimony_id = SHA-256("mt-exchange-testimony" || 0x00 || signed_scope), by the tree's one composition (MTPipe.domained).
         var id: Data { MTPipe.domained("mt-exchange-testimony", [scope]) }
         /// What it states of itself that a holder refuses before anything else is asked (levels.rs, refusal).
-        var refusal: Refusal? { MTFabricRules.mostLevels < Int(ceiling) ? .ceilingBeyondTheWallet : nil }
+        var refusal: Refusal? { MTFabricRules.mostLevels < Int(ceiling) ? .beyond : nil }
         /// The testimony and its signature; one of any other length than testimony_len is refused before it is parsed (Canon).
         static func parse(_ bytes: Data) -> (Testimony, Data)? {
             let b = [UInt8](bytes)
@@ -110,8 +123,10 @@ enum MTFabricRules {
     /// ceiling after the window a ceiling written first; a parse that misplaces a field gives another testimony back; the voice
     /// refuses a level read as its energy (0.05 counts, 0.0025 would not), a floor left out (0.001 counts nothing) and made-up samples.
     static func selfCheck() -> Bool {
+        #if !MONTANA_MESSENGER
         guard walletLevel(2) == 0, walletLevel(3) == 1, walletLevel(313) == 2, walletLevel(314) == 3,
               walletLevel(3_141_592_653_589_793_238) == 19 else { return false }
+        #endif
         guard fabricLevel([]) == 0, fabricLevel([5]) == 1, fabricLevel([3, 3, 3]) == 3, fabricLevel([9, 1, 7, 2, 6]) == 3,
               fabricLevel([2, 2, 2, 2, 2, 2]) == 2 else { return false }
         guard halfWindows == 10_080, segmentWindows == 1_440, half(20_160, 10_081) == 0, half(20_160, 10_080) == 1,
@@ -126,7 +141,7 @@ enum MTFabricRules {
         t.ceiling = 19
         guard t.refusal == nil else { return false }
         t.ceiling = 20
-        guard t.refusal == .ceilingBeyondTheWallet else { return false }
+        guard t.refusal == .beyond else { return false }
         guard voiced(seconds: 2, energy: 2 * 0.05 * 0.05, received: 96_000, concealed: 0) == 2,
               voiced(seconds: 2, energy: 2 * 0.05 * 0.05, received: 96_000, concealed: 48_000) == 1,
               voiced(seconds: 2, energy: 2 * 0.001 * 0.001, received: 96_000, concealed: 0) == 0,
@@ -264,7 +279,11 @@ struct MTWeave {
         var moved = prune(w)
         if kept.opened == nil { kept.opened = w; moved = true }
         var ceil: Int? = nil
+        #if MONTANA_MESSENGER
+        if let p = MTPersonLevel.now { ceil = min(MTFabricRules.mostLevels, p) }   // no coins in Messenger (cut C6): the person's level alone
+        #else
         if let p = MTPersonLevel.now, let wl = MTPersonChain.walletTerm { ceil = min(MTFabricRules.mostLevels, p, wl) }
+        #endif
         let opened = kept.opened ?? w
         let grace = w < opened + MTFabricRules.tau2Windows
         let regs = regulars(w)

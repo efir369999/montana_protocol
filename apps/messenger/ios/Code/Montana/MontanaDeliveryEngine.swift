@@ -505,6 +505,7 @@ final class MontanaDeliveryEngine {
     private let q = DispatchQueue(label: "montana.delivery")
     private var tick: Task<Void, Never>?
     private var cargoChecked: [String: Double] = [:]   // letter mid -> last sender-side cargo check
+    private var cargoAsking: Set<String> = []          // letters whose cargo question is in flight or whose verdict is under way (checkCargo)
     private var lastMirror: Double = 0                 // the mirror law runs at most once in 5s
     private var forceBell: Set<String> = []            // mids whose next attempt knocks past the bell's ramp (door alive)
     private var lastRoadBack: [String: Double] = [:]   // each road that comes back drains at most once in 30 s (drainOnDoorAlive)
@@ -973,6 +974,14 @@ final class MontanaDeliveryEngine {
         }
     }
 
+    /// Whether any of these letters still waits in the queue, read on the queue's own line (MTKeeping.releaseAllForDeletion).
+    func stillQueued(_ mids: Set<String>) async -> Bool {
+        guard !mids.isEmpty else { return false }
+        return await withCheckedContinuation { c in
+            q.async { [self] in c.resume(returning: load().contains { mids.contains($0.mid) }) }
+        }
+    }
+
     // Enqueue a guaranteed-delivery item (real user text). Dedup by mid; immediate first attempt.
     /// An EMPTY CONVERSATION is one where not a single human word was said — none sent, none
     /// received. Service letters (name, face, receipts, typing) do not count as words — the
@@ -1378,7 +1387,7 @@ final class MontanaDeliveryEngine {
             // the node has accepted knocks once in five minutes, and «resend» must not wait
             // for that. Every undelivered media letter is verified here, once a minute each.
             for it in a where it.kind == .letter && it.text.hasPrefix(mediaMark) {
-                checkCargo(it.mid, chat: it.chat, age: now - it.since, text: it.text)
+                checkCargo(it.mid, chat: it.chat, born: it.since, text: it.text)
             }
             let mids = Set(a.map { $0.mid })
             cargoChecked = cargoChecked.filter { mids.contains($0.key) }
@@ -1455,8 +1464,19 @@ final class MontanaDeliveryEngine {
         return (o["chunks"] as? [[String: Any]] ?? []).compactMap { $0["bid"] as? String }
     }
 
-    private func checkCargo(_ m: String, chat: String, age: Double, text: String) {
-        let now = Date().timeIntervalSince1970
+    /// ONE QUESTION ABOUT A LETTER'S CARGO AT A TIME, AND ITS VERDICT IS THE ASKED LETTER'S ALONE (11.11.2026, T1 10.11.2026
+    /// 21:24:33Z; the author's word 18526: «the voice to Ruslan did not leave for a long time -- fix it at the root»). The
+    /// receiver's word opened the throttle (verifyCargoNow) while the drain's own question was in flight: two answers «gone»
+    /// came in one millisecond and two verdicts ran side by side. The one that found the ledger already released went
+    /// straight to the repair and laid the voice again (blob_up 21:24:34.415Z, its copy 34.895Z); the other was still
+    /// walking the doors with its removal and took the fresh piece off both machines by its name (blob_drop n=2, 35.584Z),
+    /// took the fresh letter out of the queue and found the one repair spent -- one checkmark here, no voice there, and
+    /// nothing left to heal it. Now a second question waits for the first (the receiver's word leaves the throttle open, so
+    /// the next tick asks again), the place is held until the verdict has run to its end (cargoGoneNow), and the verdict
+    /// names the letter by its birth (`since`, set anew by promotePiece): an answer about a letter that has been laid again
+    /// describes nothing that rides. Guard: tools/mt-cargo-lane-check.py.
+    private func checkCargo(_ m: String, chat: String, born: Double, text: String) {
+        let now = Date().timeIntervalSince1970, age = now - born
         // Fresh letters verify once a minute; a letter waiting for a sleeping receiver for
         // hours slows to once in half an hour — the truth keeps, the network noise does not.
         // SILENT-OK: the early returns are the throttle and the «cannot judge» arm of a
@@ -1464,19 +1484,28 @@ final class MontanaDeliveryEngine {
         // the check simply comes back on the next tick.
         let interval: Double = age < 600 ? 60 : (age < 3600 ? 300 : 1800)
         guard now - (cargoChecked[m] ?? 0) > interval else { return }
+        guard cargoAsking.insert(m).inserted else { return }
         cargoChecked[m] = now
         Task { [weak self] in
             guard let self else { return }
             var bids = MontanaWakePush.bidsOf(letter: m)
             if bids.isEmpty { bids = Self.bidsNamed(inLetter: text) }
-            guard !bids.isEmpty, !MontanaBlobUpload.anyPending(bids),
-                  let have = await MontanaWakePush.blobsPresent(bids, everyStore: true) else { return }   // a verdict of loss needs every store (1638)
-            if have.count < bids.count {
-                MontanaTrace.mark("cargo_lost", mid: m,
-                    "sender check: \(bids.count - have.count)/\(bids.count) chunks gone from the node — red if the letter still rides")
-                self.cargoGone(m, chat: chat)
+            var gone = 0
+            if !bids.isEmpty, !MontanaBlobUpload.anyPending(bids),
+               let have = await MontanaWakePush.blobsPresent(bids, everyStore: true) {   // a verdict of loss needs every store (1638)
+                gone = bids.count - have.count
             }
+            guard 0 < gone else { self.q.async { self.cargoAsking.remove(m) }; return }
+            MontanaTrace.mark("cargo_lost", mid: m,
+                "sender check: \(gone)/\(bids.count) chunks gone from the node — red if the letter still rides")
+            self.cargoGone(m, chat: chat, born: born)
         }
+    }
+
+    /// The letter a cargo verdict names: the one of this name that rides -- and, when the verdict answers a question, the
+    /// very letter the question was asked about (`born`). A row deleted by hand names no birth: its letter goes with it.
+    private static func sentenced(_ m: String, born: Double?) -> (Item) -> Bool {
+        { $0.mid == m && $0.kind == .letter && (born == nil || $0.since == born) }
     }
 
     /// The engine's one road into red (MTRefusal): a word, never a span of time.
@@ -1487,7 +1516,7 @@ final class MontanaDeliveryEngine {
     /// Cargo is gone — by the sender's own check OR the receiver's report. ONE closure for
     /// both roads ([C-1]): red bubble, ledger released, remnants dropped from the node, and
     /// the LETTER leaves the queue — a dead manifest held the conversation gate for new media.
-    func cargoGone(_ m: String, chat: String) {
+    func cargoGone(_ m: String, chat: String, born: Double? = nil) {
         q.async { [weak self] in
             guard let self else { return }
             // THE VERDICT FALLS ONLY ON A LETTER STILL RIDING — checked HERE, at the moment of
@@ -1497,15 +1526,17 @@ final class MontanaDeliveryEngine {
             // a closed letter, not a loss. Precedent 08.09 06:15: a music letter delivered after
             // eight hours went red 1.2 s later, and the receiver was told to erase it. The
             // receipt is the letter's terminal: after it no verdict road may write its name.
-            guard self.load().contains(where: { $0.mid == m && $0.kind == .letter }) else {
+            // And a letter laid again while the node was asked is another letter (sentenced): the answer is not about it.
+            guard self.load().contains(where: Self.sentenced(m, born: born)) else {
                 MontanaTrace.mark("cargo_check", mid: m, "stale — the letter settled while the node was asked; no verdict")
+                self.cargoAsking.remove(m)
                 return
             }
-            self.cargoGoneNow(m, chat: chat)
+            self.cargoGoneNow(m, chat: chat, born: born)
         }
     }
 
-    private func cargoGoneNow(_ m: String, chat: String) {
+    private func cargoGoneNow(_ m: String, chat: String, born: Double?) {
         Task { [weak self] in
             guard let self else { return }
             await MainActor.run { self.store?.settleRefused(conv: chat, mid: m, because: .cargoGone) }
@@ -1513,10 +1544,11 @@ final class MontanaDeliveryEngine {
             if !freed.isEmpty { await MontanaWakePush.dropBids(freed) }
             self.q.async {
                 var a = self.load(); let n = a.count
-                let to = a.first(where: { $0.mid == m && $0.kind == .letter })?.to
+                let to = a.first(where: Self.sentenced(m, born: born))?.to
                 // Only the LETTER dies: a live resend re-mints under the SAME letter name,
-                // and a late cargo-check answer must not kill its fresh .piece intent.
-                a.removeAll { $0.mid == m && $0.kind == .letter }
+                // and a late cargo-check answer must not kill its fresh .piece intent --
+                // nor the letter that intent has already become (sentenced).
+                a.removeAll(where: Self.sentenced(m, born: born))
                 if a.count != n { self.save(a) }
                 // NO RETRACT, EVER (1638, the author's invariant: what stands in the sender's chat stands
                 // in the receiver's). The dead cargo used to take the RECEIVER's row with it — a silent
@@ -1534,6 +1566,7 @@ final class MontanaDeliveryEngine {
                         self?.store?.repairLostMediaOnce(mid: m, to: to, chat: chat)
                     }
                 }
+                self.cargoAsking.remove(m)   // the verdict has run to its end: the letter laid again may be asked about
             }
         }
     }
@@ -1561,7 +1594,7 @@ final class MontanaDeliveryEngine {
                 return
             }
             cargoChecked[m] = 0
-            checkCargo(m, chat: it.chat, age: Date().timeIntervalSince1970 - it.since, text: it.text)
+            checkCargo(m, chat: it.chat, born: it.since, text: it.text)
         }
     }
 
@@ -1794,7 +1827,11 @@ final class MontanaDeliveryEngine {
             let sil = it.silent || it.nodeAck == true
             Task { [weak self] in
                 guard let self else { return }
-                guard let linkText = await MontanaWakePush.sealLongLetter(mid: m, text: text),
+                // A STATE LETTER'S LONG BODY IS QUIET CARGO (the author's word 18518, 10.11.2026): a wall page is carried to
+                // every visitor, and its bodies held the lane a person's photo needed (MTBulkPuts). A person's own long
+                // letter is the person's put and waits for nobody.
+                guard let linkText = await MontanaWakePush.$quietCargo.withValue(it.kind.isState, operation: {
+                          await MontanaWakePush.sealLongLetter(mid: m, text: text) }),
                       let env = MontanaWakePush.sealLetterEnvelope(mid: m, text: linkText, secret: secret,
                                                                    quoteText: it.qt, quoteMid: it.qm, linkPreview: it.lp) else {
                     MontanaLog.event("DELIVERY ✗ mid=\(m.prefix(8)) long-letter blob failed")
@@ -2018,7 +2055,7 @@ final class MontanaDeliveryEngine {
                         // never re-runs, and a node-side wipe would stay invisible until the next
                         // launch. The per-letter throttle inside checkCargo keeps this to 1/min.
                         for it in a where it.kind == .letter && it.text.hasPrefix(mediaMark) {
-                            self.checkCargo(it.mid, chat: it.chat, age: now - it.since, text: it.text)
+                            self.checkCargo(it.mid, chat: it.chat, born: it.since, text: it.text)
                         }
                         self.reconcile(a)   // M-1/M-2: the queue is the chat's shadow, every 5s
                     }

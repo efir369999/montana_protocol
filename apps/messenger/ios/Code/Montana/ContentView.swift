@@ -165,8 +165,9 @@ final class MTTurnDrag: ObservableObject {
     /// THE NETWORK IS DISBANDED INTO THREE APPLICATIONS (the author's word 29.09): the VPN under the globe, in the finger's row;
     /// the mesh and the P2P network are pages under the bar opened from the drawer.
     enum Pane {
-        case chats, groups, channels, contacts, calls, music, p2p, gallery
+        case chats, groups, channels, contacts, calls, p2p, gallery
         #if !MONTANA_MESSENGER
+        case music       // the music page, the Protocol's alone (decision 793, 11.11.2026: Messenger plays a letter's audio file from its chat and carries no music page)
         case feed        // the logo's page, the Protocol's alone (cut C6)
         case vpn, mesh   // the Protocol's alone: never compiled into Montana Messenger (MTApps.swift, MONTANA_MESSENGER)
         #endif
@@ -233,12 +234,26 @@ final class MTTurnDrag: ObservableObject {
     }
     /// THE MUSIC IS CHOSEN AS THE CALLS ARE (the author's word 23.09): the drawer's row and the dynamic glyph put the
     /// music page under the bar; its big page unfolds from the player's plate at the page's head.
+    #if !MONTANA_MESSENGER
     func askMusic() { lastMedia = "music"; pane = .music }
+    #endif
     /// THE DYNAMIC GLYPH IS THE MUSIC'S WHILE THE MUSIC PAGE STANDS (the critic 24.09): the gallery opened over the music
     /// page made the glyph the gallery's while the puck stood under it for the music, and the music's glyph was gone.
+    #if MONTANA_MESSENGER
+    var mediaIsMusic: Bool { false }   // no music page in Messenger (decision 793): the dynamic glyph is the gallery's alone
+    #else
     var mediaIsMusic: Bool { pane == .music || (pane != .gallery && lastMedia != "gallery") }
+    #endif
     /// THE GALLERY IS A PAGE UNDER THE BAR TOO (the author's word 25.09): chosen as the music is, in the dynamic glyph's slot.
     func askGallery() { lastMedia = "gallery"; pane = .gallery }
+    /// THE DYNAMIC GLYPH'S TAP: the page it stands for, opened again -- in Messenger the gallery alone (decision 793).
+    func askMedia() {
+        #if MONTANA_MESSENGER
+        askGallery()
+        #else
+        if mediaIsMusic { askMusic() } else { askGallery() }
+        #endif
+    }
     /// THE TABS IN THE PANEL'S OWN ORDER (the author's word 24.09), left to right: the panes the puck stands under —
     /// the contacts, the calls, THE FEED under the logo between them and the chats (the author's word 25.09: «the feed page as
     /// whole as the chats, the calls and the contacts, turning sideways as they do»), the chats, the dynamic glyph's page --
@@ -246,7 +261,7 @@ final class MTTurnDrag: ObservableObject {
     /// (the author's word 25.09).
     var turnOrder: [Pane] {
         #if MONTANA_MESSENGER
-        return [.contacts, .calls, .chats, mediaIsMusic ? .music : .gallery, Self.globePane]
+        return [.contacts, .calls, .chats, .gallery, Self.globePane]   // no music page in Messenger (decision 793)
         #else
         var row: [Pane] = [.contacts, .calls, .feed, .chats, mediaIsMusic ? .music : .gallery, Self.globePane]
         if MTApps.wall == nil { row.removeAll { $0 == .feed } }   // the feed only where the wall stands (slice S4c2)
@@ -1560,7 +1575,11 @@ enum MTApplication: String, CaseIterable, Identifiable {
     #if !MONTANA_MESSENGER   // the Protocol's applications alone (cuts C5 and C6); the Protocol's order of the cases stands
     case feed
     #endif
-    case chats, groups, channels, music, gallery
+    case chats, groups, channels
+    #if !MONTANA_MESSENGER
+    case music   // the music page is the Protocol's alone (decision 793, 11.11.2026)
+    #endif
+    case gallery
     #if !MONTANA_MESSENGER
     case chess
     case wallet   // no coins in Messenger (cut C6)
@@ -1571,7 +1590,7 @@ enum MTApplication: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     /// The icons' preview in Settings, in its own order.
     #if MONTANA_MESSENGER
-    static let libraryPreview: [MTApplication] = [.contacts, .calls, .chats, .music, .gallery, .settings]
+    static let libraryPreview: [MTApplication] = [.contacts, .calls, .chats, .gallery, .settings]
     #else
     static let libraryPreview: [MTApplication] = [.contacts, .calls, .chats, .feed, .wallet, .music, .gallery, .chess, .vpnWall, .meshWall, .p2pWall, .settings]
     #endif
@@ -1607,7 +1626,9 @@ enum MTApplication: String, CaseIterable, Identifiable {
         case .chats: return String(localized: "Chats", bundle: MTLanguage.bundle)
         case .groups: return String(localized: "Groups", bundle: MTLanguage.bundle)
         case .channels: return String(localized: "Channels", bundle: MTLanguage.bundle)
+        #if !MONTANA_MESSENGER
         case .music: return String(localized: "Music", bundle: MTLanguage.bundle)
+        #endif
         case .gallery: return String(localized: "Gallery", bundle: MTLanguage.bundle)
         #if !MONTANA_MESSENGER
         case .vpnWall: return String(localized: "VPN wall", bundle: MTLanguage.bundle)
@@ -1630,9 +1651,9 @@ enum MTApplication: String, CaseIterable, Identifiable {
         case .wallet: return .montana
         #endif
         case .messenger: return .montana
-        case .music, .gallery: return .media
+        case .gallery: return .media
         #if !MONTANA_MESSENGER
-        case .chess: return .media
+        case .music, .chess: return .media
         #endif
         case .settings: return .utilities
         }
@@ -1747,9 +1768,9 @@ struct MontanaSideDrawer: View {
             case .chats: ui.pane = .chats
             case .groups: ui.pane = .groups
             case .channels: ui.pane = .channels
-            case .music: ui.askMusic()
             case .gallery: ui.askGallery()
             #if !MONTANA_MESSENGER
+            case .music: ui.askMusic()
             case .vpnWall: if let v = MTApps.vpn, v.carried { v.opened(); ui.pane = .vpn }
             case .meshWall: ui.pane = .mesh
             case .p2pWall: ui.pane = .p2p
@@ -2542,7 +2563,7 @@ struct MainTabView: View {
             Button("Keep") { MTKeeping.shared.answer(keep: true) }
             Button("Not now", role: .cancel) { MTKeeping.shared.answer(keep: false) }
         } message: {
-            Text("Your copy is sealed with your 24 words and cut into parts. The people you write to keep the parts around a ring, each part with two of them: they see only its size and when it changes, and cannot open it. With your words on a new phone, the parts come back from them, and each of them gives back the conversation you share.")
+            Text("Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them. In the same way this phone keeps sealed parts for your contacts, up to 1 GB, and cannot open them. Both switches are in Settings → Data and Storage.")
         }
     }
 

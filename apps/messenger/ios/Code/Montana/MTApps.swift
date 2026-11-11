@@ -290,16 +290,12 @@ protocol MTVPNDoor: AnyObject {
     /// A moment of the application the VPN keeps its own work at: the launch warms the server book, the app shown wakes the page's
     /// quiet beats and hidden rests them, the return reads the tunnel and what its extension wrote while the app was away.
     @MainActor func moment(_ m: MTAppMoment)
-    /// The Mac's VPN supervisor started as a process of its own: it runs here, and the app is not born (true).
-    @MainActor func ranAsAgent() -> Bool
-    /// The install road asked at launch: the reconnect lifted, the tunnel stopped, the app leaves (true).
+    /// The install road asked at launch: the tunnel stopped, the app leaves (true).
     @MainActor func installRoad() -> Bool
     /// The system's word for every app, carried to the tunnel at each path the phone takes; off the main thread.
     func path(satisfied: Bool, tunnel: Bool)
     /// The interface set or the tunnel fact changed: a tunnel not ours is judged a moment later.
     @MainActor func foreignTunnel(present: Bool, satisfied: Bool)
-    /// The recovery's hooks: a recovery never raises a tunnel under a live call, and it writes to the diary.
-    func wire(callBusy: @escaping () -> Bool, diary: @escaping (String) -> Void)
     /// The store was replaced under the living (a copy laid, the seed changed): what the VPN holds in memory is let go (slice S3b b2).
     func storeReplaced()
     /// THE WALL STANDS WHERE THE PLATFORM ADMITS A TUNNEL (slice S3b b3): the globe opens the VPN wall, else the P2P wall; the

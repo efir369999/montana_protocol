@@ -79,12 +79,17 @@ struct MontanaPeerInfoScreen: View {
         // correspondent's; a tap on the bar goes to the letter by the one road.
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
-                MontanaPlayerBar(onPlace: { t in dismiss(); ui.closeChat(); ui.askMusic(); MTMusicFocus.shared.show(t) },
-                                 onSearch: { dismiss(); ui.closeChat(); ui.askMusic() },
-                                 onGoTo: { c, f in
+                let toLetter = { (c: String, f: String) in   // the one road to the letter, the same in both editions
                     if c == chat.name, let mid = store.letterId(of: f, in: c) { dismiss(); ui.showLetter(chat, mid) }
                     else { NotificationCenter.default.post(name: .montanaGoToLetter, object: nil, userInfo: ["chat": c, "file": f]) }
-                })
+                }
+                #if MONTANA_MESSENGER   // no music page to leave for (decision 793, 11.11.2026): the bar goes to the letter alone
+                MontanaPlayerBar(onGoTo: toLetter)
+                #else
+                MontanaPlayerBar(onPlace: { t in dismiss(); ui.closeChat(); ui.askMusic(); MTMusicFocus.shared.show(t) },
+                                 onSearch: { dismiss(); ui.closeChat(); ui.askMusic() },
+                                 onGoTo: toLetter)
+                #endif
             }
         }
         // The same sheet as deleting a conversation from the list (the author's word 15.09): the

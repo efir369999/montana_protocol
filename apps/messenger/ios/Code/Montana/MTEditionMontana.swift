@@ -16,10 +16,15 @@ enum MTEdition {
     static let ownNode = false
     /// The Protocol's site, the general one (decision 711 = a): its page and its privacy policy, montana.xxx/privacy/.
     static let site = "https://montana.xxx"
+    /// THE PROTOCOL'S CARDS stay on montana.quest: its association file names quest.montana.app with /n/, montana.xxx's names none.
+    static let cards = "https://montana.quest"
     /// MONTANA PROTOCOL'S FACE (the author's word 15590, 03.11.2026: his coin is this app's icon): the glass icon on the first
     /// screen, the room's face and the icon chooser's first place, and the flat picture a track without a cover wears.
     static let face = "IconGlassPreview"
     static let cover = "AppIconPicture"
+    /// WHAT TURNS UNDER A PULL (MontanaPullSpinner): Montana's coin, face and back (the author's word 10.09).
+    static let pullFace = "CoinFace"
+    static let pullBack = "CoinBack"
     /// THE FIRST SCREEN'S LINE (the author's words 16364 and 16543, 04.11.2026: MT Protocol is next-generation communication,
     /// Montana the anonymous messenger): each edition says what it is, the shared screen reads it.
     static let intro: LocalizedStringResource = "Next-generation communication. Your identity comes from your secret phrase, and everything you send is encrypted on your device."

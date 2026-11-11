@@ -88,7 +88,10 @@ enum MontanaLog {
     /// finished files up one place: `.prev` is the newest, `.prev.1` the one before it, up to `.prev.keep`; the
     /// shipper (MontanaDiagShip) deletes each one it has sent whole. Only when every place is taken is the oldest
     /// dropped -- and the drop is written into the telemetry as a fact, so a hole in the diary is never silent.
-    static let keep = 6
+    /// TWENTY-FOUR PLACES (the author's word 17968, 09.11.2026: the diary is critical, no scenario loses it). Six held three
+    /// megabytes a channel -- less than one day of T1's trace (4.2 MB on 09.11) when the node refuses; twenty-four hold about
+    /// three such days, twelve megabytes a channel at most, and the loss below stays the last fuse, written as a fact.
+    static let keep = 24
     private static func prevURL(_ ch: Channel, generation g: Int = 0) -> URL {
         dir.appendingPathComponent(ch.file + (g == 0 ? ".prev" : ".prev." + String(g)))
     }

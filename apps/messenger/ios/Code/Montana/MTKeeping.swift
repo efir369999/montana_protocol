@@ -2,7 +2,6 @@ import Foundation
 import CryptoKit
 import SwiftUI
 import UIKit
-import UserNotifications
 import MontanaBindings
 
 // THE COPY KEPT BY THE PEOPLE ONE WRITES TO (the author's words 08.10.2026, 16:2x-17:3x UTC: «restore by the words fully, byte
@@ -424,9 +423,12 @@ enum MTKeepDerive {
         guard text.hasPrefix(keepMark), let d = String(text.dropFirst(keepMark.count)).data(using: .utf8) else { return nil }
         return (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
     }
-    private func say(_ conv: String, _ o: [String: Any]) {
-        guard let d = try? JSONSerialization.data(withJSONObject: o), let s = String(data: d, encoding: .utf8) else { return }
-        MontanaDeliveryEngine.shared.enqueue(to: conv, chat: conv, mid: UUID().uuidString, text: keepMark + s, silent: true)
+    /// The word's letter name, so a caller may wait for it to leave (releaseAllForDeletion).
+    @discardableResult private func say(_ conv: String, _ o: [String: Any]) -> String? {
+        guard let d = try? JSONSerialization.data(withJSONObject: o), let s = String(data: d, encoding: .utf8) else { return nil }
+        let mid = UUID().uuidString
+        MontanaDeliveryEngine.shared.enqueue(to: conv, chat: conv, mid: mid, text: keepMark + s, silent: true)
+        return mid
     }
     /// A keeping word lives in the queue while it can still mean something: a question an hour (an older build buries it
     /// unread and never receipts it), every other word two days -- the pieces of a part live a week on the nodes.
@@ -461,6 +463,23 @@ enum MTKeepDerive {
             for conv in owner.keepers.keys { say(conv, ["w": "release"]) }
             owner = Owner(generation: owner.generation); saveOwner()
         }
+    }
+    /// THE ACCOUNT LEAVES, ITS PARTS LEAVE WITH IT (Guideline 5.1.1(v); the author's decision (a), 10.11.2026: «Delete account»
+    /// erases the history, takes the parts back from the keepers and removes the iCloud copy). Every keeper is told «release» and
+    /// drops my part (heard, drop); the words are waited for while they are still in the queue, `within` seconds at most, because
+    /// the queue leaves with the seed. A keeper who is away keeps a sealed part nothing but these 24 words can open -- the alert says so.
+    func releaseAllForDeletion(within: Double) async {
+        let mids = Set(owner.keepers.keys.compactMap { say($0, ["w": "release"]) })
+        owner = Owner(generation: owner.generation); saveOwner()
+        UserDefaults.standard.set(false, forKey: Self.mineKey)
+        objectWillChange.send()
+        MontanaTrace.mark("keep_release_all", "keepers=\(mids.count)")
+        let until = Date().addingTimeInterval(within)
+        while Date() < until, await MontanaDeliveryEngine.shared.stillQueued(mids) {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        let left = await MontanaDeliveryEngine.shared.stillQueued(mids)
+        MontanaTrace.mark("keep_release_all", left ? "some words still wait: their keepers are away" : "every keeper was told")
     }
     /// THE OWNER'S RHYTHM: a renewal is due a day after the last; it asks the people I write to, waits ten minutes for one yes
     /// at least (a full ring goes at once), and an hour without one leaves the copy where it stands until tomorrow.
@@ -766,7 +785,6 @@ enum MTKeepDerive {
         }
         try? FileManager.default.removeItem(at: dest)
         guard (try? FileManager.default.moveItem(at: landing, to: dest)) != nil else { return }
-        let first = !held.keys.contains { Self.convOf($0) == conv }
         // A RENEWAL REPLACES (Network): this person's parts of an older copy leave as the newer one arrives.
         for (old, h) in held where Self.convOf(old) == conv && old != key && generation(h) < head.generation { dropKey(old) }
         let now = Date().timeIntervalSince1970
@@ -778,7 +796,6 @@ enum MTKeepDerive {
         MontanaWakePush.registerConvs()   // the slot's pipe rings this phone from now on: a call wakes it by a push
         say(conv, ["w": "held", "g": Int(head.generation), "d": head.shareDigest.montanaHexString, "k": k])
         MontanaTrace.mark("keep_part", "held slot=\(k) of \(n) bytes=\(size)")
-        if first { tell(conv, size) }
     }
     private func dropKey(_ key: String) {
         held[key] = nil; roads[key] = nil
@@ -797,15 +814,6 @@ enum MTKeepDerive {
         UserDefaults.standard.set(on, forKey: Self.othersKey)
         objectWillChange.send()
         if !on { for conv in keptFor { drop(conv) } }
-    }
-    /// THE PERSON IS TOLD whose part this phone holds and how many bytes, the moment it first holds one (App, «What a client
-    /// owes the person»).
-    private func tell(_ conv: String, _ bytes: Int) {
-        let name = ChatStore.live?.peerNames[conv] ?? ""
-        let c = UNMutableNotificationContent()
-        c.title = String(localized: "Keeping a copy", bundle: MTLanguage.bundle)
-        c.body = String(format: String(localized: "%@ keeps a sealed part of their copy on this phone (%@). Nobody can open it here.", bundle: MTLanguage.bundle), name, mtSize(bytes))
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "keep-" + UUID().uuidString, content: c, trigger: nil))
     }
     /// The pipes of the slots this phone holds, heard in the box beside every correspondence (MontanaWakePush.fetchBox).
     nonisolated static func listening() -> [String: MTPipeKey] {
@@ -891,7 +899,7 @@ enum MTKeepDerive {
         let rows = (store.messages[conv] ?? []).filter {
             $0.createdAt > since && !$0.text.isEmpty && $0.imageFile == nil && $0.videoFile == nil && $0.audioFile == nil && $0.docFile == nil
         }
-        guard !rows.isEmpty else { return say(conv, ["w": "given", "c": 0]) }
+        guard !rows.isEmpty else { say(conv, ["w": "given", "c": 0]); return }
         // A letter of the asker rides with the author field it came with (Message.authorTag): their phone names it theirs by
         // their own key, never by this phone's word.
         let list: [[String: Any]] = rows.map { r in
@@ -1118,6 +1126,9 @@ extension ChatStore {
 
 /// THE KEEPING IN SETTINGS, native rows: two switches, what a keeper learns said beneath them, the state in the keepers' own
 /// words (a part is «held» only on its keeper's «held»), the parts this phone holds by name and size, and the road back.
+/// SAID HERE AND NOWHERE ELSE (the author's word 17977-17978, 09.11.2026): the notice «N keeps a sealed part of their copy on
+/// this phone» is gone -- a banner about someone's part on your phone read as control. The footers below say it plainly, as
+/// what it is: Montana's own way of keeping copies with no cloud in between.
 struct MTKeepingSection: View {
     @ObservedObject private var keep = MTKeeping.shared
     private var mineState: LocalizedStringKey {
@@ -1136,7 +1147,7 @@ struct MTKeepingSection: View {
         } header: {
             Text("COPY WITH CONTACTS")
         } footer: {
-            Text("Your copy is sealed with your 24 words and cut into parts. The people you write to keep the parts around a ring, each part with two of them: they see only its size and when it changes, and cannot open it. With your words on a new phone, the parts come back from them, and each of them gives back the conversation you share.")
+            Text("Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them.")
         }
         .listRowBackground(MTGlassRowPlate())
         Section {
@@ -1177,7 +1188,7 @@ struct MTKeepingSection: View {
                 EmptyView()
             }
         } footer: {
-            Text("Parts of other people's copies are sealed: this phone cannot open them, and each goes back only to its owner's words.")
+            Text("The parts your contacts leave with you are sealed the same way: this phone cannot open them, and only their own 24 words can. This is how Montana keeps copies with no cloud in between: people hold each other's sealed parts, and no one but the owner can ever read them.")
         }
         .listRowBackground(MTGlassRowPlate())
     }

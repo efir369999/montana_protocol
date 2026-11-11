@@ -113,7 +113,9 @@ _cargo_lock = threading.Lock()
 # against a stranger's flood and pushes out the oldest FILES, not devices.
 DIAG_DIR  = "/var/lib/montana-node-wake/diag"
 DIAG_BODY = 512 * 1024
-DIAG_DEV_DAY = 64 * 1024 * 1024   # a device's diary per UTC day (29.09: 4 MiB held two hours of a busy phone, and the ring cut T1's whole day of 28.09 five times); the tree cap and the week's window bound the disk
+# NO CAP PER DEVICE AND NO RING (the author's word 17968, 09.11.2026: no scenario loses the diary): the day cap and the ring
+# that kept the newest half are gone, as on the network node; the one ceiling is the tree's (DIAG_TREE, diag_gc), and a write
+# the disk refuses is answered 507, never ok.
 DIAG_TREE = 24 * 1024 * 1024 * 1024
 DIAG_TTL  = 7 * 86400   # sliding window: the author reads a week back, never further
 RE_DG = re.compile(r"^[0-9A-Fa-f-]{8,64}$")
@@ -845,23 +847,14 @@ class H(BaseHTTPRequestHandler):
             # held about 5 hours of a live stream instead of the promised 7 days.
             pth = os.path.join(d, f"{base}-{time.strftime('%Y%m%d', time.gmtime())}.log")
             wrote = 0
-            # THE DAY FILE IS A RING, NOT A CLIFF (16.09): past the cap the OLDEST half leaves and the
-            # newest lines keep landing — an incident lives in the last hours, and the node used to
-            # answer ok while dropping exactly those (T1 16.09: blind from 17:33Z, the lost letter at
-            # 18:25Z). The answer stays 200 with the count: no build reads anything else of it.
+            # EVERY LINE LANDS OR THE ANSWER IS NOT OK (the author's word 17968): a disk that refuses is said as 507, never as ok.
             try:
-                if DIAG_DEV_DAY < os.path.getsize(pth):
-                    with open(pth, "rb") as f:
-                        f.seek(-(DIAG_DEV_DAY // 2), os.SEEK_END); tail = f.read()
-                    nl = tail.find(b"\n")
-                    tail = tail[nl + 1:] if nl != -1 else tail
-                    with open(pth, "wb") as f: f.write(tail)
-                    _log("diag-put", "ring %s/%s: kept the newest %d bytes" % (dg[:8], base, len(tail)))
-            except OSError:
-                pass
-            with open(pth, "a") as f:
-                for ln in lines:
-                    if isinstance(ln, str): f.write(strip_addresses(ln[:2048]) + "\n"); wrote += 1
+                with open(pth, "a") as f:
+                    for ln in lines:
+                        if isinstance(ln, str): f.write(strip_addresses(ln[:2048]) + "\n"); wrote += 1
+            except OSError as e:
+                _log("diag-put", "disk refused %s/%s: %s" % (dg[:8], base, str(e)[:80]))
+                return self._m(507, "/diag-put", _t0, {"error": "disk"})
             return self._m(200, "/diag-put", _t0, {"ok": True, "lines": wrote})
 
         if self.path == "/blob-put":

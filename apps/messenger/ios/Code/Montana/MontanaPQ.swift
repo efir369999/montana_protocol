@@ -720,6 +720,25 @@ extension MontanaArchive {
             UserDefaults.standard.set(forgottenFolders.sorted(), forKey: forgottenKey)
         }
     }
+    /// THE ACCOUNT LEAVES, ITS HISTORY LEAVES THIS DEVICE (Guideline 5.1.1(v); the author's decision (a), 10.11.2026, over the word
+    /// of 07.09 that kept the history sealed for the same words): «Delete account» in the Messenger erases what the archive holds for
+    /// the person, letters and sealed attachments, not the keys alone. Every conversation the store names goes with its marks
+    /// (deleteChatFolder); alone on the phone, the whole Chats folder goes too -- recovered transcripts and orphans with it -- while
+    /// with other people seated their folders, set aside on the shelf, stand. Run while the words are here: a folder is found by them.
+    static func eraseForDeletion(convRefs: [String], alone: Bool, then done: @escaping () -> Void) {
+        for c in convRefs { deleteChatFolder(convRef: c) }
+        ioQueue.async {
+            var gone = 0
+            if alone {
+                let chats = rootURL.appendingPathComponent(MontanaPaths.chats)
+                for n in (try? FileManager.default.contentsOfDirectory(atPath: chats.path)) ?? [] where !n.hasPrefix(".") {
+                    if (try? FileManager.default.removeItem(at: chats.appendingPathComponent(n))) != nil { gone += 1 }
+                }
+            }
+            MontanaTrace.mark("archive_erased", "conversations=\(convRefs.count) folders=\(gone) alone=\(alone ? 1 : 0)")
+            DispatchQueue.main.async(execute: done)
+        }
+    }
     /// THE FOLDER'S MARKS GO WITH THE FOLDER (the critic B-3, 11.10.2026; the author's word 11.10.2026 17:1x UTC: «check the whole
     /// architecture of the chats' time chains, so there are no holes by the constitution»): the head, name-head, folder-map and
     /// cursor marks are economies that say «this folder already holds it», and they outlived the directory -- a folder born again

@@ -3051,6 +3051,7 @@ class ChatStore: ObservableObject {
         MontanaTrace.mark("wall_card", "laid mine=\(mine ? 1 : 0) peer=\(String(peer.prefix(10)))")
     }
     #endif
+    #if !MONTANA_MESSENGER
     /// THE MONEY FLOW BEGAN IN THIS CHAT (MTMoneyFlowRow): the one birth of its row, this phone's own and read; the coin switched
     /// on again within a minute lays nothing more.
     func appendMoneyFlow(peer pipe: String) {
@@ -3064,6 +3065,7 @@ class ChatStore: ObservableObject {
         Task { @MainActor in self.noteListState(peer, last: self.lastLetter(peer)) }
         MontanaTrace.mark("money_flow", "begun peer=\(String(peer.prefix(10)))")
     }
+    #endif
     /// A GROUP'S EVENT STANDS IN ITS FEED (MTGroupEvent, stage R -- the reference folder's service rows): this phone's own row,
     /// read, drawn in the middle of the feed; it rings nothing and is never sent.
     func appendGroupEvent(_ key: String, _ text: String) {
@@ -4137,7 +4139,12 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     /// were seen (phide_, phideAt_), and the coin guards (ownWords., coinBinds.) -- a deletion opens no door a guard closed; the
     /// graves and the funeral stay too, being what keeps the conversation gone.
     static let conversationOwnPrefixes = ["chatWall.", "chatWallBlur.", "pcap_", "abcap_", "pgcap_", "plcap_", "linkSent.",
-                                          "aboutSent.", "pgHeld.", "aboutCoins.", "moneyFlow.", "coinPair.", "autoReact."]
+                                          "aboutSent.", "pgHeld."] + doorOwnPrefixes
+    #if MONTANA_MESSENGER
+    private static let doorOwnPrefixes: [String] = []
+    #else
+    private static let doorOwnPrefixes = ["aboutCoins.", "moneyFlow.", "coinPair.", "autoReact."]   // the coins' own (cut C6)
+    #endif
     func forgetConversation(_ conv: String) {
         guard !conv.isEmpty, !Self.isLocalRoom(conv) else { return }
         let page = MTWallpaper.pageKey(.peer(conv))
@@ -4561,7 +4568,9 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                 MontanaPresencePrivacy.notePeerHides(chat, payload.dropFirst(1).contains("h"), at: wordAt)
                 if payload.dropFirst(1).contains("f") { E2E.shared.resendProfileOnReconnect(to: chat) }
                 E2E.heardCapable(from: chat, payload: payload)   // what its build reads, from every word, late ones too (25.09)
+                #if !MONTANA_MESSENGER
                 E2E.heardCoins(from: chat, payload: payload, at: wordAt)   // the balance the word tells (04.10)
+                #endif
                 E2E.heardLevel(from: chat, payload: payload, at: wordAt)   // the Global Level the word tells, or its withdrawal (11.10)
                 if fresh { E2E.shared.heardHeld(from: chat, payload: payload) }   // what of mine their screen holds (20.09)
                 heardHeldLetters(chat, payload: payload)   // which of my letters they hold whole (23.09)
@@ -4588,7 +4597,9 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                 MontanaPresencePrivacy.notePeerHides(chat, payload.dropFirst(1).contains("h"), at: wordAt)
                 if payload.dropFirst(1).contains("f") { E2E.shared.resendProfileOnReconnect(to: chat) }
                 E2E.heardCapable(from: chat, payload: payload)   // what its build reads, from every word, late ones too (25.09)
+                #if !MONTANA_MESSENGER
                 E2E.heardCoins(from: chat, payload: payload, at: wordAt)   // the balance the word tells (04.10)
+                #endif
                 E2E.heardLevel(from: chat, payload: payload, at: wordAt)   // the Global Level the word tells, or its withdrawal (11.10)
                 if fresh { E2E.shared.heardHeld(from: chat, payload: payload) }   // what of mine their screen holds (20.09)
                 heardHeldLetters(chat, payload: payload)   // which of my letters they hold whole (23.09)
@@ -4612,7 +4623,11 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             return false
         }
         if m.text.hasPrefix(callSignalMark) {
-            if !m.isFromMe { MontanaMainProbe.step("call-signal") { E2E.shared.handleLiveCallSignal(from: chat, payload: String(m.text.dropFirst(callSignalMark.count))) } }
+            // A call word by the pipe names its door, so the receipt goes back the same way: near while a local connection to
+            // this person stands, otherwise the node's line (MTCallRoute.lineDoor, P-3 09.11.2026 -- before, every pipe word
+            // was filed as «near», and a receipt for a word that came by the line was sent on a local connection that did not exist).
+            if !m.isFromMe { MontanaMainProbe.step("call-signal") { E2E.shared.handleLiveCallSignal(from: chat, payload: String(m.text.dropFirst(callSignalMark.count)),
+                door: MontanaPhoneNode.shared.hasStandingNearChannel(chat) ? MTCallRoute.nearDoor : MTCallRoute.lineDoor) } }
             return false
         }
         // The peer sent their external address — punch back AT ONCE and answer with ours if
@@ -6036,10 +6051,14 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
             // failure, the letter never queued, the sender's clock stood forever. The watchdog watches not
             // the whole upload's time (a big video runs minutes) but the PAUSE between chunks: silent past
             // the limit — we give up honestly.
+            // THE PAUSE IS READ FROM THE BYTES (10.11.2026, T1 15:51Z): the beat used to be a piece the node confirmed, so a
+            // large piece on a slow road was «silent» for as long as it took to leave. Every byte handed to the wire is a
+            // beat now (MTPutPulse), a confirmed piece is one as before; and a piece no longer stands in line behind
+            // another cargo (MTBulkPuts), so the silence measured here is the upload's own.
             let beat = MTBox<Date>(Date())
             let chunksOk = await withTaskGroup(of: Bool.self) { g -> Bool in
                 g.addTask {
-                    await MontanaWakePush.uploadChunks(ref, letter: letterMid) { done, total in
+                    await MontanaWakePush.uploadChunks(ref, letter: letterMid, alive: { beat.value = Date() }) { done, total in
                         beat.value = Date()
                         report(0.25 + 0.75 * Double(done) / Double(max(1, total)))
                     }
@@ -7000,13 +7019,18 @@ enum SeedScope {
     /// whether their build reads the ground's word (pgcap_) — 25.09.
     static let dataPrefixes = ["chatWall.", "chatWallBlur.", "phide_", "phideAt_", "pcap_", "abcap_", "linkSent.", "aboutSent.",
                                "pgHeld.", "pgcap_", "plcap_",
-                               "dqcap_",        // the correspondent's build takes a deletion quietly (E2E.deletionQuiet, 16.10)
-                               "aboutCoins.",   // the balance last told this correspondent and when (MTCoinBoard, 03.10)
-                               "moneyFlow.",    // a chat's own Money Flow (MTMoneyFlow, 04.10)
-                               "ownWords.",     // the pair holds my words, by its own word (MTOwnWords, 06.10)
-                               "coinPair.",     // retired 11.10 19:5x (a pair's word that it held coins): its keys leave with the seed
-                               "coinBinds.",    // the birth of the pair's first coin letter that names itself (MTCoinSend.credits, 06.10)
-                               "autoReact."]    // the coins a chosen person's every new letter is paid (MTAutoReact, 06.10)
+                               "dqcap_"] + doorDataPrefixes   // the correspondent's build takes a deletion quietly (E2E.deletionQuiet, 16.10)
+    #if MONTANA_MESSENGER
+    private static let doorDataPrefixes: [String] = []
+    #else
+    private static let doorDataPrefixes =
+        ["aboutCoins.",   // the balance last told this correspondent and when (MTCoinBoard, 03.10)
+         "moneyFlow.",    // a chat's own Money Flow (MTMoneyFlow, 04.10)
+         "ownWords.",     // the pair holds my words, by its own word (MTOwnWords, 06.10)
+         "coinPair.",     // retired 11.10 19:5x (a pair's word that it held coins): its keys leave with the seed
+         "coinBinds.",    // the birth of the pair's first coin letter that names itself (MTCoinSend.credits, 06.10)
+         "autoReact."]    // the coins a chosen person's every new letter is paid (MTAutoReact, 06.10)
+    #endif
     /// The one store of this concept is the shared keychain ([C-1], 1640): the conversations deleted at both
     /// ends, and those closed at the other end (24.09). A copy carries each set and lays it back as a union — a copy
     /// adds a deletion or a closure, it never lifts one.
@@ -7112,6 +7136,7 @@ enum SeedScope {
         "mt.release.told",   // the build the Montana room already told this phone of (29.09): this device's own
         "mt_device_key", "mt.install.marker", "mt_store_witness", "cargoRepairMids",
         "mt.doorbook", "mt.nodes", "mt.nodes.learned", "mt.nodes.machines", "mt.self.proven",
+        MontanaNodes.epochKey,   // the age of the doors list this phone learned (17887): the network teaches the next device again
         "mt.notify.asked",
         MontanaDiagConsent.key,   // this device's yes to its diary leaving it (08.10.2026): each device answers for itself
         MontanaDiagConsent.askedKey,   // the build this device last asked that yes for (11.10.2026): each device is asked itself

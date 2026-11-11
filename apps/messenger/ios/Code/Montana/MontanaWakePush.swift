@@ -188,7 +188,8 @@ enum MontanaWakePush {
             if let (d, resp) = try? await URLSession.shared.data(for: req),   // SERVER-DEBT-ACK: the accelerator node (rung 4)
                (resp as? HTTPURLResponse)?.statusCode == 200,
                let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
-               let doors = j["doors"] as? [String], !doors.isEmpty {
+               let doors = j["doors"] as? [String], !doors.isEmpty,
+               MontanaNodes.admits(epoch: (j["epoch"] as? Int) ?? 0) {   // no list older than one this phone holds (17887)
                 MontanaNodes.learn(doors.joined(separator: "\n"))
                 // The network names its MACHINES too (15.22): which doors are one node. Absent in
                 // an older node's answer — then the client groups by what the handshakes taught it.
@@ -675,7 +676,7 @@ enum MontanaWakePush {
         sigQ.async {
             guard terminal || !MontanaCall.endedHere(epoch: epoch) else { return }
             let route = callRoute(conv, epoch: epoch)
-            if nodeOnly { route.avoidNear() }
+            if nodeOnly { route.avoidPipe() }
             if terminal { route.ending(now: ProcessInfo.processInfo.systemUptime) }
             guard route.enqueue(id: id, payload: payloadB64, now: ProcessInfo.processInfo.systemUptime, terminal: terminal) else {
                 MontanaTrace.mark("call_noroute", "signal queue full epoch=\(String(epoch.prefix(8)))")
@@ -699,7 +700,10 @@ enum MontanaWakePush {
         if let route = callRoutes[key] { return route }
         let first = callReadDoors[conv] ?? signalDoor(for: conv)
         let near = MontanaPhoneNode.shared.hasStandingNearChannel(conv) ? [MTCallRoute.nearDoor] : []
-        let doors = (near + [first] + callDoors(for: "signal").filter { $0 != first }).filter { !$0.isEmpty }
+        // The node's line stands last: a copy of every packet rides it beside the HTTPS doors, and when those are dead
+        // the peer's receipt by the line turns the route onto it (P-3, 09.11.2026).
+        let line = MontanaNodes.liveNodes > 0 ? [MTCallRoute.lineDoor] : []
+        let doors = (near + [first] + callDoors(for: "signal").filter { $0 != first } + line).filter { !$0.isEmpty }
         let route = MTCallRoute(conv: conv, epoch: epoch, doors: doors,
                                 life: MontanaCall.callLifeS, now: ProcessInfo.processInfo.systemUptime)
         callRoutes[key] = route
@@ -729,7 +733,7 @@ enum MontanaWakePush {
         let living = MontanaCall.epochSnapshot
         let route = routes.first { living.contains($0.epoch) } ?? (routes.count == 1 ? routes.first : nil)
         if callReadDoors[conv] == door {
-            callReadDoors[conv] = route?.door == MTCallRoute.nearDoor ? nil : route?.door
+            callReadDoors[conv] = route?.door.flatMap { MTCallRoute.isPipe($0) ? nil : $0 }
         }
     }
     private static func driveCallRoute(_ route: MTCallRoute) {
@@ -737,7 +741,7 @@ enum MontanaWakePush {
                                       reading: route.door.map { sigInFlight[route.conv]?.contains($0) == true } ?? false),
               let door = route.door else { return }
         let epochs = MontanaCall.epochSnapshot
-        if !route.isEnding, door != MTCallRoute.nearDoor, (epochs.isEmpty || epochs.contains(route.epoch)), callReadDoors[route.conv] != door {
+        if !route.isEnding, !MTCallRoute.isPipe(door), (epochs.isEmpty || epochs.contains(route.epoch)), callReadDoors[route.conv] != door {
             callReadDoors[route.conv] = door
             // A node may already have consumed its reply. Finish the standing read before
             // moving to this door; a missing receipt cannot cancel the read carrying it.
@@ -767,11 +771,13 @@ enum MontanaWakePush {
     private static func sendCallPacket(_ conv: String, epoch: String, payload: String, door: String,
                                        terminal: Bool = false,
                                        completion: ((Int) -> Void)? = nil) {
-        if door == MTCallRoute.nearDoor {
+        if MTCallRoute.isPipe(door) {
+            // The pipe's two doors: near -- one standing local connection to the peer; line -- the standing channels to the nodes.
             DispatchQueue.main.async {
                 guard terminal || !MontanaCall.endedHere(epoch: epoch) else { completion?(-999); return }
+                let near = door == MTCallRoute.nearDoor
                 let sent = MontanaPhoneNode.shared.sendLetter(to: conv, mid: UUID().uuidString,
-                    text: callSignalMark + payload, standingNearOnly: true) != nil
+                    text: callSignalMark + payload, standingNearOnly: near, standingLineOnly: !near) != nil
                 completion?(sent ? 200 : -1)
             }
         } else {
@@ -1545,6 +1551,7 @@ enum MontanaWakePush {
             MontanaTrace.mark("letter_blob", mid: mid, "the cached reference names a released cargo — a fresh one is sealed")
         }
         guard !Task.isCancelled, await enterBulkLane("put") else { return nil }   // the wait first: a waiting seal holds no bytes
+        if quietCargo, !(await yieldToPerson("seal")) { return nil }   // a state letter's body (a wall page) stands aside unsealed
         var full = Data(mid.utf8); full.append(0); full.append(contentsOf: text.utf8)
         let mk = montanaRandom(32)
         guard let sealed = MontanaDirect.seal(key: [UInt8](mk), full) else { return nil }
@@ -1974,13 +1981,23 @@ enum MontanaWakePush {
     /// copies to the second machine in three and a half minutes -- on the very doors and roads the person's photos came in by.
     /// A copy waits a minute and loses nothing; a picture on screen waits in front of the person. Quiet cargo is the keeping's
     /// own (MTKeeping.lay), said once around the whole lay, and it stands aside while a piece the person waits for is in line.
+    /// THE SERVICE STANDS ASIDE FOR WHAT THE PERSON SENDS AS WELL (10.11.2026, the author's word 18518; T1 15:51Z): the lane
+    /// of the cargo coming in (MTCargoLane) never saw a photo going out, and the wall's pages held the places it needed. A
+    /// quiet put waits here, holding no body, while a piece the person waits for is in line or a put of the person is in
+    /// flight or in line; the rule itself is MTBulkPuts' (personAhead, admits). Quiet are the keeping's lay, the long body
+    /// of a state letter (MontanaDeliveryEngine.attempt -- a wall page) and the diary (MontanaDiagShip.put).
     @TaskLocal static var quietCargo = false
-    private static func yieldToMedia(_ work: String) async -> Bool {
+    fileprivate static func yieldToPerson(_ work: String) async -> Bool {
         var held = false
-        while await MTCargoLane.shared.wanted {
+        while true {
+            let media = await MTCargoLane.shared.wanted
+            var ahead = media
+            if !ahead { ahead = await MTBulkPuts.shared.personAhead }
+            guard ahead else { break }
             if !held {
                 held = true
-                MontanaTrace.markFolded("bulk_lane", "held=media work=\(work)", window: 30, key: "media")
+                let whom = media ? "media" : "put"
+                MontanaTrace.markFolded("bulk_lane", "held=\(whom) work=\(work)", window: 30, key: whom)
             }
             if Task.isCancelled { return false }
             try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -1990,16 +2007,17 @@ enum MontanaWakePush {
 
     static func putBlob(_ bid: String, data: Data, over: Bool = false,
                         cargo: String? = nil, last: Bool = false, assumeAbsent: Bool = false,
-                        bulk: Bool = false) async -> Bool {
+                        bulk: Bool = false, pulse: (@Sendable () -> Void)? = nil) async -> Bool {
         // A CHUNK ALREADY ON THE NODE IS NOT SENT AGAIN (08.09): the face letter to nine
         // correspondences and every retry of it re-uploaded the same 64 KB, twelve times a
         // minute, and a person's 221 KB photo crawled behind them at 94 kbps for nineteen
         // seconds. The name is the content; one small question first, the bytes only when the
         // node lacks them. A chunk walk (uploadChunks) has already asked for its whole batch.
+        let quiet = quietCargo
         if bulk {
             guard await enterBulkLane("put") else { return false }
-            // Before the put takes a place among the few in flight (MTBulkPuts): a copy held there would hold the person's own sends.
-            if quietCargo, !(await yieldToMedia("put")) { return false }
+            // Before the put takes a place among the few in flight (MTBulkPuts): the quiet wait here, where a wait holds no body.
+            if quiet, !(await yieldToPerson("put")) { return false }
         }
         if !over, !assumeAbsent, let have = await blobsPresent([bid]), have.contains(bid) {
             MontanaTrace.markFolded("blob_put", "already on the node id=\(String(bid.prefix(8))) — not sent again", window: 30)
@@ -2007,8 +2025,11 @@ enum MontanaWakePush {
         }
         // THE BODIES THE LANE LETS GO ARE BUILT A FEW AT A TIME (18.10, T1 18:33:05Z): a base64 and a JSON of the piece live
         // for the whole put; hundreds let go in one second asked for gigabytes at once.
-        if bulk { await MTBulkPuts.shared.enter() }
-        defer { if bulk { Task { await MTBulkPuts.shared.leave() } } }
+        // The place is the cargo's own (MTBulkPuts): a piece waits behind its own cargo, never behind another's -- and a put
+        // without a cargo mark stands with its own kind: the person's under the empty key, the service's under its own.
+        let place = cargo ?? (quiet ? MTBulkPuts.service : "")
+        if bulk { await MTBulkPuts.shared.enter(place, quiet: quiet) }
+        defer { if bulk { Task { await MTBulkPuts.shared.leave(place, quiet: quiet) } } }
         let t0 = Date()
         defer {
             let ms = max(1, Int(Date().timeIntervalSince(t0) * 1000))
@@ -2028,10 +2049,10 @@ enum MontanaWakePush {
             if Task.isCancelled { why = "cancelled"; break }
             if bulk, !(await enterBulkLane("put")) { why = "cancelled"; break }
             // The doors are read AT EVERY ATTEMPT, never once per chunk: a door that died between
-            // two attempts is no longer first.
-            let doors = bases(for: "blob").filter { !doorResting($0) }.map { ($0, $0 + "/blob-put") }   // SERVER-DEBT-ACK: the accelerator node (rung 4)
+            // two attempts is no longer first. A resting door stands last in the list, not outside it (restingLast).
+            let doors = restingLast(bases(for: "blob")).map { ($0, $0 + "/blob-put") }   // SERVER-DEBT-ACK: the accelerator node (rung 4)
             guard !doors.isEmpty else { why = "no live door"; break }
-            let (code, w) = await hedgedPut(doors, payload: payload, bytes: data.count, bid: bid, bulk: bulk)
+            let (code, w) = await hedgedPut(doors, payload: payload, bytes: data.count, bid: bid, bulk: bulk, pulse: pulse)
             if code == 200 {
                 // A LETTER'S CARGO LIES ON EVERY MACHINE (20.10, T1 16:53Z). A piece lay on the one machine its put reached,
                 // and the sender dropped its crate at that 200. Two photos of the iPhone 15 landed on the ams node at 16:47:11Z;
@@ -2057,23 +2078,27 @@ enum MontanaWakePush {
     /// elected door could not be reached through that exit (dial_timeout ifs=tunnel), the signal
     /// lane declared it dead 3 s later and moved on, and the chunk kept waiting at it until the 45 s
     /// silence watchdog gave the photo up, with a living door beside it the whole time. Now the chunk
-    /// goes to the next live door as soon as the first is declared dead by ANY road, or has not
-    /// answered in half its own deadline. The first 200 wins and the rest are cancelled. A put is
-    /// idempotent by its name, and a receiver asks every door at once, so the chunk found on a
-    /// second node is the same chunk. A healthy slow link is never uploaded twice: it neither dies
-    /// nor goes silent past half its deadline. A 200 names the door that took the piece -- the copy goes to the other machines.
+    /// goes to the next door as soon as the first is declared dead by ANY road, or falls silent. The
+    /// first 200 wins and the rest are cancelled. A put is idempotent by its name, and a receiver asks
+    /// every door at once, so the chunk found on a second node is the same chunk. A healthy slow link
+    /// is never uploaded twice: it neither dies nor stops moving bytes. A 200 names the door that took
+    /// the piece -- the copy goes to the other machines.
+    /// A PIECE DOES NOT STAND ON A SILENT DOOR (10.11.2026, T1 15:51Z). Silence was «half the piece's deadline» by the clock,
+    /// and nothing ended the attempt when no door was left to call: the last door of four took no byte and held three pieces
+    /// for 56 s, while a door that had come back stood unasked. Silence is read from the bytes (MTPutPulse); and when nobody
+    /// is left to call and no door in flight moves a byte, the attempt ends at once -- putBlob reads the doors again.
     private static func hedgedPut(_ doors: [(door: String, road: String)], payload: Data, bytes: Int, bid: String,
-                                  bulk: Bool) async -> (Int, String) {
+                                  bulk: Bool, pulse: (@Sendable () -> Void)? = nil) async -> (Int, String) {
         let deadline = MTNodeWire.cargoTimeoutS(bytes: bytes)   // one deadline rule with the sheet (17.09)
-        let patience = deadline / 2
         enum Step { case answer(String, Int, String); case tick }
         return await withTaskGroup(of: Step.self) { group -> (Int, String) in
             var next = 0, inFlight = 0
-            var started: [String: Date] = [:]
+            var flying: [String: MTPutPulse] = [:]
             func launch() {
                 guard next < doors.count else { return }
                 let (door, road) = doors[next]; next += 1; inFlight += 1
-                started[door] = Date()
+                let beat = MTPutPulse(heard: pulse)
+                flying[door] = beat
                 if next > 1 { MontanaTrace.mark("blob_up", "id=\(String(bid.prefix(8))) next door=\(URL(string: door)?.host ?? "-")") }
                 group.addTask {
                     guard let url = URL(string: road) else { return .answer(door, -1, "bad door") }   // SERVER-DEBT-ACK: the accelerator node (rung 4)
@@ -2082,7 +2107,7 @@ enum MontanaWakePush {
                     req.httpBody = payload
                     req.timeoutInterval = deadline
                     do {
-                        let (_, resp) = try await URLSession.shared.data(for: req)   // SERVER-DEBT-ACK: the accelerator node (rung 4)
+                        let (_, resp) = try await URLSession.shared.data(for: req, delegate: beat)   // SERVER-DEBT-ACK: the accelerator node (rung 4)
                         let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
                         return .answer(door, code, "code \(code)")
                     } catch {
@@ -2098,7 +2123,7 @@ enum MontanaWakePush {
                 switch step {
                 case .answer(let door, let code, let w):
                     inFlight -= 1
-                    started[door] = nil
+                    flying[door] = nil
                     if code == 200 { doorSpoke(door); group.cancelAll(); return (200, door) }
                     if code == -2 { break }   // a lost race says nothing about the door
                     if code == -1 || code >= 500 { baseFailed(door, code: code) } else { doorSpoke(door) }
@@ -2110,10 +2135,18 @@ enum MontanaWakePush {
                         group.cancelAll()
                         return (-2, "held=call")
                     }
-                    // An in-flight door that died by any road's verdict, or overstayed half its
-                    // deadline, calls the next one in. One extra door per second at most: never a storm.
-                    let stale = started.contains { d, t in doorResting(d) || Date().timeIntervalSince(t) > patience }
-                    if stale { launch() }
+                    let silent = flying.filter { $0.value.silent(pieceDeadline: deadline) }.map { $0.key }
+                    if next < doors.count {
+                        // An in-flight door that died by any road's verdict, or moves no byte, calls the
+                        // next one in. One extra door per second at most: never a storm.
+                        if !silent.isEmpty || flying.keys.contains(where: { doorResting($0) }) { launch() }
+                    } else if !flying.isEmpty, silent.count == flying.count {
+                        for d in silent { baseFailed(d) }
+                        let names = silent.map { URL(string: $0)?.host ?? "-" }.sorted().joined(separator: ",")
+                        MontanaTrace.mark("blob_up", "id=\(String(bid.prefix(8))) silent=\(names) — no door left to call, the attempt ends and the doors are read again")
+                        group.cancelAll()
+                        return (-1, "every door in flight is silent")
+                    }
                     if inFlight > 0 { group.addTask { try? await Task.sleep(nanoseconds: 1_000_000_000); return .tick } }
                 }
                 if inFlight == 0 { group.cancelAll(); return last }
@@ -2126,6 +2159,29 @@ enum MontanaWakePush {
     static func doorResting(_ b: String) -> Bool {
         baseLock.lock(); defer { baseLock.unlock() }
         return signalDoorDead[b].map { $0 > Date() } ?? false
+    }
+    /// A RESTING DOOR IS ASKED LAST, NEVER LEFT OUT (10.11.2026, T1 15:51Z; the author's word 18462: a door does not hang
+    /// dead). The cargo road used to drop the resting doors from its list: four doors failed in the two seconds after the
+    /// phone woke -- their connections had died while it was away -- all four rested a minute, and the pieces had «no live
+    /// door» while one of them answered six seconds later. The rest is an order, not an exclusion: the living first, in
+    /// their order, then the resting; the first answer of a resting door forgives it (doorSpoke).
+    static func restingLast(_ doors: [String]) -> [String] {
+        doors.filter { !doorResting($0) } + doors.filter { doorResting($0) }
+    }
+
+    /// A MACHINE'S DOOR FOR ITS COPY OF A PIECE (11.11.2026, T1 10.11.2026 20:32:19Z; the author's word 18526: «the voice to
+    /// Ruslan did not leave for a long time -- fix it at the root»). A voice of 409 KB was put 56 s after a change of the
+    /// network had laid a door to rest; the copy's list left the resting doors out, the second machine was passed over without
+    /// a word, and the piece lay on one machine alone -- the receiver was answered «no such cargo» until the sender came
+    /// forward 52 minutes later, verified the loss and laid the piece again (cargo_repair 21:24:33Z, and only then «copy to=mow»
+    /// in the diary). A machine is never passed over for want of a door in the list: a resting door is asked last, and when
+    /// the list holds no door of the machine at all (its doors unverified since the launch) any known door of it not proven
+    /// to lack the store takes the copy -- the system carries the file, now or when the door answers.
+    static func copyDoor(of hosts: Set<String>) -> String? {
+        let its: (String) -> Bool = { URL(string: $0)?.host.map(hosts.contains) == true }
+        if let d = restingLast(bases(for: "blob")).first(where: its) { return d }
+        let known = verifyLock.withLock { capsOf }
+        return candidates().first { its($0) && known[$0]?.contains("blob") != false }
     }
 
     /// «No answer» and «the node answered NO» are different things, and mixing them means being
@@ -2202,7 +2258,9 @@ enum MontanaWakePush {
     // launching interactive uploads and hands the remaining chunks to the background session.
     static let handOffFlag = MTAtomicFlagSet()
 
+    /// `alive` hears every byte that leaves (MTPutPulse); `progress` hears the pieces the node confirmed.
     static func uploadChunks(_ ref: [String: Any], letter: String? = nil,
+                             alive: (@Sendable () -> Void)? = nil,
                              progress: (@Sendable (Int, Int) -> Void)? = nil) async -> Bool {
         guard await enterBulkLane("chunks") else { return false }
         let bids = (ref["chunks"] as? [[String: Any]] ?? []).compactMap { $0["bid"] as? String }
@@ -2286,7 +2344,7 @@ enum MontanaWakePush {
                             return (bid, true)
                         }
                         let ok = await putBlob(bid, data: sealed, cargo: cargoMark, last: bid == lastBid,
-                                               assumeAbsent: true, bulk: true)
+                                               assumeAbsent: true, bulk: true, pulse: alive)
                         if ok {
                             MontanaTrace.mark("blob_up", "id=\(String(bid.prefix(8))) bytes=\(sealed.count)")
                             MontanaBlobStore.drop([bid])
@@ -2294,7 +2352,7 @@ enum MontanaWakePush {
                         return (bid, ok)
                     }
                 }
-                for _ in 0..<min(3, batch.count) { launch(next); next += 1 }
+                for _ in 0..<min(MTBulkPuts.width, batch.count) { launch(next); next += 1 }
                 var out: [(String, Bool)] = []
                 var okLocal = 0
                 for await r in group {
@@ -2376,6 +2434,13 @@ enum MontanaWakePush {
         guard !letter.isEmpty else { return [] }
         ledgerLock.lock(); defer { ledgerLock.unlock() }
         return loadLedger().compactMap { b, letters in letters.contains(letter) ? b : nil }
+    }
+
+    /// Which of these chunks no letter rides at this moment: the ledger's word, asked as a removal leaves (dropBids).
+    static func unridden(_ bids: [String]) -> [String] {
+        ledgerLock.lock(); defer { ledgerLock.unlock() }
+        let m = loadLedger()
+        return bids.filter { m[$0] == nil }
     }
 
     /// The letter has ended — delivered or failed. Returns the chunks referenced by NO letter
@@ -2523,31 +2588,43 @@ enum MontanaWakePush {
         UserDefaults.standard.set(a, forKey: unsentDropKey)
     }
 
+    /// A CHUNK A LETTER RIDES AGAIN STAYS ON THE NODE (11.11.2026, T1 10.11.2026 21:24:35Z; the author's word 18526). A chunk
+    /// is named by its content, so a file laid again takes the very names its lost cargo had -- and a removal written before
+    /// that walks the doors one after another, fifteen seconds each, or waits on disk for the next return to the person
+    /// (flushPendingDrops): a voice rebuilt at 21:24:34Z was taken off both machines one second later by the removal of
+    /// its own earlier loss. The list is the releaser's word about the past; the ledger is asked again as every request
+    /// leaves (unridden), and a chunk it names is no longer anybody's to remove -- the end of its new letter frees it.
     @discardableResult
     static func dropBids(_ bids: [String]) async -> Bool {
         guard !bids.isEmpty else { return true }
         // THE DROP GOES TO EVERY STORE (1638): the chunks lie on the one store the upload reached,
         // and a drop sent to another store was a free no-op that left them for the seven-day term.
         let doors = electedFirst(orderedBases(for: "blob"))   // every store that names the capability, the elected first
-        var landed = false, dropped = 0
+        var landed = false, dropped = 0, free = bids
         for b in doors {
-            guard let url = URL(string: b + "/blob-drop") else { continue }   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
+            free = unridden(free)
+            guard !free.isEmpty, let url = URL(string: b + "/blob-drop") else { continue }   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
             var req = URLRequest(url: url); req.httpMethod = "POST"   // SERVER-DEBT-ACK: the accelerator node (rung 4)
             req.setValue("application/json", forHTTPHeaderField: "content-type")
             req.timeoutInterval = 15
-            req.httpBody = try? JSONSerialization.data(withJSONObject: ["bids": bids])
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["bids": free])
             if let (d, resp) = try? await URLSession.shared.data(for: req),   // SERVER-DEBT-ACK
                (resp as? HTTPURLResponse)?.statusCode == 200,
                let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {
                 landed = true; dropped += o["dropped"] as? Int ?? 0
             }
         }
+        free = unridden(free)
+        if free.count < bids.count {
+            MontanaTrace.mark("blob_drop", "kept n=\(bids.count - free.count) of \(bids.count) — a letter rides them again")
+        }
         if landed {
             MontanaTrace.mark("blob_drop", "removed n=\(dropped) of \(bids.count) doors=\(doors.count)")
             return true
         }
-        rememberDrops(bids)
-        MontanaTrace.mark("blob_drop", "did not land n=\(bids.count) — deferred, re-sending later")
+        guard !free.isEmpty else { return true }
+        rememberDrops(free)
+        MontanaTrace.mark("blob_drop", "did not land n=\(free.count) — deferred, re-sending later")
         return false
     }
 
@@ -4105,7 +4182,9 @@ enum MontanaWakePush {
                 await MainActor.run {
                     E2E.notePresenceCapable(chat)
                     E2E.heardCapable(from: chat, payload: payload)   // what its build reads, learned from the stamp as its presence is (25.09)
+                    #if !MONTANA_MESSENGER
                     E2E.heardCoins(from: chat, payload: payload, at: at)   // the balance the last word tells (04.10, the wallet's live top)
+                    #endif
                     E2E.heardLevel(from: chat, payload: payload, at: at)   // the Global Level the last word tells, or its withdrawal (11.10)
                     MontanaPresencePrivacy.notePeerHides(chat, payload.dropFirst(1).contains("h"), at: at)
                     if let a = payload.firstIndex(of: "@") { notePeerDoor(chat, host: String(payload[payload.index(after: a)...])) }
@@ -4134,7 +4213,7 @@ enum MontanaWakePush {
         guard !routes.isEmpty else { return [callReadDoors[conv] ?? signalDoor(for: conv)] }
         // Receiving has no election: the peer may still use any of these existing nodes,
         // including an older build. Sending owns one door and copies each packet to the rest.
-        return Array(Set(routes.flatMap { $0.doors }.filter { $0 != MTCallRoute.nearDoor })).sorted()
+        return Array(Set(routes.flatMap { $0.doors }.filter { !MTCallRoute.isPipe($0) })).sorted()
     }
     private static func fetchSignals(_ conv: String, door: String) {
         // SILENT-OK: this exact mailbox already has a standing question.
@@ -4479,17 +4558,33 @@ enum MontanaWakePush {
     }
 
     /// Open a call envelope: the pipe walk + windows. Returns the caller's address and (if present) the offer.
-    static func openRingEnvelope(_ sealed: Data) -> RingPush? {
-        for conv in MTPipeBook.all() {
-            guard let secret = MTPipeBook.key(for: conv) else { continue }
-            if let ring = openRing(sealed, conv: conv, secret: secret) { return ring }
+    /// A RING THAT CAME LATE OPENS BY THE MINUTE IT WAS SENT IN (11.11.2026, iPhone 15 10.11.2026 15:03:36Z; the author's word
+    /// 18413: «I could not get through -- if the fault is ours, fix it at the root»). A call envelope is sealed with the key
+    /// of its minute (MTPipe.sealBody) and was opened by this phone's clock alone: seven wakes the system handed over
+    /// 137-171 s late opened for no pipe (wakepush_vrx peer=nil), so the call that had come had no caller -- it ended
+    /// «failed» from «Montana», and the phone's own list held no missed call of the person. The node stamps the moment it
+    /// sent the wake («at»): a wake of another minute is tried at that minute too, as a letter from the box is read by the
+    /// node's minute (MTPipe.openBoxed). The stamp only chooses the minute -- the seal still proves the pipe, and the
+    /// call's own age inside it (born) still buries it as stale (MTVoipReport.expired).
+    static func openRingEnvelope(_ sealed: Data, sent: Int? = nil) -> RingPush? {
+        let now = Date()
+        var moments = [now]
+        if let sent, 0 < sent {
+            let then = Date(timeIntervalSince1970: TimeInterval(sent))
+            if MTPipe.window(then) != MTPipe.window(now) { moments.append(then) }
+        }
+        for at in moments {
+            for conv in MTPipeBook.all() {
+                guard let secret = MTPipeBook.key(for: conv) else { continue }
+                if let ring = openRing(sealed, conv: conv, secret: secret, at: at) { return ring }
+            }
         }
         return nil
     }
 
     /// One pipe's try at a call envelope: the walk above and the ring at the card (openCardRing) open it alike.
-    private static func openRing(_ sealed: Data, conv: String, secret: MTPipeKey) -> RingPush? {
-        guard let plain = MTPipe.openBody(sealed, sharedSecret: secret),
+    private static func openRing(_ sealed: Data, conv: String, secret: MTPipeKey, at: Date = Date()) -> RingPush? {
+        guard let plain = MTPipe.openBody(sealed, sharedSecret: secret, at: at),
               let sep1 = plain.firstIndex(of: 0),
               let word = String(data: plain[..<sep1], encoding: .utf8),
               word == "ring" || word == "answ" else { return nil }
@@ -4633,13 +4728,17 @@ final class MontanaBlobUpload: NSObject, URLSessionDataDelegate {
     /// no body is held in memory, and it lands even after the process dies.
     func mirror(bid: String, body: Data, besides taken: String) {
         let takenHost = URL(string: taken)?.host
-        let doors = MontanaWakePush.bases(for: "blob").filter { !MontanaWakePush.doorResting($0) }
         for m in MontanaNodes.machines() {
             let hosts = Set(m.doors.map { $0.host })
             if let takenHost, hosts.contains(takenHost) { continue }
-            guard let door = doors.first(where: { URL(string: $0)?.host.map(hosts.contains) == true }),
-                  let url = URL(string: door + "/blob-put") else { continue }   // SERVER-DEBT-ACK: the accelerator node (rung 4)
-            ride(bid + "-" + m.id.filter { $0.isLetter || $0.isNumber }, body: body, to: url)
+            let name = bid + "-" + m.id.filter { $0.isLetter || $0.isNumber }
+            // A machine is never passed over in silence (copyDoor says why): its door is the one owner's to name, and the one
+            // case with no door at all is a line of the diary.
+            guard let door = MontanaWakePush.copyDoor(of: hosts),
+                  let url = URL(string: door + "/blob-put") else {   // SERVER-DEBT-ACK: the accelerator node (rung 4)
+                MontanaTrace.mark("blob_bgup", "no door \(Self.label(name))"); continue
+            }
+            ride(name, body: body, to: url)
         }
     }
 
@@ -4752,7 +4851,13 @@ enum MontanaDiagConsent {
     /// day: an alert standing over a ring made the call impossible to take (MontanaApp.askDiagnosticsWhenFree).
     static let askedKey = "diagAskedBuild"
     private static var build: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "" }
+    #if DEBUG
     static var shouldAsk: Bool { !on && UserDefaults.standard.string(forKey: askedKey) != build }
+    #else
+    /// ONCE PER INSTALL outside Debug (App Review 5.1.1(iv), decision 743): a no stands until the person turns the switch in
+    /// Settings, Privacy; an update does not ask again.
+    static var shouldAsk: Bool { !on && UserDefaults.standard.string(forKey: askedKey) == nil }
+    #endif
     static func answer(_ yes: Bool) {
         UserDefaults.standard.set(yes, forKey: key)
         UserDefaults.standard.set(build, forKey: askedKey)
@@ -4818,6 +4923,12 @@ enum MontanaDiagShip {
         // carry packets to it went MUTE as a witness: the very device with the broken road was
         // the one whose journal never arrived (measured 26.08 19:38: the app open, the diag
         // dead for four minutes, while the door beside was alive).
+        // THE DIARY IS QUIET CARGO (the author's word 18518, 10.11.2026): it takes its place in the one lane of the puts
+        // (MTBulkPuts) and starts only while no put of the person is in flight or in line. The lines wait on the phone
+        // and lose nothing: a pass that stood aside is the next pass's work.
+        guard await MontanaWakePush.yieldToPerson("diag") else { return false }
+        await MTBulkPuts.shared.enter(MTBulkPuts.service, quiet: true)
+        defer { Task { await MTBulkPuts.shared.leave(MTBulkPuts.service, quiet: true) } }
         var lastCode = -1
         for b in MontanaWakePush.bases(for: "diag") {
             guard let u = URL(string: b + "/diag-put") else { continue }   // SERVER-DEBT-ACK: the accelerator node (rung 4), not the delivery road
@@ -4829,7 +4940,7 @@ enum MontanaDiagShip {
             req.timeoutInterval = MTNodeWire.cargoTimeoutS(bytes: data.count)
             req.httpBody = data
             req.networkServiceType = .background   // a live conversation and a letter take the wire first
-            guard let (_, resp) = try? await URLSession.shared.data(for: req),   // SERVER-DEBT-ACK: the accelerator node (rung 4)
+            guard let (answer, resp) = try? await URLSession.shared.data(for: req),   // SERVER-DEBT-ACK: the accelerator node (rung 4)
                   let code = (resp as? HTTPURLResponse)?.statusCode else {
                 MontanaWakePush.baseFailed(b, code: -1)
                 lastCode = -1
@@ -4839,6 +4950,19 @@ enum MontanaDiagShip {
             guard code == 200 else {
                 MontanaWakePush.baseFailed(b, code: code)   // a refusal is an answer; only 5xx counts as silence
                 continue
+            }
+            // LANDED MEANS EVERY LINE LANDED (the author's word 17968, 09.11.2026). A node's 200 with «dropped» -- its day cap of
+            // 22.1 -- was read as landed: the watermark went past lines the node had thrown away and the finished generation was
+            // let go, so T1's 18:21-18:37 UTC of 09.11 is gone on both sides. The answer is read: ok, nothing lost, as many
+            // lines as were sent. Anything else keeps the lines on the phone for the next pass; the door is not blamed -- it answered.
+            let o = (try? JSONSerialization.jsonObject(with: answer)) as? [String: Any] ?? [:]
+            let ok = (o["ok"] as? Bool) == true
+            let kept = o["lines"] as? Int ?? lines.count
+            let lost = o["dropped"] as? Int ?? 0
+            guard ok, lost == 0, kept == lines.count else {
+                MontanaTrace.markFolded("diag_ship", "refused=kept-nothing ok=\(ok ? 1 : 0) kept=\(kept) lost=\(lost) of=\(lines.count)", window: 300)
+                notePutOutcome(landed: false)
+                return false
             }
             MontanaWakePush.learnSkew(from: resp)   // one owner of the skew ([C-1])
             notePutOutcome(landed: true)
@@ -5550,8 +5674,10 @@ struct MTClientRelease: Codable, Equatable {
         guard let channel = await installedChannel() else { refuse("ask", channelMiss); return }
         if latest == nil, let data = UserDefaults.standard.data(forKey: Self.cacheKey),
            let kept = MTClientRelease.read(data, bundle: bundle, channel: channel) { accept(kept) }
-        // Public metadata only; the site's release document has no account or device identifiers.
-        let site = "https://montana.xxx/updates/" + bundle + "-" + channel + ".json"
+        // Public metadata only; the site's release document has no account or device identifiers. The site is the edition's own
+        // (MTEdition.site, the one owner -- article 15): the Messenger asks montana.one, the Protocol montana.xxx; both serve
+        // /updates (build/messenger of the site holds it, 10.11.2026). A miss is never shown: the nodes are asked next, then one refusal line.
+        let site = MTEdition.site + "/updates/" + bundle + "-" + channel + ".json"
         var misses: [String] = []
         guard let siteMiss = await ask(site, channel: channel) else { lastAsked = Date(); return }
         misses.append(siteMiss)
@@ -5634,6 +5760,13 @@ enum MontanaRelease {
 // this object owns only the recipient receipt and the choice of the existing node lane.
 final class MTCallRoute {
     static let nearDoor = "near"
+    // THE NODE'S LINE IS A DOOR (OZ 1 P-3, 09.11.2026 16:47 UTC: the iPhone 17 heard T1's offer by the Noise line of a node
+    // while every HTTPS door was dead, and its receipt went nowhere -- the line had no door of its own, the word was filed
+    // as «near», and the sender threw the receipt away and beat on the dead doors, 94 sig_tx refusals in a day). The line
+    // is the same sealed letter under the pipe label, laid on the standing channels to the nodes alone. Near and line are
+    // the two doors of the PIPE: a word that must never reach an old build's epoch-blind pipe (nodeOnly) avoids both.
+    static let lineDoor = "line"
+    static func isPipe(_ door: String) -> Bool { door == nearDoor || door == lineDoor }
     struct Packet {
         let id: String
         let payload: String
@@ -5660,21 +5793,22 @@ final class MTCallRoute {
     private var sendingGeneration = 0
     private var sendingDoor: String?
     private var retiredWrite: (id: String, door: String)?
-    private var allowsNear = true
+    private var allowsPipe = true
     private var heardDoor: (door: String, legacy: Bool)?
     static let receiptWait: TimeInterval = 2
     var isEnding: Bool { endsAt != nil }
     var door: String? {
-        guard doors.indices.contains(index), allowsNear || doors[index] != Self.nearDoor else { return nil }
+        guard doors.indices.contains(index), allowsPipe || !Self.isPipe(doors[index]) else { return nil }
         return doors[index]
     }
     var needsWake: Bool { legacy || !packets.isEmpty }
     // Every other node holds the same packet at once (24.10.2026 16:17 UTC: the owned door was dead and
     // held each packet five seconds while the peer read another node). The receiver applies a packet once
-    // by its id; the authenticated local connection is never doubled onto the nodes.
+    // by its id; the authenticated local connection is never doubled onto the nodes. The node's line is one
+    // more copy beside the HTTPS doors -- unless the route avoids the pipe (nodeOnly).
     var echoDoors: [String] {
         guard let door, door != Self.nearDoor else { return [] }
-        return doors.filter { $0 != door && $0 != Self.nearDoor }
+        return doors.filter { $0 != door && $0 != Self.nearDoor && (allowsPipe || $0 != Self.lineDoor) }
     }
 
     init(conv: String, epoch: String, doors: [String], life: TimeInterval, now: TimeInterval) {
@@ -5728,7 +5862,7 @@ final class MTCallRoute {
                 // does not prove it reads A. Carry this same packet sequentially to every
                 // existing node; the authenticated local connection needs no such discovery.
                 if door == Self.nearDoor { packets.remove(at: i) }
-                else if let next = doors.firstIndex(where: { $0 != Self.nearDoor && !packets[i].acceptedDoors.contains($0) }) {
+                else if let next = doors.firstIndex(where: { $0 != Self.nearDoor && (allowsPipe || $0 != Self.lineDoor) && !packets[i].acceptedDoors.contains($0) }) {
                     index = next; packets[i].acceptedAt = nil
                 } else { packets.remove(at: i) }
             } else { packets[i].acceptedAt = now }
@@ -5748,7 +5882,7 @@ final class MTCallRoute {
         return true
     }
     func heard(door: String, legacy: Bool) {
-        guard allowsNear || door != Self.nearDoor, let i = doors.firstIndex(of: door) else { return }
+        guard allowsPipe || !Self.isPipe(door), let i = doors.firstIndex(of: door) else { return }
         // A real peer word proves a usable node now. Do not wait five seconds for an old
         // HTTP request before sending ringing/answer there. At most one retiring request
         // may stand beside the active one; its immutable callback owns no new-route state.
@@ -5769,7 +5903,7 @@ final class MTCallRoute {
         if self.door == door { proven = true; misses = 0; self.legacy = legacy }
     }
     private func selectHeard(_ door: String) {
-        guard let i = doors.firstIndex(of: door), allowsNear || door != Self.nearDoor else { return }
+        guard let i = doors.firstIndex(of: door), allowsPipe || !Self.isPipe(door) else { return }
         if index != i {
             index = i
             for j in packets.indices { packets[j].acceptedAt = nil }
@@ -5793,31 +5927,103 @@ final class MTCallRoute {
         packets.removeAll { !$0.terminal }
         if endsAt == nil { endsAt = now + min(10, life) }
     }
-    func avoidNear() {
-        let wasNear = door == Self.nearDoor
-        allowsNear = false
-        if wasNear { pathChanged(); advance() }
+    func avoidPipe() {
+        let wasPipe = door.map(Self.isPipe) ?? false
+        allowsPipe = false
+        if wasPipe { pathChanged(); advance() }
     }
     private func advance() {
         if !doors.isEmpty {
             index = (index + 1) % doors.count
-            if !allowsNear, doors[index] == Self.nearDoor { index = (index + 1) % doors.count }
+            // The two pipe doors meet at the wrap (the line stands last, near first): a route that avoids the pipe steps over both.
+            var steps = 0
+            while !allowsPipe, Self.isPipe(doors[index]), steps < doors.count { index = (index + 1) % doors.count; steps += 1 }
         }
         proven = false; misses = 0
     }
 }
 
-/// THE BULK PUTS IN FLIGHT FOR THE WHOLE PHONE: a few, the rest wait in the order they came (MontanaWakePush.putBlob).
+/// THE BULK PUTS IN FLIGHT: A PLACE BELONGS TO A CARGO, AND THE PERSON GOES FIRST (10.11.2026, T1 15:51Z; the author's words
+/// 18462, 18475, 18485, 18518). The lane was one for the whole phone -- three places, in the order of coming: three pieces
+/// of 836 KB -- pages of the wall, carried to each visitor as a long letter -- stood on a silent door for 56 s, and a photo
+/// sent that second waited behind them until its watchdog gave it up. A cargo now has `width` places of its own and waits
+/// for nobody but itself; the phone holds `whole` bodies at once (a body lives in memory for the whole put -- putBlob says
+/// why), and a freed place goes to the waiting cargo with the fewest in flight, the first in line of it. THE SERVICE IS
+/// QUIET, AND THIS ACTOR IS THE ONE OWNER OF WHAT THAT MEANS FOR A PUT: a quiet put (MontanaWakePush.quietCargo -- the
+/// keeping's copy, the long body of a state letter such as a wall page, the diary) starts only while no put of the person
+/// is in flight or in line, and all the quiet together hold `width` places -- the person's put never finds the lane taken
+/// by the service. Puts that carry no cargo mark share one key: the person's the empty one, the service's `service`, so
+/// the two share no place. Guard: tools/mt-cargo-lane-check.py.
 actor MTBulkPuts {
     static let shared = MTBulkPuts()
+    /// The places of one cargo: the window of a chunk walk (uploadChunks reads it here, never a number of its own) -- and
+    /// of all the quiet puts together.
     static let width = 3
-    private var running = 0
-    private var waiting: [CheckedContinuation<Void, Never>] = []
-    func enter() async {
-        if running < Self.width { running += 1; return }
-        await withCheckedContinuation { c in waiting.append(c) }
+    /// The bodies alive at once on the whole phone.
+    static let whole = 9
+    /// The key of the service's puts that carry no cargo mark of their own.
+    static let service = "service"
+    private var running: [String: Int] = [:]
+    private var flying = 0
+    private var hushed = 0
+    private var waiting: [(cargo: String, quiet: Bool, go: CheckedContinuation<Void, Never>)] = []
+    /// A put of the person is in flight or in line: the quiet stand aside (MontanaWakePush.yieldToPerson waits on it).
+    var personAhead: Bool { hushed < flying || waiting.contains { !$0.quiet } }
+    func enter(_ cargo: String, quiet: Bool) async {
+        if admits(cargo, quiet) { take(cargo, quiet); return }
+        await withCheckedContinuation { c in waiting.append((cargo, quiet, c)) }
     }
-    func leave() {
-        if waiting.isEmpty { running -= 1 } else { waiting.removeFirst().resume() }
+    func leave(_ cargo: String, quiet: Bool) {
+        flying -= 1
+        if quiet { hushed -= 1 }
+        let left = running[cargo, default: 1] - 1
+        running[cargo] = 0 < left ? left : nil
+        while let i = nextInLine() {
+            let w = waiting.remove(at: i)
+            take(w.cargo, w.quiet); w.go.resume()
+        }
+    }
+    private func take(_ cargo: String, _ quiet: Bool) {
+        flying += 1; running[cargo, default: 0] += 1
+        if quiet { hushed += 1 }
+    }
+    private func admits(_ cargo: String, _ quiet: Bool) -> Bool {
+        guard flying < Self.whole, running[cargo, default: 0] < Self.width else { return false }
+        return !quiet || (hushed < Self.width && !personAhead)
+    }
+    /// The first in line of the cargo with the fewest in flight, among the puts the lane admits now. While a put of the
+    /// person waits no quiet one is admitted, so a freed place never goes to the service past the person.
+    private func nextInLine() -> Int? {
+        var best: Int? = nil
+        for (i, w) in waiting.enumerated() where admits(w.cargo, w.quiet) {
+            if let b = best, running[waiting[b].cargo, default: 0] <= running[w.cargo, default: 0] { continue }
+            best = i
+        }
+        return best
+    }
+}
+
+/// THE PULSE OF ONE PUT (10.11.2026): the moment the system last handed a byte of the body to the wire. A put used to be
+/// judged by the clock of the whole piece (five seconds and a second for every 16 KB -- 56 s for 836 KB), so a door that
+/// never took a byte held the piece for all of it. Silence is read from the bytes: while the body is leaving, no byte for
+/// the one post deadline is silence; once the whole body is handed over, the answer has half the piece's own deadline --
+/// the tail may still be leaving the system's buffer. The same bytes are the upload's sign of life (ChatStore's watchdog).
+final class MTPutPulse: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var at = Date()
+    private var whole = false
+    private let heard: (@Sendable () -> Void)?
+    init(heard: (@Sendable () -> Void)?) { self.heard = heard }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
+                    totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        lock.lock()
+        at = Date(); whole = totalBytesExpectedToSend > 0 && totalBytesSent >= totalBytesExpectedToSend
+        lock.unlock()
+        heard?()
+    }
+    func silent(pieceDeadline: TimeInterval) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        let patience = whole ? max(MTNodeWire.postTimeoutS, pieceDeadline / 2) : MTNodeWire.postTimeoutS
+        return Date().timeIntervalSince(at) > patience
     }
 }

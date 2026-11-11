@@ -366,14 +366,15 @@ final class MontanaSliderView: UIControl, MTHorizontalOwning {
 /// line under a track's name no longer says (29.09 ~23:20) live here -- a letter's chat, a post of the feed, a folder lent
 /// from the phone. One owner of the choice: which tracks the playlist shows, and which it plays through.
 enum MTTrackSource: Hashable {
-    case all, chats, folders
+    case all, chats
     #if !MONTANA_MESSENGER
+    case folders   // the folders lent on the music page: the Protocol's alone (decision 793, 11.11.2026)
     case walls   // the feed's and my wall's posts (cut C6: the Protocol's alone)
     #endif
     case chat(String)   // one chat, by its conversation's name
     static func of(_ t: MusicTrack) -> MTTrackSource {
-        if MTMusicFolders.isLent(t.file) { return .folders }
         #if !MONTANA_MESSENGER
+        if MTMusicFolders.isLent(t.file) { return .folders }
         if t.inPost { return .walls }
         #endif
         return .chat(t.chat)
@@ -421,6 +422,7 @@ extension MTTrackSource {
     }
 }
 
+#if !MONTANA_MESSENGER   // the music page is the Protocol's alone (decision 793)
 /// THE TRACK'S PLACE, ASKED OF THE MUSIC PAGE (the author's word 01.10 00:44: «the track's number opens the page where it plays and
 /// centres the visible area on that track, on any page, so that it stands at the middle of the screen between the player and the
 /// screen's top»): the host turns to the page and asks here; the page's list stands the row there (MTChatListView.focus).
@@ -432,6 +434,7 @@ extension MTTrackSource {
         MontanaTrace.mark("music", "place asked")
     }
 }
+#endif
 
 /// WHETHER THE MINI STANDS UNFOLDED (the author's word 01.10 00:13): one fact for the bar of every page, so the bar on the next
 /// page stands as the person left it.
@@ -638,8 +641,10 @@ struct MTPlayerHead: View {
                 say(player.shuffleOn ? "Shuffle on" : "Shuffle off", glyph: "shuffle")
             }
             Spacer(minLength: 0)
+            #if !MONTANA_MESSENGER   // four buttons in Messenger: the search is the music page's, and that page is the Protocol's alone (decision 793)
             circleButton("magnifyingglass", on: false) { onSearch() }   // the music page's own search
             Spacer(minLength: 0)
+            #endif
             filter
             Spacer(minLength: 0)
             circleButton("square.and.arrow.up", on: false) { if let t = track { MontanaPlayerBar.share(t.file, as: title, from: nil) } }
@@ -675,8 +680,8 @@ struct MTPlayerHead: View {
                 Label("Chats", systemImage: "bubble.left.and.bubble.right").tag(MTTrackSource.chats)
                 #if !MONTANA_MESSENGER
                 if MTApps.wall != nil { Label("Walls", systemImage: "text.below.photo").tag(MTTrackSource.walls) }   // a source only where the wall stands
+                Label("Folders", systemImage: "folder").tag(MTTrackSource.folders)   // lent on the music page, the Protocol's alone (decision 793)
                 #endif
-                Label("Folders", systemImage: "folder").tag(MTTrackSource.folders)
             } label: { EmptyView() }
             .pickerStyle(.inline)
             let each = chats()
@@ -849,7 +854,9 @@ struct MTQueuePage: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { MontanaCloseMark { montanaClose?() } }
                 ToolbarItemGroup(placement: .confirmationAction) {
+                    #if !MONTANA_MESSENGER   // the music page is the Protocol's alone (decision 793)
                     MontanaBarMark(glyph: "music.note.list", label: "Show in playlist") { montanaClose?(); onPlace() }
+                    #endif
                     // THE ARROWS TURN THE ORDER, THE LINES MOVE BY HAND (the author's word 18.10.2026 10:3x UTC: «change the arrow button
                     // to the ordering icon, and to the left of it an arrow button that only turns the tracks' order over»).
                     MontanaBarMark(glyph: "arrow.up.arrow.down", label: "Reverse order") {
@@ -872,8 +879,8 @@ struct MTQueuePage: View {
             case .chat: return first.chatTitle
             #if !MONTANA_MESSENGER
             case .walls: return String(localized: "Walls", bundle: MTLanguage.bundle)
-            #endif
             case .folders: return String(localized: "Folders", bundle: MTLanguage.bundle)
+            #endif
             default: break
             }
         }
@@ -982,7 +989,7 @@ struct MTMusicCover: View {
 /// frame (the author's picture 30.09 00:44). The home screen shows his pixels fitted to the icon's whole canvas (5dd2afeb: along
 /// every ray the rim lands on the icon's shape, nothing redrawn); since 03.11.2026 it is Montana Protocol's coin (the author's word 15590):
 /// his coin whole on the icon's black field, the platform drawing the rim -- that very picture, AppIcon.icon/Assets/logo.png byte for byte
-/// (sha256 05d748cd...), is the one the cover wears (AppIconPicture.imageset), cut by the icon's own shape. One owner of a track's
+/// (sha256 d77ecea7...), is the one the cover wears (AppIconPicture.imageset), cut by the icon's own shape. One owner of a track's
 /// picture for the plate, the playlist's rows and the lock screen; a track's own cover is always first.
 enum MTMusicArt {
     static let asset = MTEdition.cover
@@ -1841,6 +1848,7 @@ extension MTMusicArt {
     static let thumb: UIImage? = icon?.preparingThumbnail(of: CGSize(width: MTTrackMeta.rowSide, height: MTTrackMeta.rowSide))
 }
 
+#if !MONTANA_MESSENGER   // THE MUSIC PAGE IS THE PROTOCOL'S ALONE (decision 793, 11.11.2026: Messenger plays a letter's audio file from its chat, and carries no music page, no list and no folder lent from Files)
 /// THE MUSIC PAGE: every track a row in the mini's form; the track that plays wears the thin blue ring, and the one floating
 /// player of the pages stands at the bottom over the rows, as on the chats and the feed (the author's word 29.09: «the mini
 /// player there must come up, our native one, and everything pinned at the bottom as on every page»).
@@ -1968,6 +1976,7 @@ struct MusicTabView: View {
         }
     }
 }
+#endif
 
 /// THE FOLDERS LENT TO THE MUSIC (the author's word 24.09: «the folders chosen by the plus are not added to Saved
 /// Messages — access is only given, so that it reads from there locally»). The plus LENDS a folder: the platform's own
@@ -2072,6 +2081,9 @@ struct MusicTabView: View {
     }
     /// The lent tracks in the library's order, with their revision; the first ask of a launch walks the folders.
     nonisolated static func tracks() -> (rev: Int, list: [MusicTrack]) {
+        #if MONTANA_MESSENGER
+        return (0, [])   // no folder is lent in Messenger (decision 793, 11.11.2026): the plus and its page are the Protocol's alone -- nothing kept is laid, nothing is walked
+        #else
         lock.lock()
         let s = shelf, first = !woke
         woke = true
@@ -2085,6 +2097,7 @@ struct MusicTabView: View {
             queue.async { layKept(asked: asked) }
         }
         return s
+        #endif
     }
     /// THE LAST LIST STANDS AT THE LAUNCH (the author's word 24.09: «after the update the tracks I had already given
     /// access to through the plus were gone — a gross violation; they came only a while after I opened the page»). A walk

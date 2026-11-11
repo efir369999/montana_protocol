@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Combine
 import CryptoKit
 import MontanaBindings
 import PhotosUI
@@ -610,6 +611,7 @@ struct AvatarCircle: View {
     }
 }
 
+#if !MONTANA_MESSENGER   // no coins in Messenger (cut C6): no balance to show
 /// Avatar reputation is always visible (14.10.2026); only the balance has a privacy
 /// switch. Badges decorate the upper edge without changing the avatar's square
 /// layout contract: the photo, its rim and its touch target always share one frame.
@@ -620,6 +622,7 @@ extension EnvironmentValues {
         set { self[MTBalanceVisibleKey.self] = newValue }
     }
 }
+#endif
 enum MTAvatarBadges {
     static let me = "@me"   // NOT-UI: the current person's face
     static let least: CGFloat = 28
@@ -725,6 +728,45 @@ struct MTAvatarBadgePair: View {
 #endif
 
 
+/// THE SEATS OF A ROLLING TAPE'S CONTROLS -- ONE OWNER (the author's words 10-11.11.2026, links 18526, 18545, 18547: «the
+/// cross and the play lie on each other»; «buttons of one size and on one line inside the recording's bubble, never past
+/// it»; «even out the step from the bubble's edges and between the buttons»; «the pressing area is tall»). The bubble is
+/// the bar's tier (composeHeight); a face stands `inset` inside it on every side; the seats stand a `pitch` apart, so the
+/// faces keep one `gap` between them and their pressing areas meet edge to edge and never overlap; a pressing area is as
+/// tall as the hold control's own. The crown draws the seats from these numbers and the bar keeps the wave's room by the
+/// same ones -- nobody writes them twice.
+enum MTTapeSeats {
+    static let inset: CGFloat = 3
+    static var face: CGFloat { MontanaOctagon.composeHeight - 2 * inset }
+    static let pitch: CGFloat = montanaTouchTarget
+    static var gap: CGFloat { pitch - face }
+    static var reach: CGSize { CGSize(width: pitch, height: MontanaHoldControl.target) }
+    static let glyph: CGFloat = 15
+    /// The wave's room at the bubble's head: `n` seats and one gap after them.
+    static func headRoom(_ n: Int) -> CGFloat { inset + CGFloat(n) * pitch }
+    /// The wave's room before the slot's centre under the lock: the arrow's face, the pause's seat and one gap.
+    static var tailRoom: CGFloat { pitch + face / 2 + gap }
+}
+/// THE PLATFORM'S BLUE RING -- ONE OWNER (the author's word 11.11.2026, link 18547: «the system's highlight, as in the
+/// example»): the ring the coin's key wears, drawn inside the plate's own shape, one width for every wearer.
+struct MTBlueRing: View {
+    static let width: CGFloat = 1.5
+    var body: some View {
+        MontanaLongOctagon().inset(by: Self.width / 2).stroke(MontanaOctagon.platformBlue, lineWidth: Self.width).allowsHitTesting(false)
+    }
+}
+/// A SEAT OF THE TAPE'S ROW: the bar's glass face at the seats' one size, the blue ring on it, inside a pressing area as
+/// wide as the pitch and as tall as the hold control's. The area is the style's own shape, so the whole of it presses.
+struct MTTapeSeatStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .montanaOctagonFace(square: true, pressed: configuration.isPressed, bar: true, height: MTTapeSeats.face)
+            .overlay(MTBlueRing().frame(width: MTTapeSeats.face, height: MTTapeSeats.face))
+            .frame(width: MTTapeSeats.reach.width, height: MTTapeSeats.reach.height)
+            .contentShape(Rectangle())
+    }
+}
+
 /// THE SWOLLEN HOLD BUTTON (the author's word 14.09). The keyboard lives in a window of its own that
 /// stands above every window of the app; since 08.10.2026 the crown is drawn in a window of ours at
 /// the highest level an app may hold, so the keyboard, when it is up, covers the part of the crown
@@ -748,15 +790,66 @@ final class MTHoldOverlayState: ObservableObject {
         let c = slot.convert(CGPoint(x: slot.bounds.midX, y: slot.bounds.midY), to: nil)
         guard abs(c.x - anchor.x) > 0.5 || abs(c.y - anchor.y) > 0.5 else { return }
         MontanaTrace.mark("crown_anchor", "x=\(Int(c.x)) y=\(Int(c.y)) was=\(Int(anchor.y)) anim=\(speed == nil ? 0 : 1)")
-        let move = { [self] in
-            if anchor != .zero, !strip.isEmpty { strip.origin.y += c.y - anchor.y }   // the strip rides in the same node: the bin keeps its head
-            anchor = c
-        }
+        let move = { [self] in anchor = c }   // the strip is not moved from here (11.11.2026): its measure in the bar is its one writer, the row's line is the anchor's
         if let speed { withAnimation(MTKeyboardSpring.swiftUI(speed: speed), move) }   // the keys' own spring, the crown in it
         else { move() }
     }
-    @Published var big = false               // the shape is up (held or locked)
-    @Published var locked = false            // the arrow instead of the microphone
+    @Published private(set) var big = false      // the shape is up (held or locked) -- settle() alone writes it
+    @Published private(set) var locked = false   // the arrow instead of the microphone -- settle() alone writes it
+    /// THE CROWN HEARS THE MACHINE ITSELF (the author's words 10-11.11.2026, links 18419, 18526, 18544, 18547: «under the lock
+    /// all the buttons sometimes vanish»; «these buttons must never vanish»). `big` and `locked` were mirrors the bar's tree
+    /// wrote from its own onChange and onDisappear, and the window was shown and hidden from there: a piece of the bar that
+    /// left the tree for a moment under a locked tape hid the window and nothing raised it again -- the tape rolled on,
+    /// the wave stood, and not one control was left but leaving the chat (T1 10.11.2026 18:03:43 UTC, a page that had lived
+    /// through a turn of the screen; the diary then had no line for a hide, so the moment itself is not proven). Now the
+    /// crown listens to the tape's one owner (MontanaRecording.phase) by a subscription of its own, which no view's life
+    /// can cut; the bar hands in only the finger's half (hold), and ONE place -- settle -- decides what stands and shows
+    /// or hides the window, each time with its reason in the diary. Whatever the bar's tree does, a locked tape keeps
+    /// its controls.
+    private weak var machine: MontanaRecording?
+    private var hearing: AnyCancellable?
+    private var rolling = false
+    private var lockedNow = false
+    private var held = false
+    private var left = false
+    private var proving = false
+    @MainActor func attend(_ rec: MontanaRecording) {
+        left = false
+        cam = rec.note; voiceTape = rec.voice
+        guard machine !== rec else { settle("attend"); return }
+        machine = rec
+        hearing = rec.$phase.sink { [weak self] p in
+            guard let self else { return }
+            self.rolling = p != .idle
+            if case .locked = p { self.lockedNow = true } else { self.lockedNow = false }
+            if !self.rolling {
+                self.held = false   // a tape that ended holds no finger, whatever the bar had time to say
+                if self.left { self.cam = nil; self.voiceTape = nil }
+            }
+            self.settle("phase")
+        }
+    }
+    /// The page left: the tape's camera and recorder are let go -- at once when nothing rolls, else when the tape ends.
+    @MainActor func leave(_ rec: MontanaRecording) {
+        guard machine === rec else { return }
+        left = true
+        if !rolling { cam = nil; voiceTape = nil }
+    }
+    /// The finger's half, the bar's alone to tell: the hold outlived the tap's threshold, or ended.
+    func hold(_ on: Bool) { held = on; settle("hold") }
+    private func settle(_ why: String) {
+        let up = lockedNow ? true : (held && rolling)
+        if locked != lockedNow { locked = lockedNow }
+        if big != up { big = up }
+        if up { MTHoldOverlayWindow.show(why: why) } else { MTHoldOverlayWindow.hide(why: why) }
+        guard lockedNow, !proving else { return }
+        proving = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            guard let self else { return }
+            self.proving = false
+            if self.lockedNow { MTHoldOverlayWindow.prove() }
+        }
+    }
     @Published var video = false
     @Published var away = false              // the finger slid left: red
     @Published var lift: CGFloat = 0         // 0…1 of the way up to the lock
@@ -774,7 +867,7 @@ final class MTHoldOverlayState: ObservableObject {
     // stays with the chat's slot beneath, where it began (16.09).
     var cam: MontanaVideoNoteCamera?
     var feed: CGRect = .zero                 // the visible feed on the screen: the note centres in it
-    var strip: CGRect = .zero                // the recording strip's place in the bar
+    @Published var strip: CGRect = .zero     // the recording strip's place in the bar -- its measure in the bar is the one writer; the crown reads its head edge
     var touchable: [String: CGRect] = [:]    // where this window takes a touch: the recording's own controls
     /// THE LOCKED TAPE'S CONTROLS ASK THE RECORDING'S OWNER (the reference's model): the crown
     /// draws the arrow, the pause and the bin and catches their taps in its own window; the
@@ -802,6 +895,15 @@ final class MTHoldOverlayState: ObservableObject {
     /// THE FIRST FREE POINT ABOVE THE BUTTON UNDER THE FINGER (the author's word 14.09): the swollen
     /// button stands at the slot; the pause stands on this line, the lock plate a lock's way above it.
     var stack: CGFloat { anchor.y - holdClear }
+    /// THE BUBBLE'S HEAD EDGE: the strip's own left edge while its measure is this bar's (its end stands at the slot); a
+    /// strip not yet measured, or left from another shape of the bar or another turn of the screen, is not read blindly --
+    /// the bar's sides are even, so the head then stands as far from its edge of the window as the slot's end from its own.
+    var head: CGFloat {
+        let way = anchor.x - strip.maxX
+        if !strip.isEmpty, way > 0, way <= MontanaOctagon.composeHeight { return strip.minX }
+        let wide = slot?.window?.bounds.width ?? MTScene.size().width
+        return max(0, wide - anchor.x - MontanaOctagon.composeHeight / 2)
+    }
 }
 
 private final class MTPassthroughWindow: UIWindow {
@@ -849,19 +951,60 @@ enum MTHoldOverlayWindow {
         window = w
         return w
     }
-    static func show() {
-        guard mountKind == "none" else { return }
-        let h = theHost()
-        MTHoldOverlayState.shared.touchable = [:]
-        guard let w = ownWindow() else { return }
-        if w.rootViewController !== h || h.view.superview !== w { w.rootViewController = nil; w.rootViewController = h }
-        w.isHidden = false
-        mountKind = "own"
-        MontanaTrace.mark("hold_mount", "own-window")
+    /// THE WINDOW STANDS WHERE THE SLOT'S WINDOW STANDS (11.11.2026). It is born once and lives hidden, through every turn
+    /// of the screen; shown, it takes the scene and the bounds of the window the slot stands in -- the crown's places are
+    /// that window's coordinates (follow()) -- and says both sizes in the diary, so a window left at another size is a line.
+    private static func fit(_ w: UIWindow) -> String {
+        let home = MTHoldOverlayState.shared.slot?.window
+        if let scene = home?.windowScene, w.windowScene !== scene { w.windowScene = scene }
+        let room = home?.bounds ?? w.windowScene?.coordinateSpace.bounds ?? w.frame
+        let was = w.frame
+        if was != room { w.frame = room }
+        return "win=\(Int(room.width))x\(Int(room.height))" + (was != room ? " was=\(Int(was.width))x\(Int(was.height))" : "")
     }
-    static func hide() {
+    /// SHOWN AND HIDDEN FROM ONE PLACE (MTHoldOverlayState.settle), each with its reason in the diary. A window that
+    /// stands is left as it stands: nothing is reseated under a finger or under a locked tape.
+    static func show(why: String) {
+        let h = theHost()
+        guard let w = ownWindow() else { MontanaTrace.mark("hold_mount", "no-window why=\(why)"); return }
+        if mountKind == "own", !w.isHidden, w.rootViewController === h { return }
+        let said = fit(w)
+        w.rootViewController = nil; w.rootViewController = h
+        w.isHidden = false
+        w.layoutIfNeeded()
+        mountKind = "own"
+        MontanaTrace.mark("hold_mount", "own-window why=\(why) \(said) root=\(Int(h.view.bounds.width))x\(Int(h.view.bounds.height))")
+    }
+    static func hide(why: String) {
+        guard mountKind != "none" else { return }
         window?.isHidden = true
         mountKind = "none"
+        healed = false
+        MTHoldOverlayState.shared.touchable = [:]   // a hidden window takes nothing; the next tape's controls report anew
+        MontanaTrace.mark("hold_unmount", "why=\(why)")
+    }
+    private static var healed = false
+    /// A LOCKED TAPE'S CONTROLS ARE PROVEN, NOT ASSUMED (the author's word 11.11.2026, link 18547: «these buttons must never
+    /// vanish»). A moment after the lock the crown is checked against what the person must be able to press: the window
+    /// is shown, the host is seated in it, both are the size of the slot's window, and the arrow has reported its pressing
+    /// area over the slot. A crown that fails is said in the diary with every number (crown_heal) and built anew -- a new
+    /// window on the slot's scene, the same host -- once per tape.
+    static func prove() {
+        guard mountKind == "own", let w = window, let h = host else { return }
+        let st = MTHoldOverlayState.shared
+        st.follow()   // the slot's place is read anew: the proof judges where the slot stands now, not where it stood
+        let seated = h.view.window === w
+        let whole = abs(h.view.bounds.width - w.bounds.width) < 1 && abs(h.view.bounds.height - w.bounds.height) < 1
+        let roomy = st.slot?.window.map { abs(w.bounds.width - $0.bounds.width) < 1 && abs(w.bounds.height - $0.bounds.height) < 1 } ?? true
+        let seat = st.touchable["send"]
+        if !w.isHidden, seated, whole, roomy, st.anchor != .zero, seat?.contains(st.anchor) == true { return }
+        MontanaTrace.mark("crown_heal", "hidden=\(w.isHidden ? 1 : 0) seated=\(seated ? 1 : 0) win=\(Int(w.bounds.width))x\(Int(w.bounds.height)) root=\(Int(h.view.bounds.width))x\(Int(h.view.bounds.height)) roomy=\(roomy ? 1 : 0) seat=\(seat.map { "\(Int($0.minX)),\(Int($0.minY)),\(Int($0.width))x\(Int($0.height))" } ?? "none") anchor=\(Int(st.anchor.x)),\(Int(st.anchor.y)) again=\(healed ? 1 : 0)")
+        guard !healed else { return }
+        healed = true
+        w.isHidden = true; w.rootViewController = nil
+        window = nil; mountKind = "none"
+        show(why: "heal")
+        st.objectWillChange.send()
     }
 }
 
@@ -910,11 +1053,11 @@ struct MTHoldOverlayView: View {
     var body: some View {
         ZStack {
             if st.big, st.video, let cam = st.cam { MTNoteChrome(cam: cam) }   // the dim, the note's circle with its seconds, its strip
-            if st.big, !st.locked, !st.strip.isEmpty {
+            if st.big, !st.locked, st.anchor != .zero {
                 Text(st.away ? "Release to cancel" : "Release to send")
                     .font(.subheadline).foregroundColor(st.away ? .red : .white)
-                    .frame(maxWidth: max(44, st.strip.width))
-                    .position(x: (st.strip.minX + st.anchor.x) / 2, y: st.strip.minY - 28)
+                    .frame(maxWidth: max(44, st.anchor.x - st.head))
+                    .position(x: (st.head + st.anchor.x) / 2, y: st.anchor.y - MontanaOctagon.composeHeight / 2 - 28)
                     .allowsHitTesting(false)
             }
             if st.big { swollen }                                              // THE BUTTON UNDER THE FINGER: at the slot, above every layer and row
@@ -956,26 +1099,33 @@ struct MTHoldOverlayView: View {
         let seats: [String] = st.video
             ? (MontanaVideoNoteCamera.dualCapable ? ["bin", "flash", "flip", "dual", "pause"] : ["bin", "flash", "flip", "pause"])
             : ["bin", "play", "pause"]
-        let first = st.strip.minX + montanaTouchTarget / 2
-        let last = st.anchor.x - st.maxScale * st.side / 2 - 8 - montanaTouchTarget / 2   // right before the swell at its loudest
-        let step = seats.count > 1 ? (last - first) / CGFloat(seats.count - 1) : 0
+        // THE ROW STANDS INSIDE THE BUBBLE, ON THE SLOT'S OWN LINE (the author's words 10-11.11.2026, links 18526, 18545, 18547):
+        // the first seat in the centre of the bubble's head rounding, the last one a pitch before the slot -- the arrow in
+        // the slot is the row's last seat -- every face `inset` inside the bubble and one `gap` from its neighbour. The line
+        // is the slot's (st.anchor.y, read through the window by follow()): the strip's own measure names the head's edge
+        // alone, so a strip measured before the keys lifted the bar cannot put the row under the keyboard.
+        let first = st.head + MontanaOctagon.composeHeight / 2
+        let last = st.anchor.x - MTTapeSeats.pitch
+        let step = 1 < seats.count ? (last - first) / CGFloat(seats.count - 1) : 0
+
         // THE VOICE'S HEAD COLUMNS STAND TOGETHER (the author's word 23.09: the listen button on the same
         // line as the bin and the wave). The note's controls are spread evenly across the strip; the voice
         // has three, and an even spread would drop the middle one onto the wave itself. So the bin and the
         // ear stand side by side at the strip's head — where the bar keeps their room — and the pause
         // keeps its own column before the swell.
+
         let column: (Int) -> CGFloat = { i in
             guard !st.video else { return first + step * CGFloat(i) }
             switch i {
             case 0: return first
-            case 1: return first + montanaTouchTarget
+            case 1: return first + MTTapeSeats.pitch
             default: return last
             }
         }
         return ZStack {
-            if !st.strip.isEmpty {
+            if st.anchor != .zero {
                 ForEach(Array(seats.enumerated()), id: \.element) { i, seat in
-                    seatButton(seat).position(x: column(i), y: st.strip.midY)
+                    seatButton(seat).position(x: column(i), y: st.anchor.y)
                 }
             }
         }
@@ -984,9 +1134,9 @@ struct MTHoldOverlayView: View {
         switch seat {
         case "bin":
                 Button { st.onCancel?() } label: {   // the one road every cancel walks: the recording's owner
-                    Image(systemName: "xmark").font(.system(size: 19, weight: .semibold)).foregroundColor(st.away ? .red : .white)
+                    Image(systemName: "xmark").font(.system(size: MTTapeSeats.glyph, weight: .semibold)).foregroundColor(st.away ? .red : .white)
                 }
-                .buttonStyle(.montanaOctagon(square: true, ghost: true, bar: true, height: montanaTouchTarget))
+                .buttonStyle(MTTapeSeatStyle())
                 .modifier(MTNoteTouchable(id: "bin"))
                 .accessibilityLabel(Text("Cancel"))
         case "play":
@@ -999,10 +1149,10 @@ struct MTHoldOverlayView: View {
                 let running = heard && VoicePlayer.shared.playingFile == st.previewFile && !VoicePlayer.shared.paused
                 Button { st.onPreview?() } label: {
                     Image(systemName: running ? "pause.fill" : "play.fill")
-                        .font(.system(size: 19, weight: .semibold)).foregroundColor(heard ? Color.accentColor : .white)
+                        .font(.system(size: MTTapeSeats.glyph, weight: .semibold)).foregroundColor(heard ? Color.accentColor : .white)
                         .contentTransition(.symbolEffect(.replace))
                 }
-                .buttonStyle(.montanaOctagon(square: true, bar: true, height: montanaTouchTarget))
+                .buttonStyle(MTTapeSeatStyle())
                 .modifier(MTNoteTouchable(id: "play"))
                 .accessibilityLabel(Text("Play"))
             }
@@ -1012,9 +1162,9 @@ struct MTHoldOverlayView: View {
                 if st.previewFile == nil {
                     Button { st.onPause?() } label: {
                         Image(systemName: st.paused ? "record.circle" : "pause.fill")
-                            .font(.system(size: 22, weight: .semibold)).foregroundColor(st.paused ? .red : .white)
+                            .font(.system(size: MTTapeSeats.glyph, weight: .semibold)).foregroundColor(st.paused ? .red : .white)
                     }
-                    .buttonStyle(.montanaOctagon(square: true, bar: true, height: montanaTouchTarget))
+                    .buttonStyle(MTTapeSeatStyle())
                     .modifier(MTNoteTouchable(id: "pause"))
                 }
             }
@@ -1024,18 +1174,18 @@ struct MTHoldOverlayView: View {
                 // bright white for the front camera, the torch lights for the back one.
                 Button { cam.toggleFlash() } label: {
                     Image(systemName: cam.flash ? "bolt.fill" : "bolt.slash.fill")
-                        .font(.system(size: 20, weight: .semibold)).foregroundColor(cam.flash ? Color.accentColor : MontanaOctagon.barGlyph)
+                        .font(.system(size: MTTapeSeats.glyph, weight: .semibold)).foregroundColor(cam.flash ? Color.accentColor : MontanaOctagon.barGlyph)
                 }
-                .buttonStyle(.montanaOctagon(square: true, bar: true, height: montanaTouchTarget))
+                .buttonStyle(MTTapeSeatStyle())
                 .modifier(MTNoteTouchable(id: "flash"))
             }
         case "flip":
             if let cam = st.cam {
                 Button { cam.flip() } label: {
                     Image(systemName: "camera.rotate")
-                        .font(.system(size: 20, weight: .semibold)).foregroundColor(MontanaOctagon.barGlyph)
+                        .font(.system(size: MTTapeSeats.glyph, weight: .semibold)).foregroundColor(MontanaOctagon.barGlyph)
                 }
-                .buttonStyle(.montanaOctagon(square: true, bar: true, height: montanaTouchTarget))
+                .buttonStyle(MTTapeSeatStyle())
                 .modifier(MTNoteTouchable(id: "flip"))
             }
         case "dual":
@@ -1045,7 +1195,7 @@ struct MTHoldOverlayView: View {
                 Button { cam.toggleDual() } label: {
                     MTDualCameraGlyph(on: cam.dual)
                 }
-                .buttonStyle(.montanaOctagon(square: true, bar: true, height: montanaTouchTarget))
+                .buttonStyle(MTTapeSeatStyle())
                 .modifier(MTNoteTouchable(id: "dual"))
             }
         default:
@@ -1056,15 +1206,17 @@ struct MTHoldOverlayView: View {
     /// system and any device): the swollen shape stands AT THE SLOT — gold and see-through, living rings
     /// breathing out around it, the glyph in the middle; it breathes with the voice, rides up with the
     /// finger, greys towards the lock and reddens towards the bin. Held, the finger's touch is the bar's
-    /// control's (it began there and stays there by the platform's rule); LOCKED, the shape stays at its
-    /// size and IS the send button — a control of this window, caught where it is drawn (measured 19.09 on
-    /// iOS 18: a tap through the keyboard's window never reached the bar).
+    /// control's (it began there and stays there by the platform's rule); LOCKED, the shape IS the send
+    /// button at the row's one size (MTTapeSeats.face, 11.11.2026) — a control of this window, caught where
+    /// it is drawn (measured 19.09 on iOS 18: a tap through the keyboard's window never reached the bar).
     private var swollen: some View {
         let rise = -st.lift * st.lockWay
         return ZStack {
             if st.locked {
                 Button { st.onSend?() } label: {
-                    swell.frame(width: 56, height: 56).contentShape(Rectangle())
+                    // UNDER THE LOCK THE ARROW IS A SEAT OF THE ROW (11.11.2026): the seats' one size, the seats' one pressing area.
+                    swell.scaleEffect(MTTapeSeats.face / st.side)
+                        .frame(width: MTTapeSeats.reach.width, height: MTTapeSeats.reach.height).contentShape(Rectangle())
                 }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("Send"))

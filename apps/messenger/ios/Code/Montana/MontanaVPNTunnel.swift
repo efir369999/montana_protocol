@@ -29,7 +29,6 @@ final class MontanaVPNTunnel: ObservableObject {
     }
     @Published private(set) var activeName: String = ""
     @Published private(set) var lastError: String = ""
-    @Published private(set) var backgroundError: String = ""
     /// The chosen row, as the page draws it: spoken by MontanaVPNSelection (the one writer of the choice), read at birth
     /// from the store. A write of the store's dotted key alone never reached the page's observation (25.09).
     @Published private(set) var selectedId: String = UserDefaults.standard.string(forKey: MontanaVPNSelection.key) ?? ""
@@ -93,8 +92,8 @@ final class MontanaVPNTunnel: ObservableObject {
     private init() {
         NotificationCenter.default.addObserver(self, selector: #selector(statusChanged),
                                                name: .NEVPNStatusDidChange, object: nil)
-        // A move of the reconnect made outside the app is written down as such: the tunnel's own arm and lift
-        // (ExtReconnect, its one owner), or the panel's own switch.
+        // The configuration moved outside this app -- the tunnel's dead mark, or the panel's own switch. Whatever moved it, a
+        // reconnect found standing on the profile is lifted (configurationChanged): the tunnel rises by the hand alone.
         NotificationCenter.default.addObserver(self, selector: #selector(configurationChanged),
                                                name: .NEVPNConfigurationChange, object: nil)
         // Tunnel throughput, every 30 s while the tunnel stands: the app asks its own extension
@@ -271,14 +270,13 @@ final class MontanaVPNTunnel: ObservableObject {
             let net = Self.physicalLink()
             switch s {
             case .connected:
-                // Who brought it up: a press of ours stamps the start; the system (the reconnect, or the switch in
-                // its own panel) stamps nothing. After a break, the time the tunnel lay is said with it.
+                // Who brought it up: a press of ours stamps the start; the switch in the system's own panel stamps nothing.
+                // After a break, the time the tunnel lay is said with it.
                 let byApp = UserDefaults.standard.object(forKey: Self.startTicksKey) != nil
                 let gap = self.breakAt.map { " gap=\(Int(Self.nowSeconds - $0))s" } ?? ""
                 self.breakAt = nil
                 self.ourStop = false
                 self.requested = true
-                MTVPNSupervisor.shared.interrupt()
                 MTVPNWhitelistRoad.shared.tunnelMoved(up: true)
                 MontanaTrace.mark("vpn_ui", "tunnel connected net=\(net) after=\(self.elapsedSincePress.map { Int($0 * 1000) } ?? -1)ms by=\(byApp ? "app" : "system")\(gap)")
                 // No stamp means this session predates the change (or the app was reinstalled while the
@@ -289,7 +287,6 @@ final class MontanaVPNTunnel: ObservableObject {
                     UserDefaults.standard.set(Self.nowSeconds - back, forKey: Self.startTicksKey)
                     UserDefaults.standard.set(d.timeIntervalSince1970, forKey: Self.startWallKey)
                 }
-                self.askReconnect(why: "up")   // the tunnel arms it as it stands; the app writes only what the platform refused the tunnel
                 self.refreshAnchor()
                 self.tg("CONNECTED ✅ net=\(net) since=\(self.connectedAt.map { ISO8601DateFormatter().string(from: $0) } ?? "-")")
                 // The tunnel is alive and can speak: ask it how the PREVIOUS session ended. A death of
@@ -306,11 +303,9 @@ final class MontanaVPNTunnel: ObservableObject {
                 let byApp = self.ourStop
                 self.ourStop = false
                 if !byApp, prev == .connected || prev == .reasserting || prev == .connecting { self.breakAt = Self.nowSeconds }
-                // The reconnect's state is not said here: its owner is the tunnel, which writes its own lift at a stop by
-                // the person, and this side's copy goes stale the moment the tunnel writes -- the platform tells the app
-                // nothing of the tunnel's saves (T1, 1927: «reconnect=off» at 23:00:10, six seconds after the arm).
-                // The app's own recovery names its stop (29.09): «other» is the system's panel or a death, nothing of ours.
-                let who = "by=\(byApp ? "app" : (Date().timeIntervalSince(MTVPNRecoveryHooks.lastStopAt) < 90 ? "recovery" : "other"))"
+                // «other» is the system's panel or a death, nothing of ours; the tunnel's own record names which. Nothing of ours
+                // raises the tunnel after either (the author's word 09.11.2026): it stands off until a hand.
+                let who = "by=\(byApp ? "app" : "other")"
                 self.tg("DISCONNECTED ⛔ heldFor=\(hs) net=\(net) prevStatus=\(self.statusName(prev)) \(who)")
                 MontanaTrace.mark("vpn_ui", "tunnel down net=\(net) held=\(held ?? -1)s from=\(self.statusName(prev)) \(who)")
                 self.clearStart()
@@ -318,10 +313,8 @@ final class MontanaVPNTunnel: ObservableObject {
                 await self.refreshRequested()
                 MTVPNWhitelistRoad.shared.tunnelMoved(up: false)
                 self.readDeadMark()
-                self.watchStartup()
             default:
                 self.refreshAnchor()
-                self.watchStartup()
                 self.tg("status -> \(self.statusName(s)) net=\(net)")
                 MontanaTrace.mark("vpn_ui", "tunnel \(self.statusName(s)) net=\(net)")
             }
@@ -363,8 +356,8 @@ final class MontanaVPNTunnel: ObservableObject {
             self.manager = await self.oneProfile(ours)
             if let m = self.manager {
                 self.status = m.connection.status
-                self.armed = m.isOnDemandEnabled
-                self.requested = m.isEnabled && m.isOnDemandEnabled
+                self.requested = Self.standing(m)
+                await self.liftReconnect(m, why: "load")   // a profile an older build armed is lifted at the first reading
                 // The defect this replaces: the anchor lived only in memory, so a relaunch made it nil and
                 // this line re-read it from the system — which re-dates a session it re-establishes after
                 // the device sleeps. The tablet ran thirty-one minutes and the screen said sixteen.
@@ -376,15 +369,12 @@ final class MontanaVPNTunnel: ObservableObject {
                         UserDefaults.standard.set(d.timeIntervalSince1970, forKey: Self.startWallKey)
                     }
                     self.refreshAnchor()
-                    // What the extension wrote while this app was away -- a death, a raise by the system -- rides
-                    // now, and the tunnel is asked what its reconnect says (after an update the app meets it up).
+                    // What the extension wrote while this app was away -- a death, the panel's switch -- rides now.
                     self.fetchTunnelDiary()
-                    self.askReconnect(why: "return")
                 }
                 if self.status == .disconnected || self.status == .invalid { self.clearStart() }
                 self.activeName = m.localizedDescription ?? ""
                 self.adoptInstalledRow()
-                self.watchStartup()
             } else { self.requested = false }
         }
         // Automatic VPN rows are retired at the owning store. Disarm an installed retired row too,
@@ -407,7 +397,7 @@ final class MontanaVPNTunnel: ObservableObject {
             catch { tg("recovery profile migration failed: \((error as NSError).code)") }
         }
         // THE VPN RISES AGAIN AFTER AN INSTALL (the author's word 29.09: «an update must not throw the VPN out; it must come up again
-        // without conflicts»). The install road's prepare has to stop the tunnel and lift the reconnect before the install (28.09: a
+        // without conflicts»). The install road's prepare has to stop the tunnel before the install (28.09, under the reconnect of that day: a
         // tunnel killed by the install held every byte until the system raised it, and the app could not be verified); it leaves its
         // moment behind (MTInstallPrepare.offKey), and the first return of the app after the install raises the chosen row by the
         // ordinary start road: a fresh profile of the new build, saved before the session, never a hot swap under a live one.
@@ -459,11 +449,11 @@ final class MontanaVPNTunnel: ObservableObject {
             throw CancellationError()
         }
         let m = found ?? NETunnelProviderManager()
-        // The tunnel writes the reconnect into this same configuration (ExtReconnect): a copy read before its write is
+        // The tunnel writes its dead mark into this same configuration (ExtDeadMark): a copy read before its write is
         // stale, and the platform refuses to save a stale one (NEVPNErrorConfigurationStale), so it is read again.
         if found != nil { try await m.loadFromPreferences() }
         guard generation == commandGeneration,
-              !preservingRequest || (m.isEnabled && m.isOnDemandEnabled) else { throw CancellationError() }
+              !preservingRequest || Self.standing(m) else { throw CancellationError() }
         let before = m.protocolConfiguration as? NETunnelProviderProtocol   // the rule a live session was established under
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = Self.extensionBundleId
@@ -493,9 +483,7 @@ final class MontanaVPNTunnel: ObservableObject {
         m.protocolConfiguration = proto
         m.localizedDescription = "Montana"     // the config's title in iOS Settings = app name only
         m.isEnabled = true                     // enabled -> the system VPN toggle (Control Center / Settings) drives it
-        m.onDemandRules = Self.reconnectRules
-        m.isOnDemandEnabled = true
-        armed = true
+        Self.noReconnect(m)                    // no profile of ours carries On Demand: the tunnel rises by the hand alone
         tg("install: saveToPreferences…")
         do { try await m.saveToPreferences() }
         catch { tg("install: saveToPreferences FAILED \((error as NSError).domain)#\((error as NSError).code) \(error.localizedDescription)"); throw error }
@@ -509,13 +497,13 @@ final class MontanaVPNTunnel: ObservableObject {
         return ruleChanged
     }
 
-    // The command generation invalidates work suspended at an await when a newer hand arrives.
+    // The command generation invalidates work suspended at an await when a newer hand arrives. A start is the hand's alone: the
+    // page's switch (byHand), a server switch under a live session (restart) and the raise after an install road (load).
     func start(_ cfg: MontanaVPNConfig? = nil, preservingRequest: Bool = false, byHand: Bool = false) async throws {
         guard !MontanaVPNStore.isRetired(cfg?.id ?? selectedId) else { throw CancellationError() }
         MTInstallPrepare.clearOff()   // the person raises the tunnel: the install's word on the page is done (29.09)
         MTVPNWhitelistRoad.shared.clear()   // a new start is a new word; the wall's road says its own after its raise
         commandGeneration += 1
-        MTVPNSupervisor.shared.interrupt()
         let generation = commandGeneration
         requested = true
         lastError = ""
@@ -528,9 +516,7 @@ final class MontanaVPNTunnel: ObservableObject {
                 if preservingRequest {
                     guard let m = self.manager else { throw CancellationError() }
                     try await m.loadFromPreferences()
-                    guard m.isEnabled, m.isOnDemandEnabled, generation == self.commandGeneration else {
-                        throw CancellationError()
-                    }
+                    guard Self.standing(m), generation == self.commandGeneration else { throw CancellationError() }
                 }
                 var ruleChanged = false
                 if let cfg { ruleChanged = try await self.install(cfg, preservingRequest: preservingRequest, byHand: byHand, generation: generation) }
@@ -540,27 +526,25 @@ final class MontanaVPNTunnel: ObservableObject {
                 }
                 try await m.loadFromPreferences()
                 guard generation == self.commandGeneration else { throw CancellationError() }
-                // An install already saved ON. A later system-panel OFF must not be overwritten
-                // by this continuation or by an automatic server switch.
-                if preservingRequest || cfg != nil {
-                    guard m.isEnabled, m.isOnDemandEnabled else { throw CancellationError() }
-                } else {
+                // A server switch under a live session goes on only while the session stands: a system-panel OFF in the
+                // meantime is not overwritten by this continuation. A profile found armed or disabled is set right first.
+                if preservingRequest {
+                    guard Self.standing(m) else { throw CancellationError() }
+                } else if !m.isEnabled || m.isOnDemandEnabled || !(m.onDemandRules ?? []).isEmpty {
                     m.isEnabled = true
-                    m.onDemandRules = Self.reconnectRules
-                    m.isOnDemandEnabled = true
+                    Self.noReconnect(m)
                     try await m.saveToPreferences()
                     try await m.loadFromPreferences()
-                    guard m.isEnabled, m.isOnDemandEnabled else { throw CancellationError() }
                 }
                 guard generation == self.commandGeneration else { throw CancellationError() }
-                self.armed = true
+                if ruleChanged, [NEVPNStatus.connected, .reasserting, .connecting].contains(m.connection.status) {
+                    try await self.endForRule(session, generation: generation)
+                }
                 for _ in 0..<100 where m.connection.status == .disconnecting {
                     try await Task.sleep(nanoseconds: 100_000_000)
                     guard generation == self.commandGeneration else { throw CancellationError() }
                 }
-                if ruleChanged, [NEVPNStatus.connected, .reasserting, .connecting].contains(m.connection.status) {
-                    self.restartForRule(session)
-                } else if m.connection.status == .connected || m.connection.status == .reasserting {
+                if m.connection.status == .connected || m.connection.status == .reasserting {
                     if let proto = m.protocolConfiguration as? NETunnelProviderProtocol,
                        let config = proto.providerConfiguration,
                        let data = try? JSONSerialization.data(withJSONObject: config) {
@@ -572,10 +556,7 @@ final class MontanaVPNTunnel: ObservableObject {
                 self.tg("start: requested connection saved")
             } catch { failure = error }
         }
-        if generation == commandGeneration {
-            await refreshRequested()
-            watchStartup()
-        }
+        if generation == commandGeneration { await refreshRequested() }
         if let failure { throw failure }
     }
 
@@ -583,27 +564,20 @@ final class MontanaVPNTunnel: ObservableObject {
     /// tester's phone 28.09 13:42Z, the iPhone 15 28.09 23:40Z). Each was the first launch after an update from a profile
     /// without the protection of all networks; each saved the new profile over the running tunnel and hot-swapped the plan
     /// into it; each phone's path went unsatisfied within 300 ms, the tunnel was handed no packet (pkts=0), and the phone
-    /// stood without any network for 8 s, 13 min and 3 min 22 s -- until a hand or chance ended the session. Neither the
-    /// tunnel's watch (no bytes out reads as idleness) nor the supervisor (the provider answers «alive») could see it. The
-    /// save is the rule's one birth, so the session established under the old rule ends at once, by the provider's own
-    /// technical stop that keeps the reconnect armed: the system raises a new session under the saved rule.
-    private func restartForRule(_ session: NETunnelProviderSession) {
+    /// stood without any network for 8 s, 13 min and 3 min 22 s -- until a hand or chance ended the session. The save is
+    /// the rule's one birth, so the session established under the old rule ends here, by this app's own stop, and the start
+    /// that follows raises a new one under the saved rule by this app's own hand (09.11.2026: nothing of the system's raises
+    /// a session of ours; before this day the provider's technical stop left the reconnect armed for the system to do it).
+    private func endForRule(_ session: NETunnelProviderSession, generation: Int) async throws {
         ourStop = true
-        tg("start: the protection's rule changed under a live session -- the session restarts under the saved rule")
+        tg("start: the protection's rule changed under a live session -- the session ends and a new one rises under the saved rule")
         MontanaTrace.mark("vpn_ui", "restart why=rule-changed")
-        do {
-            try session.sendProviderMessage(Data("restart".utf8)) { [weak self] reply in
-                guard reply != Data([1]) else { return }
-                // A provider that did not take the word: the session is ended from this side; the network comes back either way.
-                Task { @MainActor in
-                    self?.tg("start: the tunnel did not take the restart -- the session is stopped from the app")
-                    session.stopTunnel()
-                }
-            }
-        } catch {
-            tg("start: the restart could not be asked \((error as NSError).code) -- the session is stopped from the app")
-            session.stopTunnel()
+        session.stopTunnel()
+        for _ in 0..<100 where session.status != .disconnected && session.status != .invalid {
+            try await Task.sleep(nanoseconds: 100_000_000)
+            guard generation == commandGeneration else { throw CancellationError() }
         }
+        stampStart()   // the fall cleared the press's stamp; the new session is still the one the hand asked for
     }
 
     // Keep the interface while changing servers. The provider owns the engine and the fallback.
@@ -616,21 +590,43 @@ final class MontanaVPNTunnel: ObservableObject {
         commandGeneration += 1
         requested = false
         MTVPNWhitelistRoad.shared.clear()
-        MTVPNSupervisor.shared.interrupt()
         ourStop = true
         tg("stop: stopTunnel -- \(why)")
-        await setOnDemand(false, why: why, stopping: true)
+        // In the one line with every read and write of the profile: an earlier stop cannot overtake a later start.
+        await inLine { (self.manager?.connection as? NETunnelProviderSession)?.stopTunnel() }
     }
 
-    // On Demand is the durable intent, shared with the system panel. No app preference can re-enable it.
-    nonisolated static var reconnectRules: [NEOnDemandRule] {
-        let rule = NEOnDemandRuleConnect()
-        rule.interfaceTypeMatch = .any
-        return [rule]
+    /// THE TUNNEL RISES BY THE HAND ALONE (the author's word 09.11.2026 18:32 UTC: «either it went down and there is no VPN tunnel,
+    /// or by hand -- it does not reconnect by itself»; T1 09.11: seventeen session starts by=system in a day against two by=app --
+    /// the extension died of memory, and the platform's On Demand rule raised it again every time, 4-9 s after a stop by the hand
+    /// too). No profile of ours carries On Demand: this is the one place that says so, every save of the profile goes through it,
+    /// and a profile found armed -- one an older build wrote -- is lifted at the first reading (liftReconnect). Whether the VPN
+    /// is on is the system's connection status, one owner; nothing is kept beside it that could raise a session nobody asked for.
+    nonisolated static func noReconnect(_ m: NETunnelProviderManager) {
+        m.isOnDemandEnabled = false
+        m.onDemandRules = nil
+    }
+    /// A session the person has: connecting, connected or reasserting on an enabled profile.
+    nonisolated static func standing(_ m: NETunnelProviderManager) -> Bool {
+        m.isEnabled && [NEVPNStatus.connected, .connecting, .reasserting].contains(m.connection.status)
+    }
+    /// The one lift of a reconnect found on the profile: read, lifted, saved, said. Runs in the caller's turn of the line (inLine).
+    private func liftReconnect(_ m: NETunnelProviderManager, why: String) async {
+        guard m.isOnDemandEnabled || !(m.onDemandRules ?? []).isEmpty else { return }
+        Self.noReconnect(m)
+        do {
+            try await m.saveToPreferences()
+            try? await m.loadFromPreferences()
+            tg("reconnect: lifted from the profile -- \(why); the tunnel rises by the hand alone")
+            MontanaTrace.mark("vpn_ui", "reconnect lifted why=\(why)")
+        } catch {
+            let e = error as NSError
+            tg("reconnect: the lift was not saved \(e.domain)#\(e.code) -- \(why)")
+            MontanaTrace.mark("vpn_ui", "reconnect lift failed err=\(e.domain)#\(e.code) why=\(why)")
+        }
     }
     private var ourStop = false            // the next down is a stop of ours, not a break
     private var breakAt: Double?           // the moment of the last break, on the continuous clock
-    private var armed = false              // the reconnect as last written or read: our own save's echo is no news
     private var reconnectLine: Task<Void, Never>?
     /// Every read and write of the reconnect stands in one line, in order: a save of ours and the reload after
     /// the system's notice never interleave on the one manager object.
@@ -641,85 +637,15 @@ final class MontanaVPNTunnel: ObservableObject {
         await t.value
     }
 
-    /// Serialized profile change before stopping, so an earlier stop cannot overtake a later start.
-    private func setOnDemand(_ on: Bool, why: String, stopping: Bool = false) async {
-        let generation = commandGeneration
-        await inLine {
-            defer {
-                if stopping { (self.manager?.connection as? NETunnelProviderSession)?.stopTunnel() }
-            }
-            guard let m = self.manager else { return }
-            try? await m.loadFromPreferences()        // the tunnel or the system's panel may have moved it since
-            if on, generation != self.commandGeneration || !self.requested || m.connection.status != .connected { return }
-            guard m.isOnDemandEnabled != on else { self.armed = on; return }
-            if on { m.onDemandRules = Self.reconnectRules }
-            m.isOnDemandEnabled = on
-            self.armed = on                            // before the save: its echo must read as no news
-            do {
-                try await m.saveToPreferences()
-                try? await m.loadFromPreferences()     // a saved manager answers for its connection again
-                self.tg("reconnect: \(on ? "armed" : "lifted") -- \(why)")
-                MontanaTrace.mark("vpn_ui", "reconnect \(on ? "armed" : "lifted") why=\(why)")
-            } catch {
-                self.armed = !on
-                let e = error as NSError
-                self.tg("reconnect: the \(on ? "arm" : "lift") was not saved \(e.domain)#\(e.code)")
-                MontanaTrace.mark("vpn_ui", "reconnect save failed on=\(on) err=\(e.domain)#\(e.code)")
-            }
-        }
-    }
-
-    /// THE RECOVERY'S OWN STOP IS MARKED IN THE PROFILE (29.09): the moment of the stop the app's recovery is about to send,
-    /// written into the tunnel's configuration a moment before -- the tunnel's lift reads it and keeps the reconnect standing
-    /// (ExtReconnect). The ON/OFF choice is not touched; the write stands in the one line with every other write of the profile.
-    func markRecoveryStop() async {
-        await inLine {
-            guard let m = self.manager else { return }
-            try? await m.loadFromPreferences()
-            guard let proto = m.protocolConfiguration as? NETunnelProviderProtocol else { return }
-            var config = proto.providerConfiguration ?? [:]
-            config["recoveryStop"] = Date().timeIntervalSince1970
-            proto.providerConfiguration = config
-            m.protocolConfiguration = proto
-            do { try await m.saveToPreferences(); self.tg("recovery stop: marked in the profile") }
-            catch { self.tg("recovery stop: the mark was not saved \((error as NSError).code)") }
-        }
-    }
-
-    /// The provider reports its saved reconnect state for diagnostics; a late answer cannot enable it.
-    private func askReconnect(why: String) {
-        guard let session = manager?.connection as? NETunnelProviderSession else { return }
-        do {
-            try session.sendProviderMessage(Data("reconnect?".utf8)) { [weak self] d in
-                let word = d.flatMap { String(data: $0, encoding: .utf8) } ?? "no answer"
-                Task { @MainActor in
-                    guard let self else { return }
-                    self.tg("reconnect: the tunnel says \(word) -- \(why)")
-                    MontanaTrace.mark("vpn_ui", "reconnect tunnel=\(word) why=\(why)")
-                    // This answer can outlive a system-panel OFF. Only a new explicit start may arm it here.
-                }
-            }
-        } catch {
-            let e = error as NSError
-            tg("reconnect: the tunnel was not asked \(e.domain)#\(e.code) -- \(why)")
-        }
-    }
-
-    /// The system's notice that the configuration moved. Our own save echoes here and reads as no news; a move made
-    /// outside the app -- the tunnel's own arm and lift, or the panel's own switch -- is written down as such.
+    /// The system's notice that the configuration moved -- our own save, the tunnel's dead mark, or the panel. The row is read, and
+    /// a reconnect found standing is lifted (noReconnect): whoever armed it, no profile of ours raises a session by itself.
     @objc nonisolated private func configurationChanged() {
         Task { @MainActor in
             await self.inLine {
                 guard let m = self.manager else { return }
                 try? await m.loadFromPreferences()
-                let now = m.isOnDemandEnabled
                 self.adoptInstalledRow()
-                guard now != self.armed || self.requested != (m.isEnabled && now) else { return }
-                self.armed = now
-                self.requested = m.isEnabled && now
-                if !self.requested { self.commandGeneration += 1; MTVPNSupervisor.shared.interrupt() }
-                self.tg("reconnect: \(now ? "armed" : "lifted") outside the app")
-                MontanaTrace.mark("vpn_ui", "reconnect \(now ? "armed" : "lifted") by=outside the app")
+                await self.liftReconnect(m, why: "the configuration moved outside the app")
             }
         }
     }
@@ -732,15 +658,13 @@ final class MontanaVPNTunnel: ObservableObject {
             if let err {
                 let e = err as NSError, msg = e.localizedDescription
                 Task { @MainActor in
-                    // ONE RULE OF WHAT THE PERSON READS (29.09): a technical restart (montana.tunnel 8) keeps the reconnect and
-                    // comes back by itself -- written, never shown; a released dead session (montana.tunnel 7) is theirs to
-                    // know, in their language; anything else is shown as the platform said it.
+                    // ONE RULE OF WHAT THE PERSON READS (29.09; since 09.11.2026 nothing comes back by itself, so every end is
+                    // shown): a released dead session (montana.tunnel 7) is theirs to know, in their language; anything else --
+                    // the tunnel's own deadline (code 8), the platform's word -- is shown as it was said.
                     let ours = e.domain == "montana.tunnel"
-                    if !(ours && e.code == 8) {
-                        self?.lastError = ours && e.code == 7
-                            ? String(localized: "The VPN carried nothing and was turned off", bundle: MTLanguage.bundle) : msg
-                    }
-                    self?.tg("lastDisconnectError: \(msg)\(ours && e.code == 8 ? " -- a technical restart, not shown" : "")")
+                    self?.lastError = ours && e.code == 7
+                        ? String(localized: "The VPN carried nothing and was turned off", bundle: MTLanguage.bundle) : msg
+                    self?.tg("lastDisconnectError: \(msg)")
                 }
             }
             then?(err)
@@ -748,7 +672,7 @@ final class MontanaVPNTunnel: ObservableObject {
     }
 
     /// THE TUNNEL'S DEAD MARK (30.09), named once on this side: the tunnel writes it at the release of a dead session and takes it
-    /// away at every session's arm (ExtReconnect.deadKey, in the extension's own target).
+    /// away at every session's start (ExtDeadMark.deadKey, in the extension's own target).
     static let deadKey = "deadAt"
     /// Read where the VPN stands off -- at the fall, and at every load: the app that slept through the release learns it at its
     /// return. The VPN wall's road decides what rises (MTVPNWhitelistRoad). Never in the install road's prepare, which only stops.
@@ -775,17 +699,8 @@ final class MontanaVPNTunnel: ObservableObject {
             guard let m = self.manager else { self.requested = false; return }
             do { try await m.loadFromPreferences() }
             catch { self.tg("connection choice could not be read"); return }
-            self.armed = m.isOnDemandEnabled
-            self.requested = m.isEnabled && m.isOnDemandEnabled
             self.status = m.connection.status
-        }
-    }
-
-    private func watchStartup() {
-        MTVPNSupervisor.shared.startObserving()
-        guard requested else { return }
-        Task { @MainActor in
-            self.backgroundError = await MTMacVPNService.register() ?? ""
+            self.requested = Self.standing(m)
         }
     }
 
@@ -834,7 +749,7 @@ final class MontanaVPNTunnel: ObservableObject {
         case .connecting: return "connecting…"
         case .disconnecting: return "disconnecting…"
         case .reasserting: return "reconnecting…"
-        case .disconnected, .invalid: return requested ? "reconnecting…" : "off"
+        case .disconnected, .invalid: return requested ? "connecting…" : "off"
         @unknown default: return "off"
         }
     }
@@ -940,7 +855,8 @@ private final class MTVPNMeasureReply: @unchecked Sendable {
 /// diary: «PREVIOUS SESSION DID NOT STOP CLEANLY», no stopTunnel line), so the reconnect stays armed; the system holds every
 /// byte (includeAllNetworks) until it raises the new tunnel, and it raised it 90 s and 337 s after the kill -- the whole
 /// time the dialog stood. Nobody alive after the kill can lift the reconnect, so the install road (tools/mt-install-verified.sh)
-/// launches this app first with one word in its environment: the app lifts the reconnect, stops the tunnel and leaves.
+/// launches this app first with one word in its environment: the app stops the tunnel and leaves (no reconnect stands on the
+/// profile since 09.11.2026, so nothing has to be lifted first).
 /// After the install the VPN stands off until the app's first return raises the chosen row again (MontanaVPNTunnel.load; the
 /// author's word 29.09: «after a reinstall it must raise the VPN normally», which replaced «do not try to raise it» of 28.09).
 enum MTInstallPrepare {
@@ -973,7 +889,7 @@ enum MTInstallPrepare {
             let tunnel = MontanaVPNTunnel.shared
             await tunnel.load()   // reads the tunnel; the raise after an install is never asked in this process (MontanaVPNTunnel.load)
             let was = tunnel.status
-            await tunnel.stop(why: "the install road's prepare")   // lifts the reconnect first, then stops the tunnel
+            await tunnel.stop(why: "the install road's prepare")   // stops the tunnel; no reconnect stands on the profile (09.11.2026)
             // The tunnel's own stop finishes after this process leaves only if the process waits for it: T1 at 15:34Z
             // stood «disconnecting» past five seconds, the road left, and the extension's diary ends without its stop.
             for _ in 0..<150 where tunnel.status != .disconnected && tunnel.status != .invalid {
@@ -998,7 +914,7 @@ enum MTInstallPrepare {
                 return
             }
             MontanaVPNLog.write("install prepare: the tunnel was \(was.rawValue), stands \(tunnel.status.rawValue); mark=\(mark); leaving")
-            MontanaTrace.mark("vpn_ui", "install prepare: reconnect lifted, tunnel \(tunnel.status.rawValue), mark=\(mark), leaving")
+            MontanaTrace.mark("vpn_ui", "install prepare: tunnel \(tunnel.status.rawValue), mark=\(mark), leaving")
             NotificationCenter.default.removeObserver(watch)
             MontanaLog.drain()   // the road's own lines reach the diary before the process leaves
             // the leave runs no static teardown: the diary is drained and nothing else has to be said

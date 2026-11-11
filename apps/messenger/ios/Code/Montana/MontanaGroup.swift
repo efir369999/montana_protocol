@@ -407,9 +407,11 @@ final class MTGroup {
     func canWrite(_ key: String) -> Bool {
         state(key)?.canWrite == true
     }
+    #if !MONTANA_MESSENGER   // no coins in Messenger (cut C6)
     /// WHETHER THE FIELD OF THIS GROUP HOLDS THE COIN (the author's word 17.10.2026 21:14 UTC): a group's every person who writes;
     /// never a channel -- its owner alone posts and its subscribers have no field.
     func takesCoins(_ key: String) -> Bool { state(key).map { g in g.kind == .group && g.canWrite } == true }
+    #endif
     /// Whether this phone is out of the group -- it left, or the owner took it out (the chat says so instead of a field).
     func isOut(_ key: String) -> Bool { state(key)?.left == true }
     /// Whether the owner's phone already carries the group to this person (the page's «add» lists the others only).
@@ -469,7 +471,6 @@ final class MTGroup {
             return MTGroupPayee(seat: p.seat, name: p.name, chat: MTApps.coins?.canPay(chat, store: store) == true ? chat : nil, held: true)
         }
     }
-    #endif
     /// THE GROUP IS TOLD, IT IS NEVER PAID (the author's word 17.10.2026 21:14 UTC): the coins went to each person picked by the pair's
     /// own transfer (MTCoinSendSheet, MTCoinSend.transfer); the group's feed gets the sender's plain words of how many were paid -- no
     /// sum, no name, no transfer's link and no coin letter's machine line, so no phone of the group credits anything by it (carries
@@ -486,6 +487,7 @@ final class MTGroup {
         _ = store.send(text: words, chat: key)
         MontanaTrace.mark("group_coin", "told=1 people=\(people)")
     }
+    #endif
 
     static func speaker(_ id: String, _ seat: String) -> String { speakerHead + id + "/" + seat }
     static func isSpeaker(_ ref: String) -> Bool { ref.hasPrefix(speakerHead) }
@@ -723,7 +725,7 @@ final class MTGroup {
         guard g != held else { return nil }
         groups[id] = g
         saveGroups()
-        MontanaTrace.mark("group_mesh", "people=\(g.members.count)/\(count) kind=\(kind.rawValue)")
+        MontanaTrace.mark("group_roster", "people=\(g.members.count)/\(count) kind=\(kind.rawValue)")
         if let held, held.mesh {   // a pipe opened since: that listener is caught up with this phone's own letters
             let fresh = g.members.filter { m in !held.members.contains { $0.pipe == m.pipe } }
             if !fresh.isEmpty { catchUp(g, to: fresh, store: store) }
@@ -768,7 +770,7 @@ final class MTGroup {
         saveGroups()
         store.objectWillChange.send()   // the open chat trades its field for the note at once
         MTGroupRoom.shared.groupGone(g.id)   // its room goes with the chat
-        MontanaTrace.mark("group_mesh", "silenced")
+        MontanaTrace.mark("group_roster", "silenced")
     }
     /// The seat of one of an organisation's people, proven by the pipe the word came by -- never by a seat the word names.
     private func meshSeat(_ g: MTGroupState, from root: String) -> String? {

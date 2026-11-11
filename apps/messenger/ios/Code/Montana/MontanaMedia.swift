@@ -658,8 +658,15 @@ final class VoicePlayer: NSObject, ObservableObject {
             // The reply at the ear follows the PEER's voice only (the author's word 14.09): one's
             // own voice, listened back, asks for no answer.
             let theirs = voiceQueue.first { $0.file == playingFile }.map { !$0.mine } ?? false
-            let atEar = proximityArmed && UIDevice.current.proximityState && theirs
-            MontanaTrace.mark("voice_end", "queue=\(voiceQueue.count) ear=\(atEar ? 1 : 0) theirs=\(theirs ? 1 : 0)")
+            // THE EAR IS A WINDOW, NOT AN INSTANT (T1 09.11.2026, the author's word 17930: «listened and hold it at the ear as
+            // usual -- it does not record either»): the reply asked the sensor at the very tick of the sound's end, and a head
+            // that moved as the voice fell silent read «far». A «near» within the last second and a half counts as the ear
+            // (MTProximity.nearWithin, the sensor's one owner); the tone then plays, and the recording asks the sensor once more
+            // after it (beginEarReply). Every reading stands in the line, so a reply that did not come names its reason.
+            let near = UIDevice.current.proximityState
+            let recent = MTProximity.nearWithin(1.5)
+            let atEar = proximityArmed && theirs && recent
+            MontanaTrace.mark("voice_end", "queue=\(voiceQueue.count) ear=\(atEar ? 1 : 0) theirs=\(theirs ? 1 : 0) armed=\(proximityArmed ? 1 : 0) near=\(near ? 1 : 0) recent=\(recent ? 1 : 0)")
             stop()
             if atEar { NotificationCenter.default.post(name: .montanaVoiceEndedAtEar, object: nil) }
             return

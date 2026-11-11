@@ -1128,6 +1128,28 @@ final class MontanaDirect {
         return true
     }
 
+    /// Lay an envelope under the pipe label on the standing channels to the NODES alone -- the call's line door
+    /// (MTCallRoute.lineDoor). No dial and no peer channel: the nodes we already hold carry it on exactly as they carry
+    /// every letter under a label (sendUnderTag); the call receipt judges delivery. False when no node channel stands.
+    @discardableResult
+    func sendOnStandingLine(_ tag: Data, payload: Data, mid: String) -> Bool {
+        guard tag.count == 16 else { return false }
+        idxLock.lock(); let held = liveIndex.values.contains { MontanaNodes.isNode($0.ip) }; idxLock.unlock()
+        guard held else { return false }
+        let dst = Self.labelTarget(tag)
+        let fid = MontanaDirect.newFrameId()
+        q.async { [self] in
+            var used = 0
+            for (_, c) in outbound where c.ready && MontanaNodes.isNode(c.peerIP) { sendOverlayMessage(c, payload, mid, to: dst, frameId: fid); used += 1 }
+            for (_, c) in inbound where c.ready && MontanaNodes.isNode(c.peerIP) { sendOverlayMessage(c, payload, mid, to: dst, frameId: fid); used += 1 }
+            MontanaTrace.mark("line_tx", mid: mid, "nodes=\(used) tag=\(tag.prefix(4).map { String(format: "%02x", $0) }.joined())")
+        }
+        return true
+    }
+
+    /// The pipe label in the target field, padded to thirty-two: the one shape every label-addressed frame carries.
+    static func labelTarget(_ tag: Data) -> Data { var dst = tag; dst.append(Data(count: 16)); return dst }
+
     /// Put an envelope onto the local network under its pipe label.
     ///
     /// The peer address does not exist -- the set abolishes it -- so "dialling them" is impossible in
@@ -1137,7 +1159,7 @@ final class MontanaDirect {
     @discardableResult
     func sendUnderTag(_ tag: Data, payload: Data, mid: String) -> Bool {
         guard tag.count == 16 else { return false }
-        var dst = tag; dst.append(Data(count: 16))   // the pipe label in the target field, padded to thirty-two
+        let dst = Self.labelTarget(tag)
         let fid = MontanaDirect.newFrameId()
         // The same rule as for transit: the ledger answers «is there anyone to carry it», the
         // queue does the carrying. A person's send must never wait on the network queue.

@@ -536,7 +536,7 @@ final class MontanaPhoneNode: ObservableObject {
         if verdict != nodeUpKnown { DispatchQueue.main.async { self.nodeUpKnown = verdict } }
         if up != nodeUp {
             DispatchQueue.main.async { self.nodeUp = up }
-            MontanaLog.event("P2P mesh -> \(up ? "in" : "out") (nodes=\(nodes) inbound=\(ownDoor) near=\(channels) radio=\(radio))")
+            MontanaLog.event("P2P nodes -> \(up ? "in" : "out") (nodes=\(nodes) inbound=\(ownDoor) near=\(channels) radio=\(radio))")
             // A NODE IS HELD AGAIN — everything waiting rides now (18.09): the queue moves by
             // reachability, and a media intent that waited for a node (media_wait) has just got one.
             // A NODE IS A ROAD LIKE A DOOR (30.09): the letters no node holds knock now, past the ramp and the backoff
@@ -1010,7 +1010,7 @@ final class MontanaPhoneNode: ObservableObject {
 
     func sendLetter(to peerRef: String, mid: String, text: String,
                  quoteText: String? = nil, quoteMid: String? = nil,
-                 linkPreview: String? = nil, standingNearOnly: Bool = false) -> MontanaTransport? {
+                 linkPreview: String? = nil, standingNearOnly: Bool = false, standingLineOnly: Bool = false) -> MontanaTransport? {
         guard Self.stageGate, !peerRef.isEmpty else { return nil }
         // The envelope names nobody. It used to open with the sender's standing address, which is
         // the identifier the set forbids ([I-17].2) written in the clear at the head of every
@@ -1103,6 +1103,15 @@ final class MontanaPhoneNode: ObservableObject {
                   MontanaDirect.shared.sendOnStandingNear(to: overlay, payload: envelope, mid: mid) else { return nil }
             MontanaTrace.mark("sent_route", mid: mid, "route=near standing=1")
             return left(.wifi)
+        }
+        if standingLineOnly {
+            // The call's word by the node's line (MTCallRoute.lineDoor): the same envelope under the peer's pipe label, on the
+            // standing channels to the nodes alone -- no dial, no peer channel, no carrier fan-out, no owner threshold (an
+            // accelerator lane like HTTPS /signal); the call receipt judges delivery (P-3, 09.11.2026).
+            guard let tag = MTPipeBook.outgoingTag(for: peerRef),
+                  MontanaDirect.shared.sendOnStandingLine(tag, payload: envelope, mid: mid) else { return nil }
+            MontanaTrace.mark("sent_route", mid: mid, "route=line standing=1")
+            return left(MontanaTransport.delivery(cellularEgress: !wifiOn && lteOn))
         }
         // Prefer the Wi-Fi direct channel (instant persistent push); fall back to the Bluetooth mesh.
         // Per-message glyph = physical medium: cellular egress -> cellular, else Wi-Fi.

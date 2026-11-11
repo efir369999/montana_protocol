@@ -289,11 +289,11 @@ struct MTWalletPage: View {
             .coordinateSpace(.named("walletList"))
             .onPreferenceChange(MTWalletPullKey.self) { y in pulled(y) }
             // THE COIN IN THE PULL (the author's words 04.10.2026 00:19-00:56 UTC: «pulling the wallet's page brings our coin, as the
-            // time panel does»): the time panel's own coin (MontanaCoinSpinner) turns with the pull; let go past its trigger, it mints
+            // time panel does»): the time panel's own coin (MontanaPullSpinner) turns with the pull; let go past its trigger, it mints
             // and reads the page again (pulled). The platform's spinner is not drawn: the coin is the refresh.
             .overlay(alignment: .top) {
-                if MontanaCoinSpinner.pullStart < pull || pullReleased != nil {
-                    MontanaCoinSpinner(pull: pull, released: pullReleased).padding(.top, 8).allowsHitTesting(false)
+                if MontanaPullSpinner.pullStart < pull || pullReleased != nil {
+                    MontanaPullSpinner(pull: pull, released: pullReleased).padding(.top, 8).allowsHitTesting(false)
                 }
             }
             .sheet(isPresented: $sending) { MTCoinSendSheet() }
@@ -352,12 +352,12 @@ struct MTWalletPage: View {
         if pullRest == nil { pullRest = y }
         let p = max(0, y - rest)
         pull = p
-        if MontanaCoinSpinner.pullTrigger <= p { pullArmed = true; return }
-        guard pullArmed, p < MontanaCoinSpinner.pullTrigger * 0.8 else { return }
+        if MontanaPullSpinner.pullTrigger <= p { pullArmed = true; return }
+        guard pullArmed, p < MontanaPullSpinner.pullTrigger * 0.8 else { return }
         pullArmed = false
-        pullReleased = (Date(), MontanaCoinSpinner.angle(forPull: MontanaCoinSpinner.pullTrigger))
+        pullReleased = (Date(), MontanaPullSpinner.angle(forPull: MontanaPullSpinner.pullTrigger))
         autoMint.fire()
-        DispatchQueue.main.asyncAfter(deadline: .now() + MontanaCoinSpinner.finish + 0.15) { pullReleased = nil }
+        DispatchQueue.main.asyncAfter(deadline: .now() + MontanaPullSpinner.finish + 0.15) { pullReleased = nil }
     }
 }
 

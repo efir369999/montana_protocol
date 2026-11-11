@@ -192,16 +192,16 @@ enum MontanaCard {
     /// sides through the storage node at the moment of the scan. The link is 30 times shorter, the QR coarse-module.
     static let shortPrefix = "montana://r/"
     /// THE LINK IS A WEB LINK (15.15, the author's word 07.09: «clickable always and everywhere»).
-    static let webPrefix = "https://montana.quest/r/"
+    /// Each edition writes on its own cards site, MTEdition.cards (the Messenger montana.one, the Protocol montana.quest).
+    static let webPrefix = MTEdition.cards + "/r/"
     /// THE KIND IN THE LINK (the author's word 17.09): /perp/ for the permanent link, /temp/ for the
     /// daily one.
-    static let permPrefix = "https://montana.quest/perp/"
-    static let tempPrefix = "https://montana.quest/temp/"
-    /// ONE CARD, ONE NODE, TWO SITES (07.10.2026, carried over from MT Messenger): both apps write their invitations on
-    /// montana.quest, whose association file names both bundles; its /r/ page opens an app by that app's scheme (montana:// the
-    /// Messenger's, mt-protocol:// the Protocol's, Code/Names.xcconfig). Each app reads the /r/, /perp/ and /temp/ forms of
-    /// both sites, so a card written on montana.xxx before still opens.
-    static let linkHosts = Set(["montana.quest", "montana.xxx", "www.montana.xxx"])
+    static let permPrefix = MTEdition.cards + "/perp/"
+    static let tempPrefix = MTEdition.cards + "/temp/"
+    /// ONE CARD, ONE NODE, EVERY SITE: the /r/ page of each site opens an app by that app's scheme (montana:// the Messenger's,
+    /// mt-protocol:// the Protocol's, Code/Names.xcconfig). Each app reads the /r/, /perp/ and /temp/ forms of every site, so a
+    /// card written on montana.quest or montana.xxx before still opens.
+    static let linkHosts = Set(["montana.one", "montana.quest", "montana.xxx", "www.montana.xxx"])
     /// Every written form an invitation is read from.
     static let readPrefixes: [String] =
         linkHosts.sorted().flatMap { h in ["r", "perp", "temp"].map { k in "https://" + h + "/" + k + "/" } } + [shortPrefix]
