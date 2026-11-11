@@ -4,7 +4,7 @@ Every build of Montana for iPhone, iPad and Mac, newest first. The version is th
 
 ## 1.0 (2368) - 2026-11-11
 
-Source commit `d1377b726272`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2368.md).
+Source commit `0b53a57f2307`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2368.md).
 
 - Voice messages under the lock: the controls of a locked recording no longer vanish. They now follow the recording itself, not the piece of the bar they were drawn from, and a moment after the lock the app checks that they stand on the screen and can be pressed. The cross, the play and the pause are one size, on one line inside the recording's bubble, with even steps between them, and each wears the blue ring.
 - Photos and voice messages leave at once: what you send no longer waits in line behind the app's own background uploads -- the pages of the wall carried to its visitors among them, and a piece no longer stands for up to a minute at a node that takes no byte -- it goes to the next one. An attachment is laid on every node, including one that was resting a moment ago; and when the receiver reports an attachment lost, it is sent again once and a second check no longer takes the repair away.
