@@ -117,7 +117,7 @@ struct ProfileView: View {
     private func editRow(_ t: String, _ icon: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon).foregroundColor(.primary).frame(width: 26)
-            Text(LocalizedStringKey(t)).foregroundColor(.accentColor)
+            Text(LocalizedStringKey(t)).foregroundColor(onboarding ? Color.white : Color.accentColor)   // on the making only white (word 18949)
         }
     }
     @AppStorage("userName") private var name: String = ""
@@ -220,7 +220,7 @@ struct ProfileView: View {
                 if onboarding {
                     Section {
                     } footer: {
-                        Text("Everything here stays on your device. Nothing is published: your correspondent sees only what you choose to show. Leave the name empty and your call sign is used.").foregroundColor(.gray)
+                        Text("Everything here stays on your device. Nothing is published: your correspondent sees only what you choose to show. Leave the name empty and your call sign is used.").foregroundColor(.white).font(.subheadline)
                     }
                     .listRowBackground(MTGlassRowPlate())
                 }
@@ -238,7 +238,7 @@ struct ProfileView: View {
     /// Pick a callsign from the full list — the same table that yields the default callsign,
     /// in this device's language.
     private var callsignRow: some View {
-        NavigationLink { MontanaCallsignPicker() } label: {
+        NavigationLink { MontanaCallsignPicker(onMaking: onboarding) } label: {
             HStack {
                 Image(systemName: "person.text.rectangle").foregroundColor(.primary)   // the ground's ink, as the editor's other glyphs (26.09; black on the gold since 21.10)
                 Text("Choose a call sign").foregroundColor(.primary)
@@ -259,8 +259,8 @@ struct ProfileView: View {
                 // them as it already is): the very ground my page wears, window-aligned, drawn once behind the list -- the
                 // drawer stands on it the same way -- and every row above it is the tree's glass (MTGlassRowPlate); none
                 // chosen -- the page's black, as the editor always stood.
-                // On the making the editor stands on the one indigo of the login's pages (links 14793-14794), never a ground of its own.
-                ZStack { Color.black; if onboarding { MTWallpaper.paint(MTWallpaper.indigo) } else { MTPageGroundWindow() } }.ignoresSafeArea().contentShape(Rectangle()).onTapGesture { focus = nil }
+                // On the making the editor stands on the one black of the login's pages (word 18938), never a ground of its own.
+                ZStack { Color.black; if onboarding { MTWallpaper.paint(MTWallpaper.byDefault) } else { MTPageGroundWindow() } }.ignoresSafeArea().contentShape(Rectangle()).onTapGesture { focus = nil }
             )
             .navigationBarTitleDisplayMode(.inline)
     }

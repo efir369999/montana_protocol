@@ -2282,11 +2282,11 @@ struct MontanaOnboardingView: View {
 
     var body: some View {
         ZStack {
-            // ONE INDIGO FROM THE FIRST PAGE TO THE LAST (the author's words 02.11.2026 18:35 UTC, links 14793-14794: «it must be ONE
-            // ON ALL PAGES -- INDIGO from the 1st page of creation and login to the last, and not change along the way»): the login,
-            // the making and the restoring stand on the one indigo, never the burgundy, never switched at «Create»; Appearance changes
-            // the page's ground afterwards.
-            MTWallpaper.paint(MTWallpaper.indigo).ignoresSafeArea().allowsHitTesting(false)
+            // ONE BLACK FROM THE FIRST PAGE TO THE LAST, EVERY WORD WHITE (the author's word 18938, 11.11.2026 11:16 UTC: «on the whole
+            // path of creating an identity remove the grey colour of the text and make everything white so that everything reads
+            // easily -- make the default ground black»; it turns the one indigo of links 14793-14794): the login, the making and the
+            // restoring stand on the default ground, the black, never switched at «Create»; Appearance changes the ground afterwards.
+            MTWallpaper.paint(MTWallpaper.byDefault).ignoresSafeArea().allowsHitTesting(false)
             if step == 3 {
                 // Same profile screen as in settings — one source, no second implementation
                 ProfileView(onboarding: true, onFinish: { MontanaBirth.finished(); onDone() })
@@ -2377,10 +2377,10 @@ struct MontanaOnboardingView: View {
                 }
                 bornKeys = acc
                 MontanaBirth.begun(acc.mnemonic)   // a making until the profile's checkmark (link 14680)
-                // THE GROUND IS INDIGO, NOT A STEP (the author's word 02.11.2026, link 14680 (2): «by default let the indigo colour be set
-                // as the page's ground, and remove the step of choosing the ground from the registration completely»): the person is born
-                // on the indigo, and the rest of the making wears it up to the chats; Appearance changes it afterwards.
-                MTWallpaper.set(.named(MTWallpaper.indigo), for: MTWallpaper.page)
+                // THE GROUND IS THE DEFAULT, NOT A STEP (link 14680 (2): «remove the step of choosing the ground from the registration
+                // completely»; the default is the black since the author's word 18938): the person is born on the black, and the rest
+                // of the making wears it up to the chats; Appearance changes it afterwards.
+                MTWallpaper.set(.named(MTWallpaper.byDefault), for: MTWallpaper.page)
                 MontanaTrace.mark("seed_born", "ms=\(ms) stored=1")
                 MontanaEntropy.report("birth")   // what this identity stands on — recorded that same instant
                 step = 1
@@ -2406,7 +2406,7 @@ struct MontanaOnboardingView: View {
             .onAppear { withAnimation(.easeInOut(duration: 2.3).repeatForever(autoreverses: true)) { glow = true } }
             Text("Montana").font(.system(size: 40, weight: .bold)).foregroundColor(Color.accentColor)
             Text(MTEdition.intro)
-                .font(.subheadline).foregroundColor(.gray).multilineTextAlignment(.center).padding(.horizontal, 20)
+                .font(.body).foregroundColor(.white).multilineTextAlignment(.center).padding(.horizontal, 20)
             VStack(alignment: .leading, spacing: 12) {
                 privRow("key.fill", "Identity from 24 words", "Only you hold the key")
                 privRow("lock.shield.fill", "End-to-end encryption", "The key lives on your devices")
@@ -2429,7 +2429,7 @@ struct MontanaOnboardingView: View {
             Button { guarded { step = 4 } } label: { Text("Open identity") }
                 .buttonStyle(MTLoginDoorStyle())
             Text(MontanaVersion.footer)
-                .font(.caption2).foregroundColor(Color.gray.opacity(0.7)).padding(.top, 2)
+                .font(.footnote).foregroundColor(.white).padding(.top, 2)
         }
     }
     /// NOBODY IS REPLACED (the author's word 30.09: «it must not offer to replace when I create a new identity; it creates a
@@ -2447,11 +2447,11 @@ struct MontanaOnboardingView: View {
         VStack(spacing: 16) {
             Spacer().frame(height: 6)
             Image(systemName: "arrow.clockwise.circle.fill").font(.system(size: 46)).foregroundColor(Color.accentColor)
-            Text("Recovery from phrase").font(.title3.bold()).foregroundColor(.primary)
-            Text("Enter the 24 words separated by spaces, in the correct order.").font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
+            Text("Recovery from phrase").font(.title3.bold()).foregroundColor(.white)
+            Text("Enter the 24 words separated by spaces, in the correct order.").font(.subheadline).foregroundColor(.white).multilineTextAlignment(.center)
             TextEditor(text: $recoverInput).frame(height: 130).padding(8).scrollContentBackground(.hidden)
                 .background(MTGlassCardPlate(cornerRadius: 14))
-                .foregroundColor(.primary).autocorrectionDisabled().textInputAutocapitalization(.never)
+                .foregroundColor(.white).autocorrectionDisabled().textInputAutocapitalization(.never)
             #if !MONTANA_MESSENGER
             // THE PERSON'S OWN NODE, named beside the words (28.09): the copy it holds comes back before the first screen. No edition
             // draws it since the author's word 16428 (MTEdition.ownNode false in both): nodeHost stays empty and the words restore alone.
@@ -2506,10 +2506,10 @@ struct MontanaOnboardingView: View {
         VStack(spacing: 18) {
             Spacer()
             Image(systemName: "exclamationmark.shield.fill").font(.system(size: 52)).foregroundColor(.orange)
-            Text("Full control — full responsibility").font(.title3.bold()).foregroundColor(.primary).multilineTextAlignment(.center)
+            Text("Full control — full responsibility").font(.title3.bold()).foregroundColor(.white).multilineTextAlignment(.center)
             Text("The key to your identity is your 24-word seed phrase, which you're about to see. Recovery is only possible with it.\n\nLose it and you lose access to your identity and chats forever. Don't show it to anyone.\n\nStore it securely — using whatever method of storing confidential data you trust (for example, a password manager), or write it down by hand on paper and keep it offline. Don't take a screenshot or save it in Notes.")
-                .foregroundColor(.gray).font(.subheadline)
-            Toggle(isOn: $understood) { Text("I understand and take responsibility").foregroundColor(.primary).font(.subheadline) }
+                .foregroundColor(.white).font(.body)
+            Toggle(isOn: $understood) { Text("I understand and take responsibility").foregroundColor(.white).font(.body) }
             Spacer()
             Button { if understood { step = 2 } } label: { Text("Show Words") }
                 .buttonStyle(MTLoginDoorStyle(tint: MontanaOctagon.platformBlue)).disabled(!understood)
@@ -2518,8 +2518,8 @@ struct MontanaOnboardingView: View {
 
     var seed: some View {
         VStack(spacing: 14) {
-            Text("Your 24-word seed phrase").font(.title3.bold()).foregroundColor(.primary)
-            Text("Store it securely: a password manager you trust, or write it down on paper and keep it offline. Don't take a screenshot or store it in Notes.").font(.caption).foregroundColor(.gray).multilineTextAlignment(.center)
+            Text("Your 24-word seed phrase").font(.title3.bold()).foregroundColor(.white)
+            Text("Store it securely: a password manager you trust, or write it down on paper and keep it offline. Don't take a screenshot or store it in Notes.").font(.subheadline).foregroundColor(.white).multilineTextAlignment(.center)
             if let acc = bornKeys {
                 let words = acc.mnemonic.split(separator: " ").map(String.init)
                 let half = (words.count + 1) / 2
@@ -2528,15 +2528,15 @@ struct MontanaOnboardingView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(order, id: \.self) { i in
                             HStack(spacing: 6) {
-                                Text("\(i + 1).").foregroundColor(.gray).frame(width: 26, alignment: .trailing)
-                                Text(words[i]).foregroundColor(.primary).bold(); Spacer()
+                                Text("\(i + 1).").foregroundColor(.white).frame(width: 26, alignment: .trailing)
+                                Text(words[i]).foregroundColor(.white).bold(); Spacer()
                             }.padding(7).background(MTGlassCardPlate(cornerRadius: 10))
                         }
                     }
                 }
                 Button { UIPasteboard.general.string = acc.mnemonic; copied = true } label: { Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc") }
                     .buttonStyle(MTLoginDoorStyle())
-                Toggle(isOn: $savedWords) { Text("I've saved the words in a safe place").foregroundColor(.primary).font(.subheadline) }
+                Toggle(isOn: $savedWords) { Text("I've saved the words in a safe place").foregroundColor(.white).font(.body) }
                 Button {
                     // address page removed: the address and QR are now on the empty chats screen and in settings
                     // The identity is already active from the moment of its creation (see
@@ -2545,7 +2545,7 @@ struct MontanaOnboardingView: View {
                 } label: { Text("Your identity in Montana") }
                     .buttonStyle(MTLoginDoorStyle(tint: MontanaOctagon.platformBlue)).disabled(!savedWords || bornKeys == nil)
             } else {
-                Spacer(); ProgressView(); Text("Bringing an identity into being…").foregroundColor(.gray).font(.caption); Spacer()
+                Spacer(); ProgressView().tint(.white); Text("Bringing an identity into being…").foregroundColor(.white).font(.subheadline); Spacer()
             }
         }
     }
@@ -2632,9 +2632,9 @@ struct MontanaOnboardingView: View {
         VStack(spacing: 16) {
             Spacer()
             Image(systemName: "arrow.down.circle.fill").font(.system(size: 46)).foregroundColor(Color.accentColor)
-            Text(takingWord).font(.title3.bold()).foregroundColor(.primary).multilineTextAlignment(.center)
+            Text(takingWord).font(.title3.bold()).foregroundColor(.white).multilineTextAlignment(.center)
             if case .calling(let have, let need) = keep.taking, need > 0, keepLaying == nil {
-                Text("Parts in hand: \(have) of \(need)").foregroundColor(.gray).font(.caption)
+                Text("Parts in hand: \(have) of \(need)").foregroundColor(.white).font(.subheadline)
             }
             // THE BAR FROM THE FIRST FRAME (the author's word 09.10.2026 08:3x UTC: «the progress bar must show at once, now it spins
             // long before it comes; under it the approximate time of the restore»): nothing measured yet is a bar at zero, never a
@@ -2645,9 +2645,9 @@ struct MontanaOnboardingView: View {
             let f = homeNode.fetching ?? homeNode.restoring ?? keepShare ?? 0
             #endif
             ProgressView(value: f).padding(.horizontal, 24)
-            Text(verbatim: String(Int(f * 100)) + "%").foregroundColor(.gray).font(.caption)   // USER-DATA: a share
+            Text(verbatim: String(Int(f * 100)) + "%").foregroundColor(.white).font(.subheadline)   // USER-DATA: a share
             if let left = timeLeft(f) {
-                Text("About \(left) left").foregroundColor(.gray).font(.caption)
+                Text("About \(left) left").foregroundColor(.white).font(.subheadline)
             }
             Spacer()
             if canGoOn {
@@ -2656,7 +2656,7 @@ struct MontanaOnboardingView: View {
                 }
                 .buttonStyle(MTLoginDoorStyle())
                 if keep.isTaking {
-                    Text("Your history keeps coming back in the background.").foregroundColor(.gray).font(.caption).multilineTextAlignment(.center)
+                    Text("Your history keeps coming back in the background.").foregroundColor(.white).font(.subheadline).multilineTextAlignment(.center)
                 }
             }
         }
@@ -2670,7 +2670,7 @@ struct MontanaOnboardingView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
             Image(MTEdition.face).resizable().scaledToFit().frame(width: 120, height: 120)
-            Text("Sign in to Montana").font(.title.bold()).foregroundColor(.primary).padding(.top, 22)
+            Text("Sign in to Montana").font(.title.bold()).foregroundColor(.white).padding(.top, 22)
             Spacer(minLength: 0)
             VStack(spacing: 10) {
                 // ONE LOGIN PAGE, at the first launch and when a person is added from the drawer (the author's word 29.09 evening).
@@ -2687,7 +2687,7 @@ struct MontanaOnboardingView: View {
             }
             .frame(maxWidth: 420)
             Text("By continuing, you agree to the [Terms of Use](montana://terms) and [Privacy Policy](montana://privacy).")
-                .font(.caption2).foregroundColor(.gray).tint(Color.white.opacity(0.8))
+                .font(.footnote).foregroundColor(.white).tint(.white)
                 .multilineTextAlignment(.center).padding(.top, 14).padding(.horizontal, 12)
         }
         .environment(\.openURL, OpenURLAction { url in
@@ -2701,8 +2701,8 @@ struct MontanaOnboardingView: View {
         HStack(spacing: 12) {
             Image(systemName: icon).foregroundColor(Color.accentColor).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(LocalizedStringKey(title)).foregroundColor(.primary).font(.subheadline.bold())
-                Text(LocalizedStringKey(sub)).foregroundColor(.gray).font(.caption)
+                Text(LocalizedStringKey(title)).foregroundColor(.white).font(.body.bold())
+                Text(LocalizedStringKey(sub)).foregroundColor(.white).font(.subheadline)
             }
             Spacer()
         }
@@ -2722,7 +2722,7 @@ struct MTDoorLabel<Glyph: View>: View {
             Spacer(minLength: 0)
             word.font(.body.weight(.semibold)).foregroundColor(.primary).lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundColor(.secondary)
+            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundColor(.primary)   // never grey (word 18938)
         }
     }
 }
@@ -2739,23 +2739,24 @@ struct MTLoginDoorStyle: ButtonStyle {
     var tint: Color? = nil
     @Environment(\.isEnabled) private var enabled
     func makeBody(configuration: Configuration) -> some View {
+        // THE WORD NEVER GREYS (the author's words 18938 and 18949, his picture IMG_3903: «Show Words» dimmed to grey): an act not
+        // yet open dims its plate alone; its word stays the full ink of the ground -- white on the path's black.
         face(configuration.label
                 .font(.body.weight(.semibold)).foregroundColor(.primary).lineLimit(1).minimumScaleFactor(0.8)
                 .padding(.horizontal, 18)
                 .frame(maxWidth: .infinity).frame(height: 52)
                 .contentShape(Capsule()))
             .frame(maxWidth: 420)
-            .opacity(enabled ? 1 : 0.4)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
     @ViewBuilder private func face(_ label: some View) -> some View {
         if #available(iOS 26.0, *), MontanaSkin.isNative {
-            label.background(MTGlassPlate(glass: glass, shape: Capsule()))
-                .overlay(Capsule().stroke(rim.opacity(0.35), lineWidth: 1))
+            label.background(MTGlassPlate(glass: glass, shape: Capsule()).opacity(enabled ? 1 : 0.4))
+                .overlay(Capsule().stroke(rim.opacity(enabled ? 0.35 : 0.14), lineWidth: 1))
         } else {
-            label.background(Capsule().fill(MontanaOctagon.barMaterial))
-                .overlay(Capsule().stroke(rim.opacity(0.45), lineWidth: 1))
+            label.background(Capsule().fill(MontanaOctagon.barMaterial).opacity(enabled ? 1 : 0.4))
+                .overlay(Capsule().stroke(rim.opacity(enabled ? 0.45 : 0.18), lineWidth: 1))
         }
     }
     @available(iOS 26.0, *)

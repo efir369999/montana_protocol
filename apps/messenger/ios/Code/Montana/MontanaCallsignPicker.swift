@@ -4,6 +4,7 @@ import SwiftUI
 // of this device. A person who claimed no name is given one; here they may take another instead —
 // the choice is theirs and it stays on the device, exactly like the name they would have typed.
 struct MontanaCallsignPicker: View {
+    var onMaking = false   // opened on the making of an identity: the path's black ground, every word white (word 18949)
     @AppStorage("userName") private var name: String = ""
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
@@ -25,7 +26,7 @@ struct MontanaCallsignPicker: View {
                 } label: {
                     HStack {
                         // USER-DATA: a callsign table row, not interface text.
-                        Text(verbatim: row).foregroundColor(.primary)
+                        Text(verbatim: row).foregroundColor(onMaking ? Color.white : Color.primary)
                         Spacer()
                         if row == name { Image(systemName: "checkmark").foregroundColor(Color.accentColor) }
                     }
@@ -33,6 +34,8 @@ struct MontanaCallsignPicker: View {
                 }
             }
         }
+        .scrollContentBackground(onMaking ? .hidden : .automatic)
+        .background(onMaking ? Color.black : Color.clear)
         .searchable(text: $query)
         .navigationTitle("Call sign")
         .navigationBarTitleDisplayMode(.inline)

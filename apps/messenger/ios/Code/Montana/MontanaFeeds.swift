@@ -198,7 +198,7 @@ enum MTWallpaper {
     }
     /// The one default: every page and every chat that chose none wear my page's ground, so nothing chosen reads here.
     /// «No background» chosen by hand is stored, never read as nothing chosen.
-    static let byDefault = "default"   // the app's own dark ground with the Montana pattern (the gold's place until 23.10.2026)
+    static let byDefault = "black"   // the author's word 18938 (11.11.2026): «make the default ground black»; the patterned dark until then
     /// THE GROUND DECIDES THE INK (the author's word 20.10 21:4x: the gold ground, the font by default black in the whole
     /// app, so that everything reads). The gold is a light ground; white words on it do not read. The platform's own answer
     /// to a light ground is its light appearance: every primary word, bar and material turns to the platform's dark ink.
@@ -214,7 +214,7 @@ enum MTWallpaper {
     /// any more -- the light gradients alone are.
     static let lightGrounds = ["sky", "water"]
     static var scheme: ColorScheme { scheme(of: choice(for: page)) }
-    static var birthScheme: ColorScheme { scheme(of: .named(indigo)) }   // the login and the making wear the one indigo (links 14793-14794)
+    static var birthScheme: ColorScheme { scheme(of: .named(byDefault)) }   // the login and the making wear the default black (word 18938)
     static func scheme(of c: Choice) -> ColorScheme {
         switch c {
         case .named(let n): return lightGrounds.contains(n) ? .light : .dark
