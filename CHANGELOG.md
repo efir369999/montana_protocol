@@ -2,9 +2,21 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2369) - 2026-11-11
+
+Source commit `082af92d0818`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2369.md).
+
+- A new icon: Montana Protocol wears its new picture on the home screen, in the icon chooser and on the first screen; the round glass version stands in Settings and in the room.
+- The nodes say honestly when their disk is short: a node whose storage has no room left refuses a new attachment at once and names it beforehand, and the app sends the piece to the next node without waiting. Nothing the app does has changed with it.
+- Please check: the home screen icon, the icon chooser in Settings, the first screen; send a photo and a voice message; chats, groups, calls and Settings as usual.
+
+**Security and anonymity**
+
+- No algorithm or key change. The app icon's pictures were replaced (tools/delivery-policy.json pins the new blobs and retires the old ones). The node store answers /blob-put with 507 when its shelf has no room and lays nothing, and /health names it beforehand (blob_room false while blob stays); the phone already treats any refusal as the next door. Door machines no longer carry a copy of the code.
+
 ## 1.0 (2368) - 2026-11-11
 
-Source commit `0b53a57f2307`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2368.md).
+Source commit `d1377b726272`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2368.md).
 
 - Voice messages under the lock: the controls of a locked recording no longer vanish. They now follow the recording itself, not the piece of the bar they were drawn from, and a moment after the lock the app checks that they stand on the screen and can be pressed. The cross, the play and the pause are one size, on one line inside the recording's bubble, with even steps between them, and each wears the blue ring.
 - Photos and voice messages leave at once: what you send no longer waits in line behind the app's own background uploads -- the pages of the wall carried to its visitors among them, and a piece no longer stands for up to a minute at a node that takes no byte -- it goes to the next one. An attachment is laid on every node, including one that was resting a moment ago; and when the receiver reports an attachment lost, it is sent again once and a second check no longer takes the repair away.
