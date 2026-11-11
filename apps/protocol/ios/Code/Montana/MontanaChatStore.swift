@@ -7166,6 +7166,7 @@ enum SeedScope {
 
         // the VPN's keys of this device alone come through its door (MTApps.vpn.deviceKeys, slice S3b b3)
         MTGroupRoom.bookKey,   // the group rooms this phone knows and their people's room keys (07.10.2026): live minutes, never a copy's
+        MTGroupRoom.standingKey, MTGroupRoom.announcedKey,   // the room keys named for the next room, mine and the seats' (nq, 11.11.2026): a room's secret, never a copy's
         "filesPageFolder",   // the folder of the last file taken on this phone (MTFilesFolder, 27.10.2026): a path of this device's file system, never a copy's
         "pagesWall", "pagesWallRecent", "pagesWallBlur", MontanaWakePush.skewKey]
         + doorDeviceKeys
