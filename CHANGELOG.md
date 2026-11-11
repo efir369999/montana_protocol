@@ -2,9 +2,9 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2372) - 2026-11-11
+## 1.0 (2373) - 2026-11-11
 
-Source commit `fc8e37444fef`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2372.md).
+Source commit `f7cb3e8092fb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2373.md).
 
 - Groups and Channels open from the side panel, each on its own page. The strip of folders under the time panel on the chats page is gone.
 - A swipe on the chats page turns the time panel's pages, as on every page.

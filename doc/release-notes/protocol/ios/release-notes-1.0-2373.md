@@ -1,7 +1,7 @@
-1.0 (2372) Release Notes
+1.0 (2373) Release Notes
 ========================
 
-MT Protocol for iPhone, iPad and Mac, build 1.0 (2372), from source commit `fc8e37444fef1bcdc853ef9e4bf68d8d29600fc7` of 2026-11-11. The folder `apps/protocol/ios` of this repository holds that tree as it is built.
+MT Protocol for iPhone, iPad and Mac, build 1.0 (2373), from source commit `f7cb3e8092fb5d87451d88820ea6548cac065b71` of 2026-11-11. The folder `apps/protocol/ios` of this repository holds that tree as it is built.
 
 Notable changes
 ---------------
