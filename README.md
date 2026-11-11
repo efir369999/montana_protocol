@@ -1,8 +1,8 @@
 # Montana
 
-Montana is a messenger for iPhone, iPad, Mac and Android built on a post-quantum protocol core. A person is twenty-four
+MT Protocol is next-generation communication for iPhone, iPad, Mac and Android, built on a post-quantum protocol core. A person is twenty-four
 words held on the device: there is no phone number, no e-mail address and no account on a server. This repository holds
-the source of the protocol core and of the two Montana applications, laid out for an external audit.
+the source of the protocol core and of the two MT Protocol applications, laid out for an external audit.
 
 [![iPhone and iPad on TestFlight](https://img.shields.io/badge/iPhone%20·%20iPad-TestFlight-D4AF37?style=for-the-badge&logo=apple&logoColor=white)](https://testflight.apple.com/join/BHaSYWkz)
 [![Releases](https://img.shields.io/badge/IPA-Releases-C9A227?style=for-the-badge&logo=github&logoColor=white)](https://github.com/efir369999/montana_protocol/releases/latest)
@@ -23,8 +23,8 @@ statements or passing primitive tests as evidence of these properties.
 | Path | What it is |
 |---|---|
 | [`core/`](core/) | The protocol core: the normative specification (`core/docs`), its reference implementation (`core/Montana-Core`) and the client core the applications link (`core/Code`), in Rust. See [`core/README.md`](core/README.md) |
-| [`apps/messenger/ios/`](apps/messenger/ios/) | Montana for iPhone, iPad and Mac (Swift). From build 2180 it carries the VPN client that was published separately as MT VPN |
-| [`apps/messenger/android/`](apps/messenger/android/) | Montana for Android (Kotlin, with a Rust JNI library over the client core) |
+| [`apps/messenger/ios/`](apps/messenger/ios/) | MT Protocol for iPhone, iPad and Mac (Swift). From build 2180 it carries the VPN client that was published separately as MT VPN |
+| [`apps/messenger/android/`](apps/messenger/android/) | MT Protocol for Android (Kotlin, with a Rust JNI library over the client core) |
 | [`AUDIT.md`](AUDIT.md) | The audit package: scope, builds, vectors, the catalogue of open findings, what can and cannot be verified from this repository |
 | [`Audit/`](Audit/) | Current reports for the 13 protocol closure requirements, with explicit open status and source evidence |
 | [`WHITEPAPER.md`](WHITEPAPER.md) | The protocol and what the applications implement of it today |
@@ -40,7 +40,7 @@ publication and remain in the history of this repository; nothing in the current
 
 | Platform | Install | Files |
 |---|---|---|
-| iPhone, iPad, Mac | [TestFlight](https://testflight.apple.com/join/BHaSYWkz) | [IPA](https://github.com/efir369999/montana_protocol/releases/latest/download/Montana-Messenger.ipa) |
+| iPhone, iPad, Mac | [TestFlight](https://testflight.apple.com/join/BHaSYWkz) | [IPA](https://github.com/efir369999/montana_protocol/releases/latest) |
 | Android 8 or later | [montana.xxx](https://montana.xxx/messenger/) | APK from the site: [`latest.json`](https://montana.xxx/download/android/latest.json) names its build, commit and SHA-256 |
 
 The IPA is the export uploaded to the App Store and is published to be read and compared with the source; it installs
@@ -82,7 +82,7 @@ cd ../Code
 cargo test --workspace --release
 ```
 
-**Montana for iPhone, iPad and Mac.** macOS with Xcode and its iOS SDK (the Xcode release is not pinned in the tree), Rust
+**MT Protocol for iPhone, iPad and Mac.** macOS with Xcode and its iOS SDK (the Xcode release is not pinned in the tree), Rust
 1.92.0 through rustup with the device target (`rustup target add aarch64-apple-ios --toolchain 1.92.0`), Go for the VPN
 engine. The deployment target is iOS 17.2. The core is built for devices only, so the application is built for a device:
 with your own team, or with signing off to check that the source compiles. In `apps/messenger/ios`:
@@ -100,7 +100,7 @@ The last engine script writes `Frameworks/HevSocks5Tunnel.xcframework` beside `C
 `Code/Frameworks/`: move it there before `xcodebuild`. The two engine scripts are in the folder from build 2180; a folder of an
 earlier build has no VPN and needs the first three steps and `xcodebuild` only.
 
-**Montana for Android.** In `apps/messenger/android`, `python3 scripts/setup.py` installs the toolchain pinned in
+**MT Protocol for Android.** In `apps/messenger/android`, `python3 scripts/setup.py` installs the toolchain pinned in
 `scripts/toolchain.json` (JDK 17, Android SDK 35, NDK, Kotlin, the call engine, each checked against its digest), and
 `python3 scripts/build.py --check` compiles the resources and the Kotlin. The full build (`python3 scripts/build.py`) also
 builds the JNI library from the core, and it expects the core as a git checkout of one exact commit in a folder named
