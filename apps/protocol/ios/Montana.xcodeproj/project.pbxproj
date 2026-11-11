@@ -1533,7 +1533,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = Code/PacketTunnel/PacketTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1568,7 +1568,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = Code/PacketTunnel/PacketTunnel.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1737,7 +1737,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CODE_SIGN_ENTITLEMENTS = Code/Montana/Montana.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Code/Montana/Montana-Mac.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_ASSET_PATHS = "\"Code/Montana/Preview Content\"";
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				ENABLE_PREVIEWS = YES;
@@ -1792,7 +1792,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CODE_SIGN_ENTITLEMENTS = "Code/Montana/Montana-Release.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "Code/Montana/Montana-Mac-Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_ASSET_PATHS = "\"Code/Montana/Preview Content\"";
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				ENABLE_PREVIEWS = YES;
@@ -1845,7 +1845,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
@@ -1871,7 +1871,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
@@ -1896,7 +1896,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
@@ -1921,7 +1921,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
@@ -1948,7 +1948,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = Code/MontanaShare/MontanaShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1977,7 +1977,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Code/MontanaBroadcast/MontanaBroadcast.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Code/MontanaBroadcast/Info.plist;
@@ -1998,7 +1998,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Code/MontanaBroadcast/MontanaBroadcast.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Code/MontanaBroadcast/Info.plist;
@@ -2019,7 +2019,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Code/MontanaNSE/MontanaNSE.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2045,7 +2045,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Code/MontanaNSE/MontanaNSE.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2072,7 +2072,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = Code/MontanaShare/MontanaShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2371;
+				CURRENT_PROJECT_VERSION = 2373;
 				DEVELOPMENT_TEAM = S8JCA5MBVD;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2094,14 +2094,14 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 			};
 			name = Debug;
 		};
-		1505344D4C5653592AC7AEF6 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaNSE/MontanaNSE.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaNSE/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaNSE"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-		228DCD31A79AF398B1C0B90F = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaNSE/MontanaNSE.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaNSE/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaNSE"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		CD96FEBF074E61988B1588BF = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_WEAK = NO; CODE_SIGN_ENTITLEMENTS = Code/MontanaShare/MontanaShare.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaShare/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "$(MONTANA_DISPLAY_NAME)"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).Share"; PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; VALIDATE_PRODUCT = YES; }; name = Release; };
-		B45652E1792EEC2EF9E13D77 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_WEAK = NO; CODE_SIGN_ENTITLEMENTS = Code/MontanaShare/MontanaShare.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaShare/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "$(MONTANA_DISPLAY_NAME)"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).Share"; PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		36BF752C3AB22150E2DC4624 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaBroadcast/MontanaBroadcast.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_TEAM = S8JCA5MBVD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaBroadcast/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaBroadcast"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-		1532D47417EFB4A34D58906A = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaBroadcast/MontanaBroadcast.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_TEAM = S8JCA5MBVD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaBroadcast/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaBroadcast"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		9AD2917AAE8E38846BAC9FCA = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = Code/Messenger/Messenger.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_ASSET_PATHS = "\"Code/Montana/Preview Content\""; DEVELOPMENT_TEAM = S8JCA5MBVD; ENABLE_PREVIEWS = YES; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = YES; "HEADER_SEARCH_PATHS[sdk=iphoneos*]" = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/Headers", ); INFOPLIST_FILE = Code/Messenger/Info.plist; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks"; MACOSX_DEPLOYMENT_TARGET = 13.7; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; OTHER_LDFLAGS = ("$(inherited)", "-lresolv", ); "OTHER_LDFLAGS[sdk=iphoneos*]" = ("$(inherited)", "-lresolv", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/libmt_boundary.a", ); PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID)"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_PROTOCOL_CORE MONTANA_MESSENGER"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OBJC_BRIDGING_HEADER = "Code/Montana/Montana-Bridging-Header.h"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		54BEAE2A53AE1D69D5D854F2 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = Code/Messenger/Messenger.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2371; DEVELOPMENT_ASSET_PATHS = "\"Code/Montana/Preview Content\""; DEVELOPMENT_TEAM = S8JCA5MBVD; ENABLE_PREVIEWS = YES; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = YES; "HEADER_SEARCH_PATHS[sdk=iphoneos*]" = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/Headers", ); INFOPLIST_FILE = Code/Messenger/Info.plist; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks"; MACOSX_DEPLOYMENT_TARGET = 13.7; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; OTHER_LDFLAGS = ("$(inherited)", "-lresolv", ); "OTHER_LDFLAGS[sdk=iphoneos*]" = ("$(inherited)", "-lresolv", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/libmt_boundary.a", ); PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID)"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_PROTOCOL_CORE MONTANA_MESSENGER"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OBJC_BRIDGING_HEADER = "Code/Montana/Montana-Bridging-Header.h"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		1505344D4C5653592AC7AEF6 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaNSE/MontanaNSE.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaNSE/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaNSE"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		228DCD31A79AF398B1C0B90F = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaNSE/MontanaNSE.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaNSE/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaNSE"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		CD96FEBF074E61988B1588BF = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_WEAK = NO; CODE_SIGN_ENTITLEMENTS = Code/MontanaShare/MontanaShare.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaShare/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "$(MONTANA_DISPLAY_NAME)"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).Share"; PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; VALIDATE_PRODUCT = YES; }; name = Release; };
+		B45652E1792EEC2EF9E13D77 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_WEAK = NO; CODE_SIGN_ENTITLEMENTS = Code/MontanaShare/MontanaShare.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_TEAM = S8JCA5MBVD; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaShare/Info.plist; INFOPLIST_KEY_CFBundleDisplayName = "$(MONTANA_DISPLAY_NAME)"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).Share"; PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		36BF752C3AB22150E2DC4624 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaBroadcast/MontanaBroadcast.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_TEAM = S8JCA5MBVD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaBroadcast/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaBroadcast"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		1532D47417EFB4A34D58906A = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CODE_SIGN_ENTITLEMENTS = Code/MontanaBroadcast/MontanaBroadcast.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_TEAM = S8JCA5MBVD; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Code/MontanaBroadcast/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.2; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID).MontanaBroadcast"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SKIP_INSTALL = YES; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_MESSENGER"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		9AD2917AAE8E38846BAC9FCA = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = Code/Messenger/Messenger.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_ASSET_PATHS = "\"Code/Montana/Preview Content\""; DEVELOPMENT_TEAM = S8JCA5MBVD; ENABLE_PREVIEWS = YES; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = YES; "HEADER_SEARCH_PATHS[sdk=iphoneos*]" = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/Headers", ); INFOPLIST_FILE = Code/Messenger/Info.plist; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks"; MACOSX_DEPLOYMENT_TARGET = 13.7; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; OTHER_LDFLAGS = ("$(inherited)", "-lresolv", ); "OTHER_LDFLAGS[sdk=iphoneos*]" = ("$(inherited)", "-lresolv", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/libmt_boundary.a", ); PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID)"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_PROTOCOL_CORE MONTANA_MESSENGER"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OBJC_BRIDGING_HEADER = "Code/Montana/Montana-Bridging-Header.h"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
+		54BEAE2A53AE1D69D5D854F2 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = Code/Messenger/Messenger.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 2373; DEVELOPMENT_ASSET_PATHS = "\"Code/Montana/Preview Content\""; DEVELOPMENT_TEAM = S8JCA5MBVD; ENABLE_PREVIEWS = YES; FRAMEWORK_SEARCH_PATHS = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)", ); GENERATE_INFOPLIST_FILE = YES; "HEADER_SEARCH_PATHS[sdk=iphoneos*]" = ("$(inherited)", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/Headers", ); INFOPLIST_FILE = Code/Messenger/Info.plist; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES; "INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault; "INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; IPHONEOS_DEPLOYMENT_TARGET = 17.2; LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks"; MACOSX_DEPLOYMENT_TARGET = 13.7; MARKETING_VERSION = 1.0; MONTANA_APP_ID = xxx.montana.business; MONTANA_DISPLAY_NAME = "$(MT_NAME_MESSENGER)"; OTHER_LDFLAGS = ("$(inherited)", "-lresolv", ); "OTHER_LDFLAGS[sdk=iphoneos*]" = ("$(inherited)", "-lresolv", "$(MONTANA_FRAMEWORKS_DIR)/MontanaCore.xcframework/ios-arm64/libmt_boundary.a", ); PRODUCT_BUNDLE_IDENTIFIER = "$(MONTANA_APP_ID)"; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphoneos*]" = "$(inherited) MONTANA_PROTOCOL_CORE MONTANA_MESSENGER"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OBJC_BRIDGING_HEADER = "Code/Montana/Montana-Bridging-Header.h"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
