@@ -28,7 +28,7 @@
 #   three different binaries): with deduplication off and the selector stubs branching to the one stub, no target holds two slots.
 #
 # Usage, from a clone of montana_core (apps/apple):
-#   python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare Montana-Core-1.0-N.dmg
+#   python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare MT-Protocol-1.0-N.dmg
 # prints the reproducible digest of the rebuilt app and of the release, and every file that differs. Needs the Xcode, Rust and
 # Go versions the release names (Xcode 26.2 17C52, Rust 1.92.0 with aarch64-apple-ios-macabi, Go from go.mod).
 import argparse
@@ -44,6 +44,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mt_names  # noqa: E402  the Mac product's name, Code/Names.xcconfig's line (decision 829 = a)
+
 ROOT = Path(__file__).resolve().parent.parent
 # -no_adhoc_codesign (Agent 230, 22.10.2026): a release signs, so Xcode tells ld not to sign; the builder's archive may not sign,
 # so ld signed ad hoc itself -- a grown __LINKEDIT and another LC_UUID in Montana Core, NSE and Share (2278 against a clone).
@@ -55,9 +58,9 @@ LEFT_OUT_FILES = {'CodeResources', 'embedded.provisionprofile'}
 BUILDER_KEYS = ['BuildMachineOSBuild']
 FIXED = Path('/private/tmp/montana-apple')
 # One road for both apps (OZ 1, 22.10.2026): the phone archives the same project for generic iOS with the frameworks its own dependency
-# road prepares; its product is Montana.app, released inside an IPA under Payload/, the Mac's Montana Core.app inside a ZIP
+# road prepares; its product is Montana.app, released inside an IPA under Payload/, the Mac's app (MT Protocol.app, Code/Names.xcconfig) inside a disk image
 PLATFORMS = {
-    'mac': {'destination': 'generic/platform=macOS,variant=Mac Catalyst', 'app': 'Montana Core.app', 'archive': 'Montana-Core.xcarchive',
+    'mac': {'destination': 'generic/platform=macOS,variant=Mac Catalyst', 'app': mt_names.mac() + '.app', 'archive': mt_names.mac_stem() + '.xcarchive',
             'manifest': 'reproduced.manifest'},
     'phone': {'destination': 'generic/platform=iOS', 'app': 'Montana.app', 'archive': 'Montana.xcarchive',
               'manifest': 'phone-reproduced.manifest'},
@@ -313,7 +316,7 @@ def main():
     parser.add_argument('--platform', choices=sorted(PLATFORMS), default='mac')
     parser.add_argument('--core', help='the core source (core/Code of montana_core); default: the committed core beside this tree')
     parser.add_argument('--home', help='the build folder (default: build-reproduce/ of this tree)')
-    parser.add_argument('--compare', help='a published Montana-Core DMG or ZIP (Mac) or Montana IPA (phone) to compare the rebuilt app with')
+    parser.add_argument('--compare', help='a published MT-Protocol DMG or ZIP (Mac) or Montana IPA (phone) to compare the rebuilt app with')
     parser.add_argument('--archive', help='archive here with the frameworks the build home names, then scrub (the release road)')
     parser.add_argument('--scrub', help='make every Info.plist and Assets.car of this app canonical')
     parser.add_argument('--digest', help='print the reproducible digest of this app, DMG, ZIP or IPA')

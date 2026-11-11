@@ -23,7 +23,7 @@ statements or passing primitive tests as evidence of these properties.
 | Path | What it is |
 |---|---|
 | [`core/`](core/) | The protocol core: the normative specification (`core/docs`), its reference implementation (`core/Montana-Core`) and the client core the applications link (`core/Code`), in Rust. See [`core/README.md`](core/README.md) |
-| [`apps/messenger/ios/`](apps/messenger/ios/) | MT Protocol for iPhone, iPad and Mac (Swift). From build 2180 it carries the VPN client that was published separately as MT VPN |
+| [`apps/protocol/ios/`](apps/protocol/ios/) | MT Protocol for iPhone, iPad and Mac (Swift). From build 2180 it carries the VPN client that was published separately as MT VPN |
 | [`apps/messenger/android/`](apps/messenger/android/) | MT Protocol for Android (Kotlin, with a Rust JNI library over the client core) |
 | [`AUDIT.md`](AUDIT.md) | The audit package: scope, builds, vectors, the catalogue of open findings, what can and cannot be verified from this repository |
 | [`Audit/`](Audit/) | Current reports for the 13 protocol closure requirements, with explicit open status and source evidence |
@@ -85,7 +85,7 @@ cargo test --workspace --release
 **MT Protocol for iPhone, iPad and Mac.** macOS with Xcode and its iOS SDK (the Xcode release is not pinned in the tree), Rust
 1.92.0 through rustup with the device target (`rustup target add aarch64-apple-ios --toolchain 1.92.0`), Go for the VPN
 engine. The deployment target is iOS 17.2. The core is built for devices only, so the application is built for a device:
-with your own team, or with signing off to check that the source compiles. In `apps/messenger/ios`:
+with your own team, or with signing off to check that the source compiles. In `apps/protocol/ios`:
 
 ```
 MONTANA_CORE_SRC="${PWD}/../../../core/Code/crates/mt-bindings" bash scripts/build-core.sh
