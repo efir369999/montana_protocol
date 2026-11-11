@@ -1,10 +1,21 @@
 # Changelog
 
-Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
+Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
+
+## 1.0 (2371) - 2026-11-11
+
+Source commit `d600afe7e451`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2371.md).
+
+- Nothing changes on the phone. This build's source is published in its own folder of the public repository, apps/protocol/ios, under the Protocol's name; the Messenger keeps its own repository.
+- Please check: chats, groups, calls and Settings as usual.
+
+**Security and anonymity**
+
+- No algorithm, key or app code change. The public source moves from apps/messenger/ios to apps/protocol/ios in the same commit, so nothing is published twice; the publisher's scan reads the old folder's published pages as already shown and still refuses anything new.
 
 ## 1.0 (2370) - 2026-11-11
 
-Source commit `6ec745a04aca`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2370.md).
+Source commit `9e0d4b150f3c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2370.md).
 
 - The Montana Protocol icon fills the whole icon on the home screen: the white frame and the square inside the square are gone, the coin stands at full size.
 - The pages of signing in and creating an identity stand on black, and every word on them is white and larger, so everything reads easily: no grey text from the first screen to the chats. Black is the default background.
@@ -17,7 +28,7 @@ Source commit `6ec745a04aca`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2369) - 2026-11-11
 
-Source commit `76d57be365ea`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2369.md).
+Source commit `76d57be365ea`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2369.md).
 
 - A new icon: Montana Protocol wears its new picture on the home screen, in the icon chooser and on the first screen; the round glass version stands in Settings and in the room.
 - The nodes say honestly when their disk is short: a node whose storage has no room left refuses a new attachment at once and names it beforehand, and the app sends the piece to the next node without waiting. Nothing the app does has changed with it.
@@ -29,7 +40,7 @@ Source commit `76d57be365ea`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2368) - 2026-11-11
 
-Source commit `d1377b726272`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2368.md).
+Source commit `d1377b726272`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2368.md).
 
 - Voice messages under the lock: the controls of a locked recording no longer vanish. They now follow the recording itself, not the piece of the bar they were drawn from, and a moment after the lock the app checks that they stand on the screen and can be pressed. The cross, the play and the pause are one size, on one line inside the recording's bubble, with even steps between them, and each wears the blue ring.
 - Photos and voice messages leave at once: what you send no longer waits in line behind the app's own background uploads -- the pages of the wall carried to its visitors among them, and a piece no longer stands for up to a minute at a node that takes no byte -- it goes to the next one. An attachment is laid on every node, including one that was resting a moment ago; and when the receiver reports an attachment lost, it is sent again once and a second check no longer takes the repair away.
@@ -42,7 +53,7 @@ Source commit `d1377b726272`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2367) - 2026-11-10
 
-Source commit `c4ad41da9fd3`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2367.md).
+Source commit `c4ad41da9fd3`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2367.md).
 
 - The voice button answers the finger at once: the hold is counted from the moment the finger lands, not from the system's later recognition, so a short hold no longer turns into a tap that swaps the microphone for the camera. The reply at the ear after listening records again: the phone counts the ear as near if the sensor saw it within the last second and a half, and every reason a reply did not start is written down. The diary of the device is never thrown away: the node keeps every line or answers that it could not, and the phone keeps its lines until they have landed. The notice that someone keeps a sealed part of their copy on this phone is gone; Settings explains the copy with contacts in plain words.
 - The VPN tunnel rises by the hand alone: no profile of ours carries On Demand any more, so a tunnel that ended -- by the hand or because the extension died -- stays down until the switch is touched again, and every end is shown; the background supervisor and the Mac's launch agent that used to raise it are gone.
@@ -54,7 +65,7 @@ Source commit `c4ad41da9fd3`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2365) - 2026-11-09
 
-Source commit `06cca42c988b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2365.md).
+Source commit `06cca42c988b`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2365.md).
 
 - The voice button is rebuilt so the press reaches it: on iOS 27.0.1 a press on the microphone did not reach the button at all, so holding it recorded nothing. The press is now taken by the button's own platform recogniser, and its whole area is declared touchable.
 
@@ -64,7 +75,7 @@ Source commit `06cca42c988b`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2364) - 2026-11-06
 
-Source commit `0a3ed5688699`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2364.md).
+Source commit `0a3ed5688699`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2364.md).
 
 - Music keeps its word with the car and the headphones: when a call, Siri, a navigator or a car's Bluetooth takes the sound, the track pauses where it stands and the bar says so; when the sound is given back with «resume», the track plays on from its place. A headset or a car that goes away pauses the track instead of playing it aloud into the room.
 
@@ -74,7 +85,7 @@ Source commit `0a3ed5688699`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2363) - 2026-11-06
 
-Source commit `9a67c720f5c4`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2363.md).
+Source commit `9a67c720f5c4`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2363.md).
 
 - The music's diary on this device tells a track that ran to its end from one the phone could not read to its end: a track that falls silent early is named by the moment it stopped and its length, so its cause can be found and mended.
 
@@ -84,7 +95,7 @@ Source commit `9a67c720f5c4`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2362) - 2026-11-06
 
-Source commit `6e2b29ca7c9c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2362.md).
+Source commit `6e2b29ca7c9c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2362.md).
 
 - The music page shows only tracks that play: the tracks of a lent folder that did not open stay out of the list, the queue and the shuffle until the folder opens again or is lent again with the plus, and the folder lent again takes its tracks back in their places.
 - Passwords leave the app: the Passwords tile and page are gone, a secret letter sent by an older build is no longer shown, and the passwords vault is erased from this device's keychain at launch.
@@ -96,7 +107,7 @@ Source commit `6e2b29ca7c9c`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2361) - 2026-11-05
 
-Source commit `a2913264003b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2361.md).
+Source commit `a2913264003b`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2361.md).
 
 - Each app opens by its own link scheme: Montana by montana://, MT Protocol by mt-protocol://. A Montana link in a letter opens inside the app where you tap it, and an invitation still opens in either app.
 - The app has one name everywhere: the permission questions no longer name it (the system already shows its name above them), and its iCloud folder is called MT Protocol, as under the icon.
@@ -110,7 +121,7 @@ Source commit `a2913264003b`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2360) - 2026-11-04
 
-Source commit `5666090ffadb`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2360.md).
+Source commit `5666090ffadb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2360.md).
 
 - Names with @ are gone: no public @name, no search or link by @name, and the people you add are no longer written into your phone's Contacts. A contact is shared through the system's own picker, so Montana asks for no access to Contacts.
 - Adding a person speaks only of your card: people reach you by its QR code or link, and the first screen of each app says what it is.
@@ -123,7 +134,7 @@ Source commit `5666090ffadb`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2359) - 2026-11-04
 
-Source commit `ada594f9dc02`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2359.md).
+Source commit `ada594f9dc02`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2359.md).
 
 - Call recording is gone: no switch in Settings, no record mark on the call screen, and what an earlier build left of it on this phone is removed. A recording already sent to a chat stays in that chat.
 - Your node is gone from Settings. Files a node already holds still come back when you open them.
@@ -141,7 +152,7 @@ Source commit `ada594f9dc02`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2358) - 2026-11-04
 
-Source commit `48ccc9de8f07`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2358.md).
+Source commit `48ccc9de8f07`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2358.md).
 
 - Delete for everyone always works: a channel post taken away leaves every page, whatever the level.
 - No download button under a post: the row under it ends with the views.
@@ -154,7 +165,7 @@ Source commit `48ccc9de8f07`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2355) - 2026-11-03
 
-Source commit `fcdeb9ba7a4d`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2355.md).
+Source commit `fcdeb9ba7a4d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2355.md).
 
 - The name under the icon on the home screen is MT Protocol; the app stays Montana Protocol on the App Store.
 - One icon: the Montana coin fitted to the icon shape. The alternate icons are gone; a phone that had one returns to the coin.
@@ -166,7 +177,7 @@ Source commit `fcdeb9ba7a4d`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2352) - 2026-11-03
 
-Source commit `b12a68ed6373`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2352.md).
+Source commit `b12a68ed6373`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2352.md).
 
 - The app is now called Montana Protocol on the home screen, in the share sheet, in iCloud storage and in its terms -- the same name as on the App Store.
 - A new icon: the Montana coin.
@@ -178,7 +189,7 @@ Source commit `b12a68ed6373`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2351) - 2026-11-02
 
-Source commit `63de00ad1b6b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2351.md).
+Source commit `63de00ad1b6b`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2351.md).
 
 - A long message that arrives while the app is open appears with its words at once; it no longer hangs as «New message» with a spinning wheel until you open the chat again.
 
@@ -189,7 +200,7 @@ Source commit `63de00ad1b6b`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2350) - 2026-11-02
 
-Source commit `cfa3a6742919`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2350.md).
+Source commit `cfa3a6742919`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2350.md).
 
 - The feed's motion is one for everyone: the springiness and animation duration an older build let you set no longer apply, and they leave the phone at launch.
 - Signing in and creating an identity stand on one indigo background from the first page to the last; it no longer changes along the way.
@@ -205,7 +216,7 @@ Source commit `cfa3a6742919`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2349) - 2026-11-02
 
-Source commit `6e9f03a4389e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2349.md).
+Source commit `6e9f03a4389e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2349.md).
 
 - Leaving the registration midway no longer leaves an identity behind: until the profile's checkmark the making is unfinished, and the next launch forgets it.
 - The registration has no step of choosing the page's ground any more: a new identity is born on the indigo, and Appearance changes it later.
@@ -219,7 +230,7 @@ Source commit `6e9f03a4389e`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2348) - 2026-11-02
 
-Source commit `842496231721`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2348.md).
+Source commit `842496231721`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2348.md).
 
 - Time Coins now says one thing about coins: one coin is one second. The Minting section with its other sources (rights from the wall, coins from chats, the Pantheon, the VPN wall, reactions, burned, received and sent) is gone, and the badge over the coin shows the level alone.
 - The TimeChain page names the chains of earlier builds as one line, Earlier builds.
@@ -230,7 +241,7 @@ Source commit `842496231721`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2347) - 2026-11-02
 
-Source commit `386c007160f1`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2347.md).
+Source commit `386c007160f1`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2347.md).
 
 - When you create an identity, a tap on a background now applies it to the page at once: no preview and no extra confirmation. The same goes for a photo from your library. The checkmark then goes on to create the identity. Choosing the background later in your profile still shows the preview.
 
@@ -240,7 +251,7 @@ Source commit `386c007160f1`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2345) - 2026-11-02
 
-Source commit `403d039f8ec2`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2345.md).
+Source commit `403d039f8ec2`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2345.md).
 
 - The app no longer freezes and closes when it goes to the background. During a call, photos, videos, GIFs and Wall of Thoughts posts now send while the call is connected; they wait only while the call is ringing or connecting. Coins that did not leave because the key's node was busy for the minute are now sent again automatically for up to a minute, and if they still cannot go you are told why and nothing leaves your balance. On the Wall of Thoughts you can like, keep and repost a post even without a chat with its writer, a long press on the like shows who liked it, a long press on the eye of your own posts shows who saw them, and a tap on the writer's name opens their page. A repost now stands under your name, with the original's wall noted below. The side panel's background now reaches the bottom of the screen.
 
@@ -250,7 +261,7 @@ Source commit `403d039f8ec2`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2342) - 2026-11-01
 
-Source commit `0e1d9b73dbee`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2342.md).
+Source commit `0e1d9b73dbee`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2342.md).
 
 - The phone stays cooler and the app opens lighter: at launch it no longer re-sends wall pages to visitors who never came for the last one (they get the page when they reappear), no longer lays out the music list until you open the music page, remembers which parts of the coin book it has already opened so a launch fetches only the new ones, and no longer keeps redialling addresses that only its own tunnel answered.
 
@@ -260,7 +271,7 @@ Source commit `0e1d9b73dbee`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2341) - 2026-11-01
 
-Source commit `82054e1d5dc8`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2341.md).
+Source commit `82054e1d5dc8`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2341.md).
 
 - Chats are fresh sooner after launch: the app reads its mailbox the moment it starts instead of waiting a fixed two and a half seconds, and a read that comes before the network's doors have answered -- or before the account's reference is ready -- is kept and goes the moment they are, never dropped.
 
@@ -270,7 +281,7 @@ Source commit `82054e1d5dc8`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2340) - 2026-11-01
 
-Source commit `7ed684ede6bd`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2340.md).
+Source commit `7ed684ede6bd`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2340.md).
 
 - Cooler phone: a quick pass through the feed on the way to another tab no longer wakes the phones of everyone in it, and a message arriving while the app is open no longer makes it read the whole mailbox again.
 - Faster start and less heat: the chat history is no longer rewritten in full (several megabytes) at every launch, an incoming name no longer rewrites the names list on the main thread, and the clean-up of old stored files runs once a minute instead of once per write.
@@ -287,7 +298,7 @@ Source commit `7ed684ede6bd`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2336) - 2026-11-01
 
-Source commit `d039af024dca`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2336.md).
+Source commit `d039af024dca`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2336.md).
 
 - Faster and cooler start: when nothing in your chat archive has changed since the last launch, the app no longer reads and decrypts the whole archive again at every start -- it checks the size and time of each chat's log and moves on.
 
@@ -297,7 +308,7 @@ Source commit `d039af024dca`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2335) - 2026-11-01
 
-Source commit `e46ce11cc870`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2335.md).
+Source commit `e46ce11cc870`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2335.md).
 
 - The chats scroll at once after the app opens: the key is no longer derived from your words at every launch -- it is derived once and kept on this device.
 - Opening the chats no longer builds the music and the feed pages behind them; a page is built when you look at it, and the music library is gathered off the main thread.
@@ -309,7 +320,7 @@ Source commit `e46ce11cc870`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2330) - 2026-11-01
 
-Source commit `d0886d400527`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2330.md).
+Source commit `d0886d400527`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2330.md).
 
 - The chats open faster: a conversation shows its newest twelve messages at once and lays the rest a moment later, and the video-note camera starts only when you record, not when you open a chat.
 - Less heat: the music library is walked only when you open it, not at every launch; the history is written chat by chat, only the chat that changed, and only what was written is read back.
@@ -322,7 +333,7 @@ Source commit `d0886d400527`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2325) - 2026-10-30
 
-Source commit `d13e6baf45f2`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2325.md).
+Source commit `d13e6baf45f2`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2325.md).
 
 - The Time Balance rises again every second while you are in the network: the app is open or the Montana VPN is live. The available balance moves only when the core confirms the seconds at the close of a window.
 - The core inside the app now carries the door through which a phone that holds nothing joins the running chain from two consecutive final proposals and checks every certificate itself. The app does not open this door yet.
@@ -333,7 +344,7 @@ Source commit `d13e6baf45f2`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2324) - 2026-10-30
 
-Source commit `d20b2d66826d`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2324.md).
+Source commit `d20b2d66826d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2324.md).
 
 - When your contact's phone renews the secret of your private conversation, yours follows: it takes the renewal letters, checks them and opens the messages sealed under the new key. This phone does not start a renewal of its own yet.
 - The offer to update is now a small notice over the screen instead of a full page: it hides by itself after nine seconds, or close it with the cross in its top right corner. A touch on it opens the update.
@@ -344,7 +355,7 @@ Source commit `d20b2d66826d`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2323) - 2026-10-30
 
-Source commit `a007fbba7fbf`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2323.md).
+Source commit `a007fbba7fbf`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2323.md).
 
 - When your contact's phone renews the secret of your private conversation, yours follows: it takes the renewal letters, checks them and opens the messages sealed under the new key. This phone does not start a renewal of its own yet.
 
@@ -354,7 +365,7 @@ Source commit `a007fbba7fbf`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2322) - 2026-10-30
 
-Source commit `09f6bff2c957`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2322.md).
+Source commit `09f6bff2c957`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2322.md).
 
 - A comment on a wall costs no coin and brings none: nothing leaves your wallet when you comment, the wall's owner burns nothing and pays no share to the post's writer. Coins are born only by the network's core, one coin a second.
 - The wallet's «Chats and calls» chains are history: the coins chats, calls and comments minted and burned before stay readable there, and nothing moves them now.
@@ -365,7 +376,7 @@ Source commit `09f6bff2c957`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2321) - 2026-10-30
 
-Source commit `bf11ab0b1f58`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2321.md).
+Source commit `bf11ab0b1f58`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2321.md).
 
 - The app no longer counts coins of its own: letters in chats, taps on the wallet's coin, the VPN wall's seconds, the wallet's pull and the time away mint nothing on the device. Coins are born only by the network's core, one coin a second.
 - The +1 that rose under a chat's field and at the finger on the wallet's coin is gone, since nothing is credited there.
@@ -377,7 +388,7 @@ Source commit `bf11ab0b1f58`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2319) - 2026-10-29
 
-Source commit `5068b59c0575`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2319.md).
+Source commit `5068b59c0575`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2319.md).
 
 - Calls no longer credit or take coins: a call's seconds mint nothing and burn nothing, and no coin receipt stands under a call. Coins are born only by the network's core, one coin a second.
 - Chess no longer credits or takes coins: no coins for moves, no stakes, no pot and no winnings. Coins are born only by the network's core, one coin a second.
@@ -390,7 +401,7 @@ Source commit `5068b59c0575`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2317) - 2026-10-29
 
-Source commit `3febd62ee04f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2317.md).
+Source commit `3febd62ee04f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2317.md).
 
 - Chess no longer credits or takes coins: no coins for moves, no stakes, no pot and no winnings. Coins are born only by the network's core, one coin a second.
 - The captured pieces beside each player are all drawn at the same size, in the board's own artwork.
@@ -402,7 +413,7 @@ Source commit `3febd62ee04f`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2316) - 2026-10-29
 
-Source commit `f6484629d89a`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2316.md).
+Source commit `f6484629d89a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2316.md).
 
 - When the network does not answer at the moment you open the wallet, the balance shows the last amount the chain confirmed for your key, not a lower local estimate. Your coins on the chain did not change.
 
@@ -412,7 +423,7 @@ Source commit `f6484629d89a`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2315) - 2026-10-27
 
-Source commit `1604d008df48`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2315.md).
+Source commit `1604d008df48`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2315.md).
 
 - A file you sent to a channel or a group no longer shows as failed with «retry» after you reopen the app: it stands as sent, the way the channel shows it.
 - In the row of files and pictures above the message field, hold one and carry it to another place: the numbers follow, and they are sent in the order you set.
@@ -424,7 +435,7 @@ Source commit `1604d008df48`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2314) - 2026-10-26
 
-Source commit `df26a92dd9fe`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2314.md).
+Source commit `df26a92dd9fe`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2314.md).
 
 - The Time Coins page shows the minting as it happens: while you are in the app, your Time Balance rises every second with the seconds on their way to the network, before the window that confirms them is finalized; when the network confirms them the number moves on without a jump. The line Available beneath it, and what you can send, stay exactly what the network has confirmed.
 
@@ -434,7 +445,7 @@ Source commit `df26a92dd9fe`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2313) - 2026-10-25
 
-Source commit `7c3624af1f00`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2313.md).
+Source commit `7c3624af1f00`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2313.md).
 
 - Conversations keep their keys in step with the day more reliably: when the phone's clock runs ahead of the network, the first daily step of a conversation's keys waits up to four days for the network to confirm the day, and a conversation met again after a pause stays the same conversation. Messages, calls and coins work as before.
 
@@ -444,7 +455,7 @@ Source commit `7c3624af1f00`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2312) - 2026-10-25
 
-Source commit `4c768afb86eb`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2312.md).
+Source commit `4c768afb86eb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2312.md).
 
 - Several files can now be chosen at once: they wait above the message field numbered 1, 2, 3 in the order you chose them, a cross takes one out and the numbers close up, and they are sent one after another in that order to a chat, a channel or a group, so a small file never overtakes a larger one. Messages, calls and coins work as before.
 
@@ -454,7 +465,7 @@ Source commit `4c768afb86eb`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2311) - 2026-10-25
 
-Source commit `a8986f934307`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2311.md).
+Source commit `a8986f934307`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2311.md).
 
 - A long message split into several bubbles now reads top to bottom in the order it was written: the first part on top, and scrolling down shows the continuation. Messages, calls and coins work as before.
 
@@ -464,7 +475,7 @@ Source commit `a8986f934307`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2310) - 2026-10-25
 
-Source commit `f83cf7350b4b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2310.md).
+Source commit `f83cf7350b4b`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2310.md).
 
 - Each conversation's secret now moves forward one day at a time. From 3 November the phone keeps only the step from two days back and erases the original secret, so a secret taken from the phone later cannot open earlier days. From 1 November messages carry the day's tag: update both ends to this build before then. Messages, calls and coins work as before.
 
@@ -474,7 +485,7 @@ Source commit `f83cf7350b4b`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2309) - 2026-10-25
 
-Source commit `8439bb0f4306`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2309.md).
+Source commit `8439bb0f4306`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2309.md).
 
 - The secret of each conversation now lives in one place inside the app and is never handed out: every part of the app, the notification extension and the share sheet ask that one place for what they need. Messages, calls and coins work exactly as before.
 
@@ -484,7 +495,7 @@ Source commit `8439bb0f4306`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2308) - 2026-10-24
 
-Source commit `2d8a183d860e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2308.md).
+Source commit `2d8a183d860e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2308.md).
 
 - A call that has already ended no longer keeps waking your device: the stale invitation is now confirmed to its sender, so it stops being sent again.
 
@@ -494,7 +505,7 @@ Source commit `2d8a183d860e`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2307) - 2026-10-24
 
-Source commit `d2cd1db9a283`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2307.md).
+Source commit `d2cd1db9a283`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2307.md).
 
 - Calls connect when one of the nodes is down: every call signal also goes through the other node at once.
 - On the Mac, closing the last window quits the app.
@@ -506,7 +517,7 @@ Source commit `d2cd1db9a283`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2306) - 2026-10-24
 
-Source commit `221bec73d642`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2306.md).
+Source commit `221bec73d642`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2306.md).
 
 - One person, many devices: a letter, a photo or a video is taken by each of your devices on its own, so the Mac fetching first no longer leaves the phone without it.
 
@@ -516,7 +527,7 @@ Source commit `221bec73d642`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2305) - 2026-10-24
 
-Source commit `1d217f36fc91`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2305.md).
+Source commit `1d217f36fc91`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2305.md).
 
 - Coins: the wallet's number rises every second again, as it did before, and each second's coin is shown rising. The count is still kept by the network's core.
 
@@ -526,7 +537,7 @@ Source commit `1d217f36fc91`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2304) - 2026-10-23
 
-Source commit `33eb64764036`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2304.md).
+Source commit `33eb64764036`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2304.md).
 
 - Coins: every second is credited again — one second, one coin — for everyone, including those who minted by the earlier doubling rule. The count is kept by the network's core; the app shows it.
 
@@ -536,7 +547,7 @@ Source commit `33eb64764036`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2303) - 2026-10-23
 
-Source commit `ece5b8669210`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2303.md).
+Source commit `ece5b8669210`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2303.md).
 
 - Chats, groups and channels: pick as many photos, videos and files as you like at once; they are sent in the order you chose them.
 
@@ -546,7 +557,7 @@ Source commit `ece5b8669210`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2302) - 2026-10-23
 
-Source commit `8df01bb54133`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2302.md).
+Source commit `8df01bb54133`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2302.md).
 
 - Montana now finds its update on every iPhone: the update chat and the button on the time panel no longer depend on the iOS version.
 
@@ -556,7 +567,7 @@ Source commit `8df01bb54133`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2301) - 2026-10-23
 
-Source commit `91a0555a2caf`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2301.md).
+Source commit `91a0555a2caf`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2301.md).
 
 - Coins on someone's wall post now leave by a record of your TimeChain: the post's owner receives them from the chain, not from the phone.
 
@@ -566,7 +577,7 @@ Source commit `91a0555a2caf`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2300) - 2026-10-23
 
-Source commit `4b68ce190d6e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2300.md).
+Source commit `4b68ce190d6e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2300.md).
 
 - The transfer screen speaks of your time chain: a transfer not yet in it reads "Not in your TimeChain yet" -- the word book is gone.
 
@@ -576,7 +587,7 @@ Source commit `4b68ce190d6e`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2299) - 2026-10-23
 
-Source commit `4d8b7da44672`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2299.md).
+Source commit `4d8b7da44672`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2299.md).
 
 - From 26 October a call that is not recorded is paid on the time chain itself: its seconds are burned as one record at the head of your chain, once a window and at the end of the call.
 
@@ -586,7 +597,7 @@ Source commit `4d8b7da44672`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2298) - 2026-10-23
 
-Source commit `e66c53c8fefb`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2298.md).
+Source commit `e66c53c8fefb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2298.md).
 
 - The chats page no longer stutters: the coin view of each conversation is reckoned off the main thread.
 - Montana on a Mac opens only when you open it: a call or a letter no longer launches the app after you quit it.
@@ -597,7 +608,7 @@ Source commit `e66c53c8fefb`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2297) - 2026-10-23
 
-Source commit `9c4e9919a828`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2297.md).
+Source commit `9c4e9919a828`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2297.md).
 
 - Your coin balance now shows what the time chain says; after the time cut calls and taps no longer mint coins on the phone itself, and an unrecorded call burns exactly its price.
 
@@ -607,7 +618,7 @@ Source commit `9c4e9919a828`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2296) - 2026-10-23
 
-Source commit `03de274b7160`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2296.md).
+Source commit `03de274b7160`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2296.md).
 
 - Coins given on a letter now leave as a SEND record in the time chain under that letter; the reaction only names the record, and the reader's coins arrive from the chain itself.
 
@@ -617,7 +628,7 @@ Source commit `03de274b7160`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2295) - 2026-10-23
 
-Source commit `7806640bf463`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2295.md).
+Source commit `7806640bf463`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2295.md).
 
 - From 26 October, time coins are minted while you are here: every forty seconds the phone records the seconds you spent with Montana open or behind the Montana VPN as a MINT in the time chain. Taps, calls and time away mint nothing separately.
 
@@ -627,7 +638,7 @@ Source commit `7806640bf463`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2294) - 2026-10-23
 
-Source commit `55a032bb8d74`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2294.md).
+Source commit `55a032bb8d74`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2294.md).
 
 - Montana no longer reaches a server that left the network: the old Frankfurt machine now belongs to someone else, and the phone stopped connecting to it.
 
@@ -637,7 +648,7 @@ Source commit `55a032bb8d74`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2293) - 2026-10-23
 
-Source commit `057f2d1ec42d`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2293.md).
+Source commit `057f2d1ec42d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2293.md).
 
 - Coins follow the new rule of the time chain: from 25 October 21:00 UTC a mint counts only the seconds you are present in Montana, and a burned coin is a record of the chain like any other spend.
 - The gold page ground is gone; a page that used it now shows Montana's own dark ground with its pattern.
@@ -648,7 +659,7 @@ Source commit `057f2d1ec42d`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2292) - 2026-10-23
 
-Source commit `679efed3dd05`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2292.md).
+Source commit `679efed3dd05`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2292.md).
 
 - A background wake no longer keeps Montana busy: the copy of the coin chains is checked at most once in ten minutes even when a notification starts the app, and a record's signature is verified once, not at every wake.
 - Large stored values (the wall above all) now live in their own files instead of the app's settings, which had grown past the system's limit and were rewritten whole at every change.
@@ -660,7 +671,7 @@ Source commit `679efed3dd05`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2291) - 2026-10-22
 
-Source commit `d5970e7ad630`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2291.md).
+Source commit `d5970e7ad630`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2291.md).
 
 - Switching the record button between voice, video and coin no longer cuts off music or a voice message that is playing: a tap only switches the mode, and the microphone is taken only when you hold to record.
 
@@ -670,7 +681,7 @@ Source commit `d5970e7ad630`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2290) - 2026-10-22
 
-Source commit `33cd784c0819`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2290.md).
+Source commit `33cd784c0819`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2290.md).
 
 - The gold background now wears the system's dark appearance: black panels and white text on it, as the system draws them on a dark background.
 - Chats stand in the list by the time of their newest message, the same time the row shows: letters restored from the archive or a late photo no longer lift an old chat to the top.
@@ -683,7 +694,7 @@ Source commit `33cd784c0819`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2288) - 2026-10-22
 
-Source commit `47080687a05c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2288.md).
+Source commit `47080687a05c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2288.md).
 
 - Words follow the background under them: a chat with its own background and a person's page with theirs now show white text on dark backgrounds and black text on light ones, as the system does.
 - Notifications for a conversation no longer read the conversation's secret: each conversation keeps its own local name from the moment it is created, and the notification service finds the chat by that name.
@@ -697,7 +708,7 @@ Source commit `47080687a05c`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2287) - 2026-10-22
 
-Source commit `3679172de4ef`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2287.md).
+Source commit `3679172de4ef`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2287.md).
 
 - Notifications for a conversation no longer read the conversation's secret: each conversation keeps its own local name from the moment it is created, and the notification service finds the chat by that name.
 - When the app cannot check for a newer build, its private diary now says why (no store channel, network error, the site's answer or the document), once per new reason.
@@ -709,7 +720,7 @@ Source commit `3679172de4ef`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2286) - 2026-10-22
 
-Source commit `1b8505362514`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2286.md).
+Source commit `1b8505362514`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2286.md).
 
 - Music on the shared Wall of Thoughts plays again: the author of a post with tracks lays its files on the nodes once more whenever a node has let them go, and the nodes now keep the Wall's files by their free space instead of for one week.
 - Montana Core for Mac now downloads from the site and from GitHub as a disk image: open it and drag Montana Core into Applications. The image itself is signed with the Developer ID and notarized by Apple, as is the app inside it.
@@ -721,7 +732,7 @@ Source commit `1b8505362514`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2284) - 2026-10-22
 
-Source commit `93fd8386c1b3`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2284.md).
+Source commit `93fd8386c1b3`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2284.md).
 
 - Every choice in Settings now says what it does: Video note quality, Keys, Message style, Keep media, Maximum cache size, Copies to your node, View, Look and Own colours each carry a line under them.
 - The sign-in pages read in both light and dark: on the burgundy page the words are light, as iOS itself would draw them.
@@ -732,7 +743,7 @@ Source commit `93fd8386c1b3`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2282) - 2026-10-22
 
-Source commit `51a2d7c9b023`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2282.md).
+Source commit `51a2d7c9b023`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2282.md).
 
 - Every switch in Settings now says under it what it does.
 - With Show sender off, no notification names who wrote or shows their photo -- in private chats, groups and rooms alike.
@@ -744,7 +755,7 @@ Source commit `51a2d7c9b023`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2281) - 2026-10-22
 
-Source commit `13041e634423`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2281.md).
+Source commit `13041e634423`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2281.md).
 
 - Montana Core for Mac is built from the core the public montana_core repository publishes, so its release on GitHub carries the core its frameworks name.
 
@@ -754,7 +765,7 @@ Source commit `13041e634423`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2280) - 2026-10-22
 
-Source commit `08d3cf128fe5`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2280.md).
+Source commit `08d3cf128fe5`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2280.md).
 
 - Montana Core for Mac is published with its install file: the notarized ZIP on GitHub and on the site's new Desktop page, with its SHA-256 and the minimum macOS, and a clean clone of montana_core rebuilds it byte for byte.
 
@@ -764,7 +775,7 @@ Source commit `08d3cf128fe5`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2278) - 2026-10-22
 
-Source commit `31b8b4e0afe4`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2278.md).
+Source commit `31b8b4e0afe4`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2278.md).
 
 - Montana Core for Mac now rebuilds byte for byte from the public source in montana_core: any builder, at any path, gets the same app, and the release names its digest.
 
@@ -774,7 +785,7 @@ Source commit `31b8b4e0afe4`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2276) - 2026-10-21
 
-Source commit `d49860c9d61f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2276.md).
+Source commit `d49860c9d61f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2276.md).
 
 - The correspondent's bubble stays the platform's dark grey under white words on every chat background, the gold one included.
 
@@ -784,7 +795,7 @@ Source commit `d49860c9d61f`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2274) - 2026-10-21
 
-Source commit `9d106575163d`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2274.md).
+Source commit `9d106575163d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2274.md).
 
 - Montana Core for Apple silicon Macs is downloadable from montana.quest: signed with Developer ID and notarized by Apple. On the Mac the globe opens the P2P wall; the VPN stays on phones.
 
@@ -794,7 +805,7 @@ Source commit `9d106575163d`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2273) - 2026-10-21
 
-Source commit `dc181f7316a5`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2273.md).
+Source commit `dc181f7316a5`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2273.md).
 
 - Coins follow the chain's own clock: from the cut on, the chain itself counts the seconds a key has lived before every record, and the phone no longer lays its own mint for time.
 
@@ -804,7 +815,7 @@ Source commit `dc181f7316a5`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2272) - 2026-10-21
 
-Source commit `75e6afd6c837`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2272.md).
+Source commit `75e6afd6c837`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2272.md).
 
 - Top up now says only what is true: 1 coin is 1 second. Live here and now.
 
@@ -814,7 +825,7 @@ Source commit `75e6afd6c837`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2271) - 2026-10-21
 
-Source commit `5e38c1985e61`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2271.md).
+Source commit `5e38c1985e61`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2271.md).
 
 - Every link on a person's page now shows: a page field holding several addresses gives each its own bubble, and each opens.
 
@@ -824,7 +835,7 @@ Source commit `5e38c1985e61`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2270) - 2026-10-21
 
-Source commit `dafe38980253`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2270.md).
+Source commit `dafe38980253`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2270.md).
 
 - The last icons on glass over the gold background are dark now too: network, channel and reactions.
 - Groundwork for protecting the past: from 29 October coin transfers and the signature that marks a letter as yours rest on a key of the conversation's own, so the conversation's first secret can later be erased.
@@ -835,7 +846,7 @@ Source commit `dafe38980253`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2269) - 2026-10-21
 
-Source commit `94b449d4a69f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2269.md).
+Source commit `94b449d4a69f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2269.md).
 
 - On the gold background the last light words are dark now too: the terms, settings, sign-in, profile, network screen and the GIF, sticker and emoji panel read as clearly as the rest of the app.
 
@@ -845,7 +856,7 @@ Source commit `94b449d4a69f`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2268) - 2026-10-21
 
-Source commit `b2ae0f785901`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2268.md).
+Source commit `b2ae0f785901`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2268.md).
 
 - Each chat's key now moves forward on a one-way chain once a day, starting 29 October: the letters of every day are sealed under a key of that day, derived from the day before and never back. Up to 28 October nothing changes in how letters travel, and this version talks with the earlier ones as before.
 
@@ -855,7 +866,7 @@ Source commit `b2ae0f785901`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2267) - 2026-10-21
 
-Source commit `e4cd136fc54c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2267.md).
+Source commit `e4cd136fc54c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2267.md).
 
 - Each chat's key now moves forward on a one-way chain once a day, starting 29 October: the letters of every day are sealed under a key of that day, derived from the day before and never back. Up to 28 October nothing changes in how letters travel, and this version talks with the earlier ones as before.
 
@@ -865,7 +876,7 @@ Source commit `e4cd136fc54c`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2266) - 2026-10-21
 
-Source commit `c608f4df732b`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2266.md).
+Source commit `c608f4df732b`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2266.md).
 
 - Each chat's key now moves forward on a one-way chain once a day, starting 29 October: the letters of every day are sealed under a key of that day, derived from the day before and never back. Up to 28 October nothing changes in how letters travel, and this version talks with the earlier ones as before.
 
@@ -875,7 +886,7 @@ Source commit `c608f4df732b`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2265) - 2026-10-21
 
-Source commit `1fc72aed12f7`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2265.md).
+Source commit `1fc72aed12f7`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2265.md).
 
 - Voice messages can now be read as text. Tap the quote icon beside a voice message and its words appear under it. On iOS 26 the system's new speech analyzer does the work; on earlier iOS the phone's own on-device recognizer does, with punctuation and the names from your chat.
 - Coins go to anyone you have a chat with at once. Your phone now tells its coin key to your correspondents by itself, and a transfer that meets a correspondent whose key has not come yet asks for it and goes through within seconds instead of refusing.
@@ -887,7 +898,7 @@ Source commit `1fc72aed12f7`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2263) - 2026-10-21
 
-Source commit `da721028f130`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2263.md).
+Source commit `da721028f130`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2263.md).
 
 - On a video call, switching your own camera off now keeps the other person's video on your screen. Your camera rests, they see your cover, and the call returns to voice only when the last camera is switched off.
 
@@ -897,7 +908,7 @@ Source commit `da721028f130`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2262) - 2026-10-21
 
-Source commit `e0b8cc7b791c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2262.md).
+Source commit `e0b8cc7b791c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2262.md).
 
 - On the gold background every word is now dark and easy to read: the whole app takes the light look of the system on it, and switches back to the dark look on every dark background.
 
@@ -907,7 +918,7 @@ Source commit `e0b8cc7b791c`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2261) - 2026-10-20
 
-Source commit `1b0f742d9473`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2261.md).
+Source commit `1b0f742d9473`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2261.md).
 
 - Coins reach a new person at once: someone who has not written anything about themselves still tells your phone where their coins arrive.
 - A transfer that cannot go says so right away — «Coins were not sent», your balance untouched — instead of hanging on «being confirmed».
@@ -918,7 +929,7 @@ Source commit `1b0f742d9473`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2260) - 2026-10-20
 
-Source commit `d9d602571d5a`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2260.md).
+Source commit `d9d602571d5a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2260.md).
 
 - One person is one conversation: when two people scan each other's codes at the same moment, the chat no longer appears twice — both phones fold it into one.
 
@@ -928,40 +939,40 @@ Source commit `d9d602571d5a`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2259) - 2026-10-20
 
-Source commit `7511e4bc8f1c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2259.md).
+Source commit `7511e4bc8f1c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2259.md).
 
 - Sign-in by phone number is gone from Montana: your identity is your 24 words, and nothing asks for a number.
 - A call's coins are the same for both people: while the call is recorded on either side, both earn every second; when nobody records it, both spend the same.
 
 ## 1.0 (2256) - 2026-10-20
 
-Source commit `9e2bf95036ca`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2256.md).
+Source commit `9e2bf95036ca`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2256.md).
 
 - Call recording follows levels: when your correspondent has recording turned off, it stays off unless your Global level is higher.
 - A call recording now reaches the chat whoever made it.
 
 ## 1.0 (2255) - 2026-10-20
 
-Source commit `a27409a882ce`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2255.md).
+Source commit `a27409a882ce`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2255.md).
 
 - Photos, videos and files in chats now lie on every Montana machine at once, so they arrive even when one machine cannot be reached.
 
 ## 1.0 (2254) - 2026-10-20
 
-Source commit `290699b7ad54`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2254.md).
+Source commit `290699b7ad54`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2254.md).
 
 - The coins page shows what is left to the next level in units of time: one coin is one second.
 
 ## 1.0 (2252) - 2026-10-19
 
-Source commit `52203d7b0e8e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2252.md).
+Source commit `52203d7b0e8e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2252.md).
 
 - Montana Core v1.0: from 20 October a second of life mints one coin, and the nodes take no more from any build.
 - A build older than the one the network admits sees the update page at every opening, with the link to the new build.
 
 ## 1.0 (2251) - 2026-10-19
 
-Source commit `6a2c7875fb9e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2251.md).
+Source commit `6a2c7875fb9e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2251.md).
 
 - On the coins page, tap the time, the coins or $TCM to make it the main sum of your balance, large and white; the Time Balance in units of time is the default, and your choice is remembered.
 - The ticker $TCM replaces the letter sign everywhere a balance is written in Montana.
@@ -970,7 +981,7 @@ Source commit `6a2c7875fb9e`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2250) - 2026-10-19
 
-Source commit `5f4152679331`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2250.md).
+Source commit `5f4152679331`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2250.md).
 
 - The coins page shows your Time Balance: the time your coins hold, large and white, in days, hours, minutes and seconds, with the coins beneath it. One coin is one second, and one TCM is a billion coins.
 - Transfers, the history, the analytics, the TimeChain and a call's receipt show the time beside every amount of coins.
@@ -979,21 +990,21 @@ Source commit `5f4152679331`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2249) - 2026-10-19
 
-Source commit `f2bd9d56e4fe`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2249.md).
+Source commit `f2bd9d56e4fe`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2249.md).
 
 - A second of life mints one coin, everywhere and all together: no level, music, call, chat bubble or chess move mints faster. Your level of π is now a reading only.
 - After a chess game for a pot, the bubble shows the coins your wallet actually took.
 
 ## 1.0 (2248) - 2026-10-19
 
-Source commit `20451c1ad5f9`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2248.md).
+Source commit `20451c1ad5f9`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2248.md).
 
 - Coins sent to a person whose app could not accept them now come back to you by themselves a day after sending.
 - The Montana Top and «Level the top 13» now use each person's balance as their TimeChain proves it, never the number their app reports.
 
 ## 1.0 (2247) - 2026-10-19
 
-Source commit `dedf97cbbe3e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2247.md).
+Source commit `dedf97cbbe3e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2247.md).
 
 - Montana no longer closes when a copy of your own message comes back from another of your devices; such a copy no longer rings a notification with your own name.
 - Money Flow: the lines inside a bubble read top to bottom again, as before.
@@ -1002,7 +1013,7 @@ Source commit `dedf97cbbe3e`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2246) - 2026-10-18
 
-Source commit `1c8c9775e403`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2246.md).
+Source commit `1c8c9775e403`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2246.md).
 
 - The time panel wears the system's liquid glass again, as before.
 - Data and Storage names everything Montana keeps on your phone: opened files, history of chats, faces and the rest, each with its size. Opened files that stayed behind are cleared with one tap — what your node does not hold yet goes back to your chats, nothing is lost.
@@ -1011,7 +1022,7 @@ Source commit `1c8c9775e403`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2245) - 2026-10-18
 
-Source commit `2384fae584ab`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2245.md).
+Source commit `2384fae584ab`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2245.md).
 
 - Your own photo no longer appears on chats with other people: a picture equal to your own face is never taken as someone else's, whatever road it came by.
 - The time panel wears one glass on every iPhone: the same clear, see-through plate on iOS 26 as on earlier systems, and the logo no longer looks darker inside it.
@@ -1020,7 +1031,7 @@ Source commit `2384fae584ab`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2244) - 2026-10-18
 
-Source commit `f1f8193518fe`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2244.md).
+Source commit `f1f8193518fe`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2244.md).
 
 - The app no longer closes when a call ends: letters that waited through a call are sealed once and leave a few at a time.
 - Music and videos on walls play again: when the network has lost a file's pieces, the phone asks the wall's owner to lay them again, and a track that cannot play no longer shows as playing at 0:00.
@@ -1031,7 +1042,7 @@ Source commit `f1f8193518fe`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2242) - 2026-10-18
 
-Source commit `b8b6931b21fc`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2242.md).
+Source commit `b8b6931b21fc`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2242.md).
 
 - The app no longer closes at launch: a settings record that could not be saved made 2239 and 2240 quit at every start, and that whole kind of record is now saved correctly.
 - The phone stays cool: the copy your contacts keep for you no longer starts again and again when the phone is short of space. It checks the free space first and tries once a day.
@@ -1040,7 +1051,7 @@ Source commit `b8b6931b21fc`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2241) - 2026-10-18
 
-Source commit `f140ddb261ad`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2241.md).
+Source commit `f140ddb261ad`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2241.md).
 
 - All your devices are one: a person who writes to you through the link from your phone now reaches your Mac and tablet too, and the chat appears on every device.
 - Your own channels and groups: posts and invitations you make on one device are recognised as yours on your other devices instead of being refused.
@@ -1050,7 +1061,7 @@ Source commit `f140ddb261ad`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2240) - 2026-10-18
 
-Source commit `a9c8c25aad9f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2240.md).
+Source commit `a9c8c25aad9f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2240.md).
 
 - Less heat and longer battery: your coin book is no longer downloaded and decoded again every half minute -- only what is new is read, about once a minute.
 - Less heat: the phone reads its mailbox from each node once, waits when a node asks it to slow down, and asks only for the days a letter can still be there.
@@ -1062,7 +1073,7 @@ Source commit `a9c8c25aad9f`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2239) - 2026-10-18
 
-Source commit `ccaae4d233db`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2239.md).
+Source commit `ccaae4d233db`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2239.md).
 
 - Your devices with the same 24 words: every letter you receive or send, every post in your groups and channels, and every read mark reaches your other devices too; what one device took before this version is fetched from the other, photos and videos included.
 - Read on one device is read on all: the notification leaves your other devices.
@@ -1079,7 +1090,7 @@ Source commit `ccaae4d233db`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2238) - 2026-10-18
 
-Source commit `3778213a0d0e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2238.md).
+Source commit `3778213a0d0e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2238.md).
 
 - Fabric of Time: a third level beside the Person and Wallet levels. After a call of two in which each of you heard the other for at least a minute, both phones exchange a signed call seal; your level is now the lowest of the three. For the first two weeks the Fabric of Time takes the lower of your other two levels.
 - Calls: add people from your contacts on the call page -- up to 13 in one call; the call becomes a group call.
@@ -1093,7 +1104,7 @@ Source commit `3778213a0d0e`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2237) - 2026-10-17
 
-Source commit `2f460c9506e8`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2237.md).
+Source commit `2f460c9506e8`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2237.md).
 
 - Channels: Some Reactions -- under Allow Reactions the owner picks which reactions subscribers may use; the post menu offers only those.
 - Groups: Chat History for new members -- hidden by default; the owner can show new members the group's recent messages. Group Type shows Private: a group is joined by its invite link.
@@ -1101,7 +1112,7 @@ Source commit `2f460c9506e8`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2236) - 2026-10-17
 
-Source commit `8d64b8efba04`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2236.md).
+Source commit `8d64b8efba04`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2236.md).
 
 - Groups: Permissions -- the owner chooses what members may do (send messages, media, stickers, links, add members, pin, change the info) and sets Slowmode; a member's field says when they cannot send and how long to wait.
 - Groups: administrators with rights and their own titles -- the owner gives each one the rights they need, and the title shows in their bubbles.
@@ -1110,7 +1121,7 @@ Source commit `8d64b8efba04`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2235) - 2026-10-17
 
-Source commit `340be126d70c`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2235.md).
+Source commit `340be126d70c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2235.md).
 
 - Channels: administrators -- the owner names them from the subscribers, and they post into the channel and remove posts. With Sign Messages on, each post shows its author's name beside the time.
 - A post forwarded from a channel says Forwarded from and the channel's name.
@@ -1118,7 +1129,7 @@ Source commit `340be126d70c`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2234) - 2026-10-17
 
-Source commit `49de34971deb`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2234.md).
+Source commit `49de34971deb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2234.md).
 
 - Channels: the channel's page as you know it -- the subscriber count under its name, Mute, Search and, for the owner, Subscribers and Channel Settings: the name, the description, Invite Links with Copy, Share and Revoke Link, and Delete Channel. A subscriber can leave the channel or report it.
 - Channel posts: a subscriber's post menu is Copy, Forward, Report and Select. The owner's bell in the message field sends a post silently -- it arrives without a banner.
@@ -1128,7 +1139,7 @@ Source commit `49de34971deb`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2233) - 2026-10-17
 
-Source commit `18dac89c82b9`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2233.md).
+Source commit `18dac89c82b9`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2233.md).
 
 - Chat folders: tabs over your chats -- All Chats, Chats, Groups, Channels and Bots -- each with a badge of its unread chats, blue while one of them is not muted. Hold a tab for its menu: edit the folder, add chats, read all, mute all, remove it or reorder the tabs. Settings → Chat Folders creates your own folders: which kinds of chats and which chats a folder takes, and which it leaves out.
 - Bots: our bot, MTBusiness_bot, stands in the Bots folder and in All Chats; a tap opens it.
@@ -1139,7 +1150,7 @@ Source commit `18dac89c82b9`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2232) - 2026-10-17
 
-Source commit `8c6f35988460`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2232.md).
+Source commit `8c6f35988460`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2232.md).
 
 - YouTube in picture in picture: a tap on a YouTube link in a chat, on a wall, among a contact's links or in the music search starts the video at once in YouTube's own player and moves it into the system's picture-in-picture window, which floats over your chats and over other apps. The window's own button brings the video back into Montana; its cross closes it.
 - Nothing in the chats takes the sound before your own tap: another app's music plays on until you start something yourself, and it goes on again when YouTube pauses or closes.
@@ -1147,13 +1158,13 @@ Source commit `8c6f35988460`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2231) - 2026-10-17
 
-Source commit `29c06f7eb134`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2231.md).
+Source commit `29c06f7eb134`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2231.md).
 
 - YouTube inside Montana: a YouTube link in a chat, on a wall or among a contact's links now plays right here, in YouTube's own player on a sheet, without leaving the app. Your music pauses while it plays; the arrow at the top right opens the video in YouTube itself.
 
 ## 1.0 (2230) - 2026-10-17
 
-Source commit `da43a97c9c09`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2230.md).
+Source commit `da43a97c9c09`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2230.md).
 
 - Photos: a picture that would not send — the same photo refused again and again and its bubble turning red — now sends. Its small preview is drawn the same way for every camera photo, wide-colour and HDR pictures included; a picture whose file truly cannot be read says so once, instead of retrying for days. The share sheet makes its preview the same way.
 - Groups and channels: after restoring from a copy they come back to the chat list and to the Groups and Channels apps, with their pictures. A copy now always carries the chat list, even when some kinds of attachments are left out of it.
@@ -1161,49 +1172,49 @@ Source commit `da43a97c9c09`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2229) - 2026-10-17
 
-Source commit `8897ba7da629`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2229.md).
+Source commit `8897ba7da629`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2229.md).
 
 - Calls: End & Accept on a second call no longer drops the call you have just taken. When the phone briefly refuses the audio while the first call's sound winds down, the new call waits for the system instead of ending. The caller's screen shows that it is connecting until the network has carried the call, and shows the call as ringing out only after that.
 
 ## 1.0 (2228) - 2026-10-17
 
-Source commit `cc75e9bade1e`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2228.md).
+Source commit `cc75e9bade1e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2228.md).
 
 - Wallet history: a day's small expenses fold into one line, as the day's minting does. Coins on letters and posts, coins for comments and small burns become one line per source a day, and its card shows how many moves it holds and their sum. Transfers to people, calls and larger expenses stay lines of their own; the day's totals do not change.
 
 ## 1.0 (2227) - 2026-10-17
 
-Source commit `bd0319bf90cb`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2227.md).
+Source commit `bd0319bf90cb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2227.md).
 
 - Wallet: the whole balance is available at once. Coins earned while the app was away go to your TimeChain as soon as you come back, and time you have not minted yet is never lost: the chain weighs all your mints together against your key's whole time since its birth, not interval by interval. A phone that already holds a gap closes it with its next mint.
 
 ## 1.0 (2226) - 2026-10-17
 
-Source commit `fda6a42218f4`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2226.md).
+Source commit `fda6a42218f4`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2226.md).
 
 - Notifications: a letter on a locked phone shows one banner with the sender's name and sounds once. The banner is handed to the system before any other work of the notification extension, so a bare push no longer replaces it; a letter is announced through one node, not two; the app and the extension share one record of what was shown, so a letter does not ring twice while the app is open.
 
 ## 1.0 (2225) - 2026-10-17
 
-Source commit `8d9273c8c46f`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2225.md).
+Source commit `8d9273c8c46f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2225.md).
 
 - The group call screen is drawn anew: the group's name and how many are in the call at the top, the pictures of those with a camera on in a grid of two, and everyone in one list under them -- who is speaking, who is listening, whose microphone is off. At the bottom: sound, video, the microphone in the middle, screen and leave. Tap a picture to see it large.
 
 ## 1.0 (2224) - 2026-10-16
 
-Source commit `14b2fe341c23`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2224.md).
+Source commit `14b2fe341c23`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2224.md).
 
 - A group's title now says how many people are in it and, when someone besides you is here, how many of them are online. Only the people your phone already sees online are counted; a channel shows its count alone.
 
 ## 1.0 (2223) - 2026-10-16
 
-Source commit `a37a550fbe62`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2223.md).
+Source commit `a37a550fbe62`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2223.md).
 
 - Channels read as a thread of short posts: the newest post stands on top, and a reply never lifts an old one. A post's page shows the post whole with the replies below it in order, each with its author's face; everyone in the channel can reply from the bar at the bottom.
 
 ## 1.0 (2222) - 2026-10-16
 
-Source commit `000fd41cc271`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2222.md).
+Source commit `000fd41cc271`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2222.md).
 
 - Chats: a green shield to the left of Chats, Groups and Channels shows that deletion is forbidden on your phone. Tap it to read the level rule and open Access by level. Below level 7 the level switches stand off.
 - Groups: each person's messages now run together under their name in their own colour, with their face beside the last one.
@@ -1212,7 +1223,7 @@ Source commit `000fd41cc271`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2221) - 2026-10-16
 
-Source commit `8d2c782a2c10`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2221.md).
+Source commit `8d2c782a2c10`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2221.md).
 
 - Channels read as a feed of short posts: each post with its author's face, the time, and one row for comments, reposts, likes, views, saving and sharing. The channel's owner writes a new post right at the bottom of the channel and publishes it from there.
 - A photo or a group message now arrives as one notification, not two.
@@ -1222,34 +1233,34 @@ Source commit `8d2c782a2c10`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2218) - 2026-10-16
 
-Source commit `ac2d94ed8fb9`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2218.md).
+Source commit `ac2d94ed8fb9`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2218.md).
 
 - Photos and videos arrive faster: the app no longer sends your Wall of Thoughts page to every contact again at each launch. The page now goes once for each change and waits for the contact's phone to confirm it holds it.
 - In the Wallet, only Available stands under the balance. Sending coins from a chat or from the Send page shows and checks the same available amount.
 
 ## 1.0 (2217) - 2026-10-16
 
-Source commit `fc72b8c5f3bb`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2217.md).
+Source commit `fc72b8c5f3bb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2217.md).
 
 - Music playing in another app keeps playing when you open the feed or a chat: videos that play without sound no longer take the phone's sound, even right after a call or a video with sound.
 - The leftmost button of the time panel is the apps button again. It turns into the update arrow only when a newer build is available, and a tap opens the update directly.
 
 ## 1.0 (2216) - 2026-10-16
 
-Source commit `3e469ccae723`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2216.md).
+Source commit `3e469ccae723`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2216.md).
 
 - Video calls with recording on use far less of the phone: each moment of the recording is drawn once instead of every arriving frame, and the finished recording keeps the picture as it was recorded instead of encoding it a second time.
 - When the phone runs hot, the call recording keeps the voice and slows the picture to one frame a second; at the hottest it records the voice alone. The picture returns when the phone cools.
 
 ## 1.0 (2215) - 2026-10-16
 
-Source commit `0897094575fe`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2215.md).
+Source commit `0897094575fe`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2215.md).
 
 - Diagnostics: the notification extension now records how much processor time each incoming notification costs the phone, so the cost of a busy chat can be measured.
 
 ## 1.0 (2214) - 2026-10-16
 
-Source commit `49a723a3ba44`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2214.md).
+Source commit `49a723a3ba44`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2214.md).
 
 - Diagnostics: the app now records how much processor time it uses and on which of its tasks, next to the phone's temperature, battery and charger state, so a phone that runs hot can be traced to its cause.
 - When iOS reports that the app used too much processor or wrote too much to storage, the report is now kept in the diagnostics with the part of the app that caused it.
@@ -1257,7 +1268,7 @@ Source commit `49a723a3ba44`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2213) - 2026-10-15
 
-Source commit `527515bec2d8`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2213.md).
+Source commit `527515bec2d8`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2213.md).
 
 - Calls: everything a call does -- its connection, the camera of an incoming video call, the answers to a network change and the return to a call -- now runs in one place, in the order it happens, instead of from several threads at once. This removes a class of rare failures when a call starts, reconnects or comes back.
 - The Mute button always shows what the microphone really does, also after iOS refuses a mute request and after a call on hold is resumed.
@@ -1266,7 +1277,7 @@ Source commit `527515bec2d8`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2211) - 2026-10-15
 
-Source commit `bb7ab8c5e1e8`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2211.md).
+Source commit `bb7ab8c5e1e8`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2211.md).
 
 - Montana is no longer closed in the background when Do Not Disturb or a Focus holds an incoming call and the caller keeps calling: every call wake-up is now answered to iOS unless a Montana call is already on the screen.
 - When iOS ends the app, the diagnostics now name the real reason (for example an unanswered call wake-up) instead of calling it a normal background end.
@@ -1274,7 +1285,7 @@ Source commit `bb7ab8c5e1e8`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2210) - 2026-10-14
 
-Source commit `aaeba42ef131`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2210.md).
+Source commit `aaeba42ef131`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2210.md).
 
 - Only the caller automatically sends a one-to-one call recording to the chat. Both devices keep their own recording and coin calculation; update both participants.
 - Call totals use a coin badge with green earnings and red spending. Tap it to open the Explorer inside Montana.
@@ -1284,7 +1295,7 @@ Source commit `aaeba42ef131`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2208) - 2026-10-14
 
-Source commit `5e2696bbe7b1`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2208.md).
+Source commit `5e2696bbe7b1`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2208.md).
 
 - Fixed native audio processor attachment so call audio reaches the recorder. The release check now verifies both delegates against the bundled audio library.
 - Fixed avatar circle and outline sizing. Balance and level badges no longer stretch the chat rows.
@@ -1297,7 +1308,7 @@ Source commit `5e2696bbe7b1`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2207) - 2026-10-14
 
-Source commit `ffd89d2e23c3`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2207.md).
+Source commit `ffd89d2e23c3`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2207.md).
 
 - Fixed avatar circle and outline sizing. Balance and level badges no longer stretch the chat rows.
 - Text and call bubbles keep their width; complete time and seal fields move to another line when space is short.
@@ -1309,7 +1320,7 @@ Source commit `ffd89d2e23c3`. [Release notes](doc/release-notes/messenger/ios/re
 
 ## 1.0 (2206) - 2026-10-14
 
-Source commit `6aad95e277a2`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2206.md).
+Source commit `6aad95e277a2`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2206.md).
 
 - Improved call audio startup. The call timer keeps running when the connection is restored.
 - Call diagnostics record each connection stage and its duration in milliseconds.
