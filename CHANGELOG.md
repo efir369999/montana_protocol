@@ -2,9 +2,22 @@
 
 Every build of Montana for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/messenger/ios`](doc/release-notes/messenger/ios).
 
+## 1.0 (2370) - 2026-11-11
+
+Source commit `025ddbfdcaae`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2370.md).
+
+- The Montana Protocol icon fills the whole icon on the home screen: the white frame and the square inside the square are gone, the coin stands at full size.
+- The pages of signing in and creating an identity stand on black, and every word on them is white and larger, so everything reads easily: no grey text from the first screen to the chats. Black is the default background.
+- Please check: the home screen icon and the icon in Settings; create a new identity and read every page up to the chats; chats, groups, calls and Settings as usual.
+
+**Security and anonymity**
+
+- No algorithm or key change. The app icon's picture was replaced (tools/delivery-policy.json pins the new blob and retires the old one); a new guard, tools/mt-icon-fill-check.py, refuses an app icon that does not fill its canvas.
+- The pages of signing in and creating an identity change only their colours and type sizes (the author's word 18938); the default ground is black; tools/mt-birth-ground-check.py refuses a grey word on that path.
+
 ## 1.0 (2369) - 2026-11-11
 
-Source commit `7569c4712df5`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2369.md).
+Source commit `76d57be365ea`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2369.md).
 
 - A new icon: Montana Protocol wears its new picture on the home screen, in the icon chooser and on the first screen; the round glass version stands in Settings and in the room.
 - The nodes say honestly when their disk is short: a node whose storage has no room left refuses a new attachment at once and names it beforehand, and the app sends the piece to the next node without waiting. Nothing the app does has changed with it.
