@@ -2,6 +2,21 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2374) - 2026-11-11
+
+Source commit `f2d7f1c3567a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2374.md).
+
+- Switching to the emoji keyboard while typing no longer covers the input field: the field and the messages rise to the top of the emoji keys at once, and come back down when you switch to letters.
+- The build's number now lives in one place, so every part of the app carries the same number by construction.
+- Groups and Channels are in the side panel; the strip of folders under the time panel on the chats page is gone (as in 2373).
+- Please check: Settings, About shows build 2374; tap Groups and Channels in the side panel.
+- Please check: open a chat, tap the field, switch to the emoji keyboard and back several times -- the field always stands right above the keys; then type a word with emoji and send it.
+
+**Security and anonymity**
+
+- No algorithm, key or network change: the build number and version moved from 22 target settings of the project into Version.xcconfig, read by every target.
+- No algorithm, key or network change: the chat page also listens to the system's change of the input mode (UITextInputMode.currentInputModeDidChangeNotification) and places the input bar on the keys' top read from the keyboard's own accessory; tools/mt-keyboard-drag-check.py, now in the build ring, refuses a rider without it.
+
 ## 1.0 (2373) - 2026-11-11
 
 Source commit `f7cb3e8092fb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2373.md).
