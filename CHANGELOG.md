@@ -4,7 +4,7 @@ Every build of Montana for iPhone, iPad and Mac, newest first. The version is th
 
 ## 1.0 (2369) - 2026-11-11
 
-Source commit `082af92d0818`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2369.md).
+Source commit `7569c4712df5`. [Release notes](doc/release-notes/messenger/ios/release-notes-1.0-2369.md).
 
 - A new icon: Montana Protocol wears its new picture on the home screen, in the icon chooser and on the first screen; the round glass version stands in Settings and in the room.
 - The nodes say honestly when their disk is short: a node whose storage has no room left refuses a new attachment at once and names it beforehand, and the app sends the piece to the next node without waiting. Nothing the app does has changed with it.
