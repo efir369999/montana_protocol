@@ -2,9 +2,9 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2377) - 2026-11-12
+## 1.0 (2378) - 2026-11-12
 
-Source commit `45aae68628f0`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2377.md).
+Source commit `f1778d7fa2c1`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2378.md).
 
 - A group call that everyone else has left ends on the last phone too: it no longer stays open with nobody in it.
 - A group call that has ended no longer comes back in the group as an empty call: a late message of a participant who already left cannot open it again, and leaving such a call no longer leaves it hanging.
