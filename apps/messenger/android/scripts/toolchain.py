@@ -39,6 +39,7 @@ class Paths:
         self.ndk = os.path.join(self.sdk, "ndk", PIN["ndk"])
         self.adb = os.path.join(self.sdk, "platform-tools", "adb")
         self.webrtc = os.path.join(self.tools, "webrtc", "android-%s.aar" % PIN["webrtc"]["version"])
+        self.bundletool = os.path.join(self.tools, "bundletool", "bundletool-all-%s.jar" % PIN["bundletool"]["version"])
         self.protocol = os.path.normpath(os.path.join(ROOT, PIN["protocol"]["dir"]))
 
     def env(self):
@@ -56,7 +57,7 @@ class Paths:
 
     def rust_channel(self):
         # the core pins its compiler; the Android library is built with the very same one
-        pin = os.path.join(self.protocol, "Code", "rust-toolchain.toml")
+        pin = os.path.join(self.protocol, PIN["protocol"]["code"], "rust-toolchain.toml")
         for line in open(pin, encoding="utf-8"):
             key, _, value = line.partition("=")
             if key.strip() == "channel":

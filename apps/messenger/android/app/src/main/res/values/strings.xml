@@ -88,34 +88,6 @@
     <string name="copy_unopened">These 24 words do not open this file: it is a backup of another phrase, or not a Montana backup at all.</string>
     <string name="copy_torn">This backup is cut short or damaged. Whatever could be read has been filed.</string>
     <!-- the page «Your node» (iOS HomeNodeView) -->
-    <string name="your_node">Your node</string>
-    <string name="your_node_header">YOUR NODE</string>
-    <string name="node_address">Address</string>
-    <string name="node_asking">Asking your node…</string>
-    <string name="node_holds_none">Your node holds no copy</string>
-    <string name="node_holds">Held by your node</string>
-    <string name="node_refused_word">Your node refused</string>
-    <string name="node_silent">Your node did not answer</string>
-    <string name="node_sealing">Sealing the copy for your node</string>
-    <string name="node_sending">Sending to your node</string>
-    <string name="node_fetching">Downloading from your node</string>
-    <string name="node_restoring">Restoring from your node</string>
-    <string name="your_node_footer">Your node is a machine you own: your backup, your space. Once a day over Wi-Fi, while Montana is open, a copy of the whole app goes there, sealed with the key your 24 words open; the words are not in it. On a new phone, enter the address and the words, and the copy comes back.</string>
-    <string name="node_copies_switch">Copies to your node</string>
-    <string name="node_send_now">Send a copy now</string>
-    <string name="node_restore">Restore from your node</string>
-    <string name="node_offers">WHAT YOUR NODE OFFERS</string>
-    <string name="cap_vault">Copies of the whole phone</string>
-    <string name="cap_box">Letters for sleeping phones</string>
-    <string name="cap_blob">Attachments in transit</string>
-    <string name="cap_signal">Call signalling</string>
-    <string name="cap_turn">Call relay</string>
-    <string name="cap_diag">Diaries</string>
-    <string name="cap_stun">Reflector</string>
-    <string name="cap_notify">Wakes</string>
-    <string name="cap_gif">Moving pictures</string>
-    <string name="cap_name">Names</string>
-    <string name="node_taken_by">Taken by your node: %1$d conversations, %2$d records, %3$d attachments.</string>
     <string name="node_taken_into">Taken into this device: %1$d conversations, %2$d records, %3$d attachments.</string>
     <string name="ok">OK</string>
     <!-- The main screen's bar, search and contacts page (iOS ChatsListView, ContactsTab) -->
@@ -124,18 +96,12 @@
     <string name="share">Share</string>
     <!-- The page «Appearance» (iOS AppearanceView) -->
     <string name="appearance">Appearance</string>
-    <string name="app_icon">App icon</string>
-    <string name="icon_glass">Liquid glass</string>
-    <string name="icon_gold">Gold on black</string>
     <string name="note_quality">Video note quality</string>
     <string name="q_min">Min</string>
     <string name="q_medium">Medium</string>
     <string name="q_max">Max</string>
-    <string name="feed_motion">Feed motion</string>
-    <string name="springiness">Springiness</string>
-    <string name="anim_duration">Animation duration</string>
-    <string name="reset_motion">Reset motion</string>
-    <string name="feed_motion_footer">Adjusts scrolling, new messages and the return after a reply swipe. Reduce Motion takes priority.</string>
+    <string name="gif_reduce">Reduce GIF animation</string>
+    <string name="gif_reduce_footer">GIFs play without stopping; a tap stops one. With this on, a GIF plays three times and then only on a tap.</string>
     <string name="message_style">Message style</string>
     <string name="style_montana">Montana (default)</string>
     <string name="style_classic">Classic</string>
@@ -167,7 +133,6 @@
     <string name="app_chess">Chess</string>
     <string name="app_wallet">TimeCoin</string>
     <string name="app_network">Network</string>
-    <string name="app_card">Business card</string>
     <string name="notif_sounds">Notifications and Sounds</string>
     <string name="data_storage">Data and Storage</string>
     <string name="privacy">Privacy</string>
@@ -229,7 +194,9 @@
     <string name="no_posts">Posts on your people\'s walls\nwill appear here</string>
     <string name="no_photos">No photos yet</string>
     <string name="no_music">Your music will appear here</string>
+    <string name="volume">Volume</string>
     <string name="track_refused">Could not open the track</string>
+    <string name="track_folder_closed">The folder of this track did not open. Lend it again with the plus.</string>
     <!-- The card: the QR code and the link (iOS MontanaCodeView, MontanaCardShare) -->
     <string name="code_caption">This code opens one correspondence with you and nothing else.</string>
     <string name="card_perm">Permanent</string>
@@ -251,7 +218,6 @@
     <string name="compose_hold">Hold to record</string>
     <string name="emoji">Emoji</string>
     <string name="gallery">Photo</string>
-    <string name="business_card">Business card</string>
     <string name="file">File</string>
     <string name="location">Location</string>
     <string name="contact">Contact</string>
@@ -315,16 +281,18 @@
     <string name="pi_reported_letter">Reported letter</string>
     <string name="pi_block_too">Block this person too</string>
     <string name="pi_send_report">Send report</string>
-    <string name="pi_reports_go">Reports go to %1$s and are reviewed within 24 hours.</string>
+    <string name="pi_reports_reach">Reports reach Montana and are reviewed within 24 hours.</string>
+    <string name="pi_report_sent">Report sent</string>
+    <string name="pi_report_reached">Your report reached Montana. It is reviewed within 24 hours.</string>
+    <string name="no_mail_report">No mail account on this phone. The report and our address are copied — paste them into any mail.</string>
     <string name="pi_write_wall">Write on the wall</string>
+    <string name="wall_draft">Draft</string>   <!-- iOS MTBoardDraftCell «Draft» -->
     <string name="pi_voice_message">Voice message</string>
     <string name="pi_file">File</string>
     <!-- the search (iOS searchResults) -->
     <string name="search_chats">CHATS, GROUPS AND CONTACTS</string>
     <string name="search_contacts">CONTACTS</string>
     <string name="search_messages">MESSAGES</string>
-    <string name="search_global">GLOBAL SEARCH</string>
-    <string name="search_message_on_montana">Message on Montana</string>
     <string name="chat_search_hint">Search in chat…</string>
     <string name="nothing_found">Nothing found</string>
     <string name="back_to_top">Back to top</string>
@@ -337,6 +305,7 @@
     <string name="pe_note">Note</string>
     <string name="pe_restore_photo">Restore original photo</string>
     <!-- the chat's ground (iOS MTWallpaperPicker) -->
+    <string name="wall_show_in_full">Show in full</string>
     <string name="wall_tab_ready">Wallpapers</string>
     <string name="wall_tab_photos">Photos</string>
     <string name="wall_same_as_page">Same as my page</string>
@@ -409,10 +378,10 @@
     <string name="film_close">Close</string>
     <string name="film_fold">Picture in Picture</string>
     <string name="call_video_ask">is calling with video</string>
+    <string name="call_video_sent">Video request sent</string>
     <string name="call_turn_on_video">Turn on your video?</string>
     <string name="call_turn_on">Turn On</string>
     <string name="call_camera">Camera</string>
-    <string name="call_mask">Mask</string>
     <string name="call_title_video">Montana Video Call</string>
     <!-- a newer build from the site (Update.kt) -->
     <string name="update_channel">Updates</string>
@@ -425,6 +394,13 @@
     <string name="release_expand">Expand</string>
     <string name="release_collapse">Collapse</string>
     <string name="update_now">Update</string>
+    <!-- the update that cannot be put off (iOS MTUpdateRequired, 4befb14a) -->
+    <string name="update_required_title">Update Montana</string>
+    <string name="update_required_needs">%1$s needs build %2$d. This build is %3$d.</string>
+    <string name="update_required_install">Install the new build to go on.</string>
+    <string name="update_required_loading">Downloading… %1$d%%</string>
+    <string name="update_required_installing">Installing…</string>
+    <string name="update_required_site">Download from the site</string>
     <string name="update_loading">Downloading Montana %1$s (%2$d)</string>
     <string name="update_failed">The update did not download — try again later</string>
     <string name="update_current">Montana is up to date</string>
@@ -446,9 +422,23 @@
     <string name="coin_send_title">Send coins</string>
     <string name="coin_choose_chats">Choose chats</string>
     <string name="coin_no_chats">No chats yet</string>
+    <string name="coin_choose_members">Choose members</string>
+    <string name="coin_no_members">No members yet</string>
+    <string name="coin_pair_closed">Coins can\'t go to this chat</string>
+    <string name="coin_no_pair">No chat of your own with this member</string>
+    <string name="coin_group_note">Each member you pick gets a transfer of their own in your chat with them. The group is told only how many members you sent coins to.</string>
     <string name="coin_total">Total</string>
     <string name="coin_not_enough">Not enough coins</string>
+    <string name="coin_enter_amount">Enter the coin amount</string>
+    <string name="coin_send_coins">Send coins</string>
+    <string name="coin_key">Coin</string>
+    <string name="coin_available">Available</string>
+    <string name="close">Close</string>
+    <string name="yt_full_screen">Full Screen</string>
+    <string name="yt_small_screen">Exit Full Screen</string>
     <string name="coin_not_enough_sub">Your coin balance is lower than this.</string>
+    <string name="coin_not_sent">Coins were not sent</string>
+    <string name="coin_not_sent_sub">Nothing left your balance. Try again in a moment.</string>
     <string name="coin_you">You</string>
     <string name="coin_letter_sent">Coins sent</string>
     <string name="coin_letter_received">Coins received</string>
@@ -475,6 +465,7 @@
     <string name="coin_window_inactive">Not active</string>
     <string name="coin_right_share">Right to a share</string>
     <string name="wall_on">On %1$s\'s wall</string>
+    <string name="wall_on_yours">On your wall</string>
     <string name="wall_reposted">Reposted from %1$s</string>
     <string name="wall_someone">Someone</string>
     <!-- chess between two phones (Chess.kt, ChessPage.kt; iOS MTChessScreen) -->
@@ -494,7 +485,6 @@
     <string name="chess_no_clock">No clock</string>
     <string name="chess_you_white">You play white</string>
     <string name="chess_you_black">You play black</string>
-    <string name="chess_stake">stake %1$s</string>
     <string name="chess_score">Wins %1$d · Losses %2$d · Draws %3$d</string>
     <string name="chess_accept_draw">Accept draw</string>
     <string name="chess_move_failed">Move could not be sent</string>
@@ -502,8 +492,6 @@
     <string name="chess_cancel">Cancel</string>
     <string name="chess_white_clock">White clock</string>
     <string name="chess_black_clock">Black clock</string>
-    <string name="chess_pot">Pot: %1$s</string>
-    <string name="chess_stake_short">Not enough coins for the stake</string>
     <string name="chess_accept_invitation">Accept invitation</string>
     <string name="chess_withdraw">Withdraw invitation</string>
     <string name="chess_decline_invitation">Decline invitation</string>
@@ -533,24 +521,26 @@
     <string name="chess_time_control">Time control</string>
     <string name="chess_invite_correspondent">Invite a correspondent</string>
     <string name="chess_no_correspondents">No correspondents found</string>
-    <string name="chess_stake_field">Stake</string>
     <string name="chess_ask_new">Start a new game?</string>
-    <string name="coin_balance_line">%1$s coins</string>
     <string name="chess_invite_failed">Invitation could not be sent</string>
-    <string name="chess_pot_footer">Both players put the stake into the game\'s pot, and every move mints its maker\'s level times a thousand into it. The winner takes the whole pot; a draw gives each their own back.</string>
-    <string name="chess_accept">Accept</string>
-    <string name="chess_decline">Decline</string>
+    <string name="chess_accept">Accept the game</string>
+    <string name="chess_decline">Decline the game</string>
     <string name="wall_comments">Comments</string>
     <string name="wall_write_comment">Write a comment</string>
     <string name="wall_no_comments">No comments yet</string>
+    <string name="wall_under_original">The comments are under the original post</string>   <!-- iOS MTBoardComments, d71617c6 -->
+    <string name="wall_waits_phone">The wall comes when %1$s’s phone answers.</string>   <!-- iOS MTBoardRows.empty, 55fca77b -->
+    <string name="wall_preview_post">An example of a post on your page</string>   <!-- iOS MTPagePreviewDress, cdb6d01d -->
     <string name="wall_link_not_held">This post is not on this phone yet. Open the writer\'s page, then tap the link again.</string>
     <string name="wall_only_writers">Only people who may write on this wall can comment</string>
     <string name="wall_like">Like</string>
     <string name="wall_keepers">Keepers</string>
     <string name="wall_repost">Repost</string>
-    <string name="wall_downloads">Downloads</string>
     <string name="wall_views">Views</string>
+    <string name="wall_likes">Likes</string>
+    <string name="wall_nobody_yet">Nobody yet</string>
     <string name="wall_send">Send</string>
+    <string name="wall_hide_person">Hide this person</string>
     <string name="wall_save">Save</string>
     <string name="wall_unsave">Remove from saved</string>
     <string name="call_end_ask">End the call?</string>
@@ -602,33 +592,6 @@
     <string name="tc_global_note">One seal on every device that holds this transfer</string>
     <string name="tc_restored">Restored by the system</string>
     <string name="tc_not_yet">Not in your book yet</string>
-    <string name="name_lost">Your name is no longer yours: the node that keeps names holds another key under it.</string>
-    <string name="name_take">Take a name</string>
-    <string name="code_caption_named">Your name says who you are; the code opens the conversation.</string>
-    <string name="name_title">Username</string>
-    <string name="name_hint">name</string>
-    <string name="name_held_until">Your name: @%1$s, held until %2$s. Taking another releases it for good.</string>
-    <string name="name_held">Your name: @%1$s. Taking another releases it for good.</string>
-    <string name="name_lapsed">Your name @%1$s has lapsed. Take it again, or another.</string>
-    <string name="name_does_h">What a name does</string>
-    <string name="name_does_f">A name is public: anyone who knows it can write to you first, and your link pzr.me/ with the name opens a chat with you. It stays yours while the app renews it — open Montana at least once every six weeks.</string>
-    <string name="name_rules_h">Conditions of creation</string>
-    <string name="name_rules_f">From 4 to 32 characters: a–z, 0–9, «_» and «-». A name starts with a letter, never ends with a sign, and no two signs stand in a row. The name goes to whoever fixes it first: the seed phrase is enough — no application, no approval, no queue.</string>
-    <string name="name_rights_h">Rights of ownership</string>
-    <string name="name_rights_f">A name is held by renewing its record, not by the life of a person: miss the renewal and the cell is free for whoever takes it next, the previous owner keeping no advantage. A name is not transferable — an operation of transfer does not exist. There is no arbitration: no trademarks, no complaints, no exceptions. Only your own addresses stand behind a name; a foreign address cannot be listed under it.</string>
-    <string name="name_privacy_f">Until the network\'s chain carries names, a name and the key it is reached by are kept by one Montana node, which also decides who took a name first. Anyone can check a name they guess, one name at a time, and the node sees who asked; only whoever runs that node sees the whole list. Nothing else of you is kept there — not your address, not your chats — beyond the day the name was taken and last renewed. A name is optional — without one your account carries no identifier at all.</string>
-    <string name="name_taking">Taking the name…</string>
-    <string name="name_is_taken">This name is taken.</string>
-    <string name="name_full">No more names can be taken right now.</string>
-    <string name="name_busy">The node is busy. Try again in a minute.</string>
-    <string name="name_unreachable">The node that keeps names cannot be reached. Try again.</string>
-    <string name="name_refused">This username does not fit the rules.</string>
-    <string name="name_latin">Latin letters only: a–z, 0–9, «_» and «-».</string>
-    <string name="name_short">At least 4 characters.</string>
-    <string name="name_long">At most 32 characters.</string>
-    <string name="name_letter_first">It starts with a letter.</string>
-    <string name="name_sign_end">It does not end with a sign.</string>
-    <string name="name_two_signs">Two signs in a row are not allowed.</string>
     <string name="new_post">New post</string>
     <string name="write_something">Write something</string>
     <string name="wall_photos_videos">Photos and videos</string>
@@ -636,6 +599,7 @@
     <string name="wall_publishing">Publishing</string>
     <string name="wall_could_not_post">Could not post</string>
     <string name="wall_remove">Remove</string>
+    <string name="wall_frame_original">Original</string>
     <string name="wall_publish">Publish</string>
     <string name="wall_share_of">%1$d%% · %2$s of %3$s</string>
     <string name="wall_who_write_mine">Who can write on my wall</string>
@@ -693,8 +657,6 @@
     <string name="vo_histogram_note">The histogram wears the colours of the text bubble.</string>
     <!-- the folders over the chats (iOS MTChatFolders, d335474b + 786313d3 at 2240) -->
     <string name="cf_all">All</string>
-    <string name="cf_bots">Bots</string>
-    <string name="cf_bot">bot</string>
     <string name="cf_read_all">Read All</string>
     <string name="cf_mute_all">Mute All</string>
     <string name="cf_unmute_all">Unmute All</string>
@@ -720,7 +682,6 @@
     <string name="cf_personal_note">Only messages from personal chats.</string>
     <string name="cf_groups_note">Only messages from groups.</string>
     <string name="cf_channels_note">Only messages from channels.</string>
-    <string name="cf_bots_note">Only messages from bots.</string>
     <string name="cf_name">Folder Name</string>
     <string name="cf_add_chats">Add Chats</string>
     <string name="cf_included">Included Chats</string>
@@ -739,17 +700,6 @@
     <string name="cf_reorder">Reorder Tabs</string>
     <string name="cf_done">Done</string>
     <!-- access by level and the keeper's shield (iOS MTLevelAccessPage, MTKeepShield) -->
-    <string name="lv_access">Access by level</string>
-    <string name="lv_global">Global level %d</string>
-    <string name="lv_fabric">Fabric of Time</string>
-    <string name="lv_footer">Your level is the lowest of three: your time in Montana, the coins you hold and the Fabric of Time, the people you write to and call regularly in the last two weeks, weighed by the levels their own time and wallet give them. Each level opens new functions of Montana.</string>
-    <string name="lv_keep">Forbid deletion on my phone</string>
-    <string name="lv_keep_caption">A message your correspondent deletes for everyone stays on this phone, and their phone is told so.</string>
-    <string name="lv_level">Level %d</string>
-    <string name="lv_opens">Opens at level %1$d. Your level is %2$d.</string>
-    <string name="lv_node_caption">Connect a machine you own to the Montana network through this app: it is set up from here and copies of the whole phone go to it. Taking your copy back is open on every level.</string>
-    <string name="lv_shield_title">Deletion is forbidden on this phone</string>
-    <string name="lv_shield_rule">In Montana levels open functions: from level %1$d a person can forbid deletion on their phone. Your level is %2$d.</string>
     <string name="sound_sub">Notifications of new messages play a sound. Off, they arrive silently.</string>
     <string name="show_text_sub">A notification shows the words of the message. Off, it shows none of them.</string>
     <string name="show_sender_sub">A notification of a message names who wrote. Off, it reads Montana instead.</string>
@@ -758,19 +708,10 @@
     <string name="filter_objectionable_sub">Messages, wall posts and comments from others with offensive words stay folded until you tap them.</string>
     <string name="note_quality_footer">Max takes the camera\'s sharpest picture at the highest bitrate, Min makes the lightest file. A camera that cannot keep up steps down by itself.</string>
     <string name="message_style_footer">Montana: yours in the system blue, others\' in grey. Classic: yours in your bubble colour, others\' in dark grey. Custom: the colours you set below.</string>
-    <string name="node_copies_sub">Once a day, while Montana is open and on Wi-Fi only, a sealed copy of the whole app goes to your node. Off, nothing is sent and nothing is removed from the node.</string>
-    <string name="cap_home">Your files</string>
-    <string name="home_files_header">FILES ON YOUR NODE</string>
-    <string name="home_files_held">Files held by your node</string>
-    <string name="home_files_silent">Your node did not answer</string>
-    <string name="home_files_laying">Laying your files on your node</string>
-    <string name="home_files_keep_now">Keep files on your node now</string>
-    <string name="home_files_footer">Every photo, video, voice and file of your chats goes to your node in sealed pieces, over Wi-Fi while Montana is open. Data and Storage clears from this phone what your node holds; each comes back when you open it.</string>
     <string name="cache_kept_on_node">Kept on your node</string>
     <string name="cache_clear">Clear cache</string>
     <string name="cache_header">CACHE</string>
     <string name="cache_footer_node">What your node holds leaves this phone. Each photo, video and file comes back from your node when you open it, here or on a new phone with your 24 words.</string>
-    <string name="cache_footer_no_node">Set up your node in Settings, Your node: what it holds can then be cleared from this phone and comes back when you open it.</string>
     <string name="cache_clear_q">Clear the cache?</string>
     <string name="cache_clear_go">Clear</string>
     <string name="cache_clear_msg">Only what your node holds leaves this phone; what it does not hold stays.</string>
@@ -825,4 +766,23 @@
     <string name="cp_put_back">Put back into the copy</string>
     <string name="cp_total">Total: %1$s of attachments and %2$d records. The copy is sealed with the key your 24 words open; the words are not in it.</string>
     <string name="cp_letters">%1$d letters · %2$s</string>
+    <string name="voice_text_read">Transcribe</string>
+    <string name="voice_text_hide">Hide transcription</string>
+    <string name="voice_text_refused">Allow the microphone in Settings</string>
+    <string name="voice_text_unsupported">Speech recognition is not available for this language</string>
+    <string name="voice_text_silent">No speech recognized</string>
+    <!-- the unfolded player (iOS MTPlayerHead) -->
+    <string name="repeat_track">Repeat track</string>
+    <string name="repeat_playlist">Repeat playlist</string>
+    <string name="repeat_off">Repeat off</string>
+    <string name="shuffle_on">Shuffle on</string>
+    <string name="shuffle_off">Shuffle off</string>
+    <string name="current_playlist">Current playlist</string>
+    <!-- the queue's page (iOS MTQueuePage) -->
+    <string name="queue_title">Now playing</string>
+    <string name="queue_from">Playing from %1$s</string>
+    <string name="queue_walls">Walls</string>
+    <string name="queue_show">Show in playlist</string>
+    <string name="queue_reverse">Reverse order</string>
+    <string name="queue_reorder">Reorder</string>
 </resources>

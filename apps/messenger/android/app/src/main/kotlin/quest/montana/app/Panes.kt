@@ -25,12 +25,12 @@ private class Moment(val file: java.io.File, val photo: Boolean, val ref: String
 /** THE MOMENTS (iOS ChatStore.mediaLibrary): every picture and film of every conversation whose file is here, oldest first. */
 private fun moments(): List<Moment> = Book.all().flatMap { ch ->
     ch.msgs.mapNotNull { m ->
-        if (!m.text.startsWith(Marks.MEDIA)) return@mapNotNull null
+        if (!m.text.startsWith(Marks.MEDIA) || OldRecordings.hidden(m)) return@mapNotNull null
         val man = m.meta?.let { runCatching { org.json.JSONObject(it) }.getOrNull() } ?: Media.inline(m.text)
         val kind = man?.optString("k")
         val f = m.file?.let { java.io.File(it) }?.takeIf { it.exists() }
         // a round note and a sticker are letters of their own kind, not moments of the library
-        if (f == null || (kind != "img" && kind != "vid") || man.optBoolean("r") || man.optString("n") == Stickers.CARD) null
+        if (f == null || (kind != "img" && kind != "vid") || man.optBoolean("r") || man.optString("n") == Stickers.DOC_NAME) null
         else Moment(f, kind == "img", ch.ref, m.mid, m.at)
     }
 }.sortedBy { it.at }
@@ -91,11 +91,7 @@ fun galleryPane(act: MainActivity): View {
             true
         }
     }
-    fun dayWords(at: Long): String {
-        if (android.text.format.DateUtils.isToday(at)) return c.getString(R.string.today)
-        if (android.text.format.DateUtils.isToday(at + 86_400_000L)) return c.getString(R.string.gl_yesterday)
-        return android.text.format.DateUtils.formatDateTime(c, at, android.text.format.DateUtils.FORMAT_SHOW_DATE)
-    }
+    fun dayWords(at: Long): String = DayLabel.of(c, at)   // iOS MTDayLabel (MontanaFeeds 1042)
     fun fill() {
         column.removeAllViews()
         all = moments()

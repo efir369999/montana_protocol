@@ -35,9 +35,10 @@ class Onboarding(private val act: MainActivity, private val onDone: () -> Unit) 
     private var nodeHost = ""
     /** The person walked on without the copy: its late answer no longer speaks on this screen. */
     private var walkedOn = false
-    /** The new person chose a ground: the pages of the making wear it from then on (iOS groundChosen, 30.09). */
-    private var groundChosen = false
-    private val ground = act.chatGround(ChatWall.PAGE).apply { visibility = View.GONE }
+    /** ONE INDIGO FROM THE FIRST PAGE TO THE LAST (iOS c093818f at 2351, the author's words 02.11.2026 21:35 MSK: «it must be ONE ON
+     *  ALL PAGES -- INDIGO from the 1st page of creation and login to the last, and not change along the way»): the login, the making
+     *  and the restoring stand on the one indigo, never the burgundy, never switched at «Create»; Appearance changes it afterwards. */
+    private val ground = View(act).apply { background = GroundPaint(act, ChatWall.INDIGO) }
 
     init {
         view.addView(ground, FrameLayout.LayoutParams(MATCH, MATCH))
@@ -47,16 +48,12 @@ class Onboarding(private val act: MainActivity, private val onDone: () -> Unit) 
 
     private fun go(step: Int) {
         content.removeAllViews()
-        // THE AUTHOR'S OWN GROUND (iOS 29.09): his picture under every step of the first screens, edge to edge;
-        // the name's editor stands on its own black, as on iOS.
-        // THE LOGIN PAGE IS BURGUNDY BY DEFAULT (iOS 2127-2133, the author's word 06.10.2026 15:1x MSK): his file as it came
-        act.setBackdrop(if (step == 3 || groundChosen) null else R.drawable.montana_burgundy)
-        ground.visibility = if (groundChosen && step != 3) View.VISIBLE else View.GONE   // the chosen ground, once chosen (iOS 2129-2130)
+        act.setBackdrop(null)   // the indigo under every step (ground)
         val page: View = when (step) {
             0 -> if (montanaRoad) intro() else doors()
             1 -> responsibility()
             2 -> seedWords()
-            3 -> Profile(act, onboarding = true, onFinish = onDone).view
+            3 -> Profile(act, onboarding = true, onFinish = { MontanaBirth.finished(); onDone() }).view
             5 -> takingBack()
             else -> recover()
         }
@@ -101,16 +98,14 @@ class Onboarding(private val act: MainActivity, private val onDone: () -> Unit) 
         addView(c.vstack(Gravity.NO_GRAVITY) {
             privRow(R.drawable.ic_key, R.string.priv_words_title, R.string.priv_words_sub); gap(12)
             privRow(R.drawable.ic_shield, R.string.priv_e2e_title, R.string.priv_e2e_sub); gap(12)
-            privRow(R.drawable.ic_credit_card, R.string.priv_wallet_title, R.string.priv_wallet_sub); gap(12)
+            if (GooglePlay.COINS) privRow(R.drawable.ic_credit_card, R.string.priv_wallet_title, R.string.priv_wallet_sub) else privRow(R.drawable.ic_app_card, R.string.priv_address_title, R.string.priv_address_sub); gap(12)
             privRow(R.drawable.ic_hub, R.string.priv_servers_title, R.string.priv_servers_sub)
         })
         spacer()
         // EVERY ACT OF THE PATH IS A DOOR (iOS intro 2281-2291): the main act rimmed in the platform's blue, the second clear;
         // the account's door left this page for the page of opening (the author's word 29.09, 23:25)
         lateinit var create: PathDoor
-        // THE GROUND COMES BEFORE THE PERSON (iOS 2167-2172, the author's word 30.09): the first «Create» opens my page's ground;
-        // its checkmark makes the person
-        create = PathDoor(c, c.getString(R.string.create), MT.blue) { if (bornWords == null && !groundChosen) chooseGround(create) else createSeed(create) }
+        create = PathDoor(c, c.getString(R.string.create), MT.blue) { createSeed(create) }
         addView(create, lp())
         gap(18)
         addView(PathDoor(c, c.getString(R.string.open_identity)) { go(4) }, lp())
@@ -151,17 +146,6 @@ class Onboarding(private val act: MainActivity, private val onDone: () -> Unit) 
         }, lp())
     }
 
-    private fun chooseGround(button: PathDoor) {
-        act.push { close ->
-            wallpaperPicker(act, ChatWall.PAGE) {   // iOS shows no cross here; Android's bar cross closes as its checkmark does
-                close()
-                groundChosen = true
-                act.setBackdrop(null); ground.visibility = View.VISIBLE   // the page under the door wears the chosen ground at once
-                createSeed(button)
-            }
-        }
-    }
-
     /** A person is born as an identity by their own act — the tap on «Create» — and by no other event. */
     private fun createSeed(button: PathDoor) {
         if (bornWords != null) { go(1); return }
@@ -180,6 +164,10 @@ class Onboarding(private val act: MainActivity, private val onDone: () -> Unit) 
                         .setPositiveButton(R.string.got_it, null).show()
                 } else {
                     bornWords = keys!!.mnemonic
+                    MontanaBirth.begun(keys.mnemonic)   // a making until the profile's checkmark (iOS cfc6ec68)
+                    // THE GROUND IS INDIGO, NOT A STEP (iOS cfc6ec68, the author's word 02.11.2026: «by default let the indigo colour be
+                    // set as the page's ground, and remove the step of choosing the ground from the registration completely»)
+                    ChatWall.set(ChatWall.PAGE, ChatWall.Choice.Named(ChatWall.INDIGO))
                     go(1)
                 }
             }
@@ -372,7 +360,7 @@ class Onboarding(private val act: MainActivity, private val onDone: () -> Unit) 
     }
 }
 
-/** The version as scripts/version makes it: "1.0 (31 → 1277)" while catching up with iOS, "1.0 (1277)" once level. */
+/** The version as scripts/version makes it: "1.0 (798)", the build alone (the author's word 04.11.2026). */
 private fun versionName(c: Context): String =
     c.packageManager.getPackageInfo(c.packageName, 0).versionName ?: "—"
 
@@ -384,4 +372,4 @@ fun versionFooter(c: Context): String =
     "Android ${versionName(c)} · SSOT ${MtBindings.nativeAbiVersion()}"
 
 /** The privacy policy on the site (iOS MontanaSafety.privacy). */
-const val PRIVACY_URL = "https://montana.quest/privacy/"
+const val PRIVACY_URL = "https://montana.xxx/privacy/"

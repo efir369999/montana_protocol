@@ -16,14 +16,15 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
+import android.widget.Switch
 import android.widget.TextView
 
 // ─────────────────────────── the bubble's style (iOS BT, MTBubbleStyle) ───────────────────────────
@@ -72,6 +73,8 @@ object BubbleStyle {
     fun drawable(c: Context, mine: Boolean): Drawable = BubbleDrawable(c.dp(18).toFloat(), c.resources.displayMetrics.density, mine, style)
     /** The letter's own fill and rim at the call bubble's height (54): the shape at that height is a capsule (iOS voiceCapsuleBubble). */
     fun capsule(c: Context, mine: Boolean): Drawable = BubbleDrawable(c.dp(27).toFloat(), c.resources.displayMetrics.density, mine, style)
+    /** The letter's own fill at another rounding (iOS bubbleFill under a RoundedRectangle, the voice's words: 16). */
+    fun plate(c: Context, mine: Boolean, radiusDp: Int): Drawable = BubbleDrawable(c.dp(radiusDp).toFloat(), c.resources.displayMetrics.density, mine, style)
 
     private class BubbleDrawable(val radius: Float, val density: Float, val mine: Boolean, val style: String) : Drawable() {
         private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -129,24 +132,23 @@ fun Context.bubble(words: String, mine: Boolean, at: java.util.Date = java.util.
     }, FrameLayout.LayoutParams(WRAP, WRAP, if (mine) Gravity.END else Gravity.START))
 }
 
-// ─────────────────────────── the app's icon (iOS MTAppIconChooser) ───────────────────────────
+// ─────────────────────────── the app's icon (iOS MontanaApp at 2353) ───────────────────────────
 
 /**
- * THE APP'S ICON, CHOSEN BY ITS PICTURE: the platform's own road is the launcher alias — exactly one of the two enabled.
- * The new one is enabled before the old one goes, so the launcher never stands without the app.
+ * ONE ICON, NO VARIANTS (iOS 68bbc2d1, the author's words 15641 and 15651): the chooser left «Appearance», and a phone that had chosen
+ * the gold is brought back to the primary. The gold alias stays in the manifest, disabled: taking it out would leave such a phone with
+ * no launcher entry at all. The primary is enabled before the gold goes, so the launcher never stands without the app.
  */
 object AppIcon {
     private const val GLASS = "quest.montana.app.IconGlass"
     private const val GOLD = "quest.montana.app.IconGold"
-    fun gold(c: Context): Boolean = c.packageManager.getComponentEnabledSetting(ComponentName(c.packageName, GOLD)) ==
-        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-    fun choose(c: Context, gold: Boolean) {
-        if (gold == gold(c)) return
+    fun primary(c: Context) {
         val pm = c.packageManager
-        val on = ComponentName(c.packageName, if (gold) GOLD else GLASS)
-        val off = ComponentName(c.packageName, if (gold) GLASS else GOLD)
-        pm.setComponentEnabledSetting(on, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-        pm.setComponentEnabledSetting(off, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+        val gold = ComponentName(c.packageName, GOLD)
+        if (pm.getComponentEnabledSetting(gold) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) return
+        pm.setComponentEnabledSetting(ComponentName(c.packageName, GLASS), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+        pm.setComponentEnabledSetting(gold, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+        Log.d("Montana", "app_icon primary ok")
     }
 }
 
@@ -154,8 +156,8 @@ object AppIcon {
 
 /**
  * THE PAGE «APPEARANCE»: the preview is the chat — the very bubbles, on the very ground, with the person's own settings;
- * then the app's icon, the video notes' quality, the feed's motion, the message style with its own colours and the voice
- * message style (VoiceOrb.kt). Not here yet, each for its own reason: the application icons (Android has no app library yet),
+ * then the voice message style (VoiceOrb.kt), the video notes' quality, the gifs' checkmark and the message style
+ * with its own colours. Not here yet, each for its own reason: the application icons (Android has no app library yet),
  * the keyboard (the keys are the input method's own window — Android gives an app no word over their look).
  */
 class AppearancePage(private val act: MainActivity, private val onClose: () -> Unit) {
@@ -168,34 +170,7 @@ class AppearancePage(private val act: MainActivity, private val onClose: () -> U
         val c: Context = act
         val list = c.vstack(Gravity.NO_GRAVITY) {
             setPadding(dp(16), 0, dp(16), dp(24))
-            // THE APP'S ICON: the liquid glass or the gold on black, chosen by their pictures.
-            addView(header(c, R.string.app_icon))
-            addView(c.plate { addView(iconChooser(), lp()) }, lp())
-            // The note's picture quality: three steps.
-            addView(header(c, R.string.note_quality))
-            addView(c.plate {
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                addView(segmented(c, listOf(R.string.q_min to "low", R.string.q_medium to "medium", R.string.q_max to "high"),
-                    Prefs.str("noteQuality", "medium")) { Prefs.setStr("noteQuality", it) }, lp())
-            }, lp())
-            addView(footer(c, R.string.note_quality_footer))   // every choice says what it does (iOS d39e5776)
-            addView(header(c, R.string.feed_motion))
-            val motion = c.vstack(Gravity.NO_GRAVITY)
-            fun fillMotion() {
-                motion.removeAllViews()
-                motion.addView(slider(c, R.string.springiness, "chatSpringBounce", 0.18, 0.0, 0.4, big = true), lp())
-                motion.addView(slider(c, R.string.anim_duration, "chatSpringDuration", 0.55, 0.25, 0.8, big = true), lp())
-            }
-            fillMotion()
-            addView(c.plate {
-                addView(motion, lp())
-                divider()
-                addView(actionRow(c, R.string.reset_motion) { Prefs.remove("chatSpringBounce", "chatSpringDuration"); fillMotion() }, lp())
-            }, lp())
-            addView(footer(c, R.string.feed_motion_footer))
-            addView(header(c, R.string.message_style))
-            addView(c.plate { addView(styleRows, lp()) }, lp())
-            addView(footer(c, R.string.message_style_footer))
+            // VOICE STYLE STANDS HIGH, the page's first row since the app's icon left it (iOS cfc6ec68, link 14680 (6) at 2351; 68bbc2d1).
             // THE VOICE ORB'S OWN PAGE (iOS «Voice message style», MontanaSettings.swift:1097-1105 at 2155): the peer's orb, still,
             // and the words; the row leads to the colours of both sides and the motion of the ball.
             addView(header(c, R.string.vo_style))
@@ -209,6 +184,37 @@ class AppearancePage(private val act: MainActivity, private val onClose: () -> U
                     pressable { lateinit var close: () -> Unit; close = act.overlay(VoiceOrbStylePage(act) { close() }.view) }
                 }, lp())
             }, lp())
+            // The note's picture quality: three steps.
+            addView(header(c, R.string.note_quality))
+            addView(c.plate {
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                addView(segmented(c, listOf(R.string.q_min to "low", R.string.q_medium to "medium", R.string.q_max to "high"),
+                    Prefs.str("noteQuality", "medium")) { Prefs.setStr("noteQuality", it) }, lp())
+            }, lp())
+            addView(footer(c, R.string.note_quality_footer))   // every choice says what it does (iOS d39e5776)
+            // GIFS PLAY ON (iOS cfc6ec68, link 14680 (3) at 2351): the checkmark brings back three cycles and the tap. The feed's
+            // motion is no setting any more (iOS b9e68f7f): one spring for everyone, LetterMotion.
+            addView(View(c), lp(MATCH, c.dp(20)))   // no words over it, as iOS: the switch names itself
+            addView(c.plate {
+                addView(c.hstack {
+                    setPadding(dp(16), dp(8), dp(14), dp(8))
+                    minimumHeight = dp(48)
+                    val sw = Switch(c).apply {
+                        isChecked = GifPlay.reduced
+                        thumbTintList = ColorStateList.valueOf(Color.WHITE)
+                        trackTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(MT.green, Color.rgb(57, 57, 61)))
+                        setOnCheckedChangeListener { _, v -> Prefs.setBool(GifPlay.REDUCE, v); GifPlay.reduceChanged() }
+                        contentDescription = c.getString(R.string.gif_reduce)
+                    }
+                    addView(c.text(c.getString(R.string.gif_reduce), 16f), lp(0, WRAP, 1f))
+                    addView(sw)
+                    setOnClickListener { sw.toggle() }
+                }, lp())
+            }, lp())
+            addView(footer(c, R.string.gif_reduce_footer))
+            addView(header(c, R.string.message_style))
+            addView(c.plate { addView(styleRows, lp()) }, lp())
+            addView(footer(c, R.string.message_style_footer))
             addView(custom, lp())
         }
         fillStyles()
@@ -230,33 +236,6 @@ class AppearancePage(private val act: MainActivity, private val onClose: () -> U
         BT.candidate = null   // an editor left by the back gesture leaves no colour behind
         previewBox.removeAllViews()
         previewBox.addView(previewStack(act), FrameLayout.LayoutParams(MATCH, WRAP))
-    }
-
-    private fun iconChooser(): View {
-        val c: Context = act
-        val row = c.hstack { setPadding(dp(12), dp(6), dp(12), dp(6)) }
-        fun fill() {
-            row.removeAllViews()
-            val gold = AppIcon.gold(c)
-            listOf(Triple(false, R.drawable.app_icon_glass_art, R.string.icon_glass), Triple(true, R.drawable.icon_gold_preview, R.string.icon_gold)).forEach { (isGold, pic, word) ->
-                row.addView(FrameLayout(c).apply {
-                    setPadding(dp(4), dp(4), dp(4), dp(4))
-                    contentDescription = c.getString(word)
-                    // the chosen one ringed in the platform's blue
-                    if (isGold == gold) foreground = GradientDrawable().apply { cornerRadius = dp(17).toFloat(); setStroke(dp(3), MT.blue) }
-                    addView(ImageView(c).apply {
-                        setImageResource(pic); scaleType = ImageView.ScaleType.CENTER_CROP
-                        outlineProvider = object : ViewOutlineProvider() {
-                            override fun getOutline(v: View, o: Outline) = o.setRoundRect(0, 0, v.width, v.height, dp(15).toFloat())
-                        }
-                        clipToOutline = true
-                    }, FrameLayout.LayoutParams(dp(64), dp(64)))
-                    pressable { AppIcon.choose(c, isGold); fill() }
-                }, lp(WRAP, WRAP).apply { marginEnd = c.dp(12) })
-            }
-        }
-        fill()
-        return row
     }
 
     private fun fillStyles() {

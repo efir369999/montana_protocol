@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaSession
@@ -48,6 +50,29 @@ class MusicService : Service() {
         override fun onReceive(c: Context, i: Intent) { if (i.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) MusicPlayer.pause() }
     }
 
+    // THE LOCK SCREEN, THE HEADSET AND THE CAR ARE SAID (iOS da6d7683): their buttons moved the player without a word in the diary.
+    // No track, file or device's name is written.
+    private fun remote(word: String) = android.util.Log.i("Montana", "music_remote " + word)
+
+    // AN OUTPUT THAT CAME OR WENT IS SAID (iOS routeChanged). iOS names the output left standing, the platform names the one that moved.
+    // The pause itself stays with `noisy`. Registering lists the devices already there: that first list is no news.
+    private val outs = object : AudioDeviceCallback() {
+        private var listed = false
+        override fun onAudioDevicesAdded(d: Array<AudioDeviceInfo>) { if (listed) tell("new", d); listed = true }
+        override fun onAudioDevicesRemoved(d: Array<AudioDeviceInfo>) = tell("gone", d)
+        private fun tell(how: String, d: Array<AudioDeviceInfo>) = d.filter { it.isSink }.forEach {
+            android.util.Log.i("Montana", "music_route " + how + " out=" + port(it.type) + " paused=" + (if (MusicPlayer.playing) 0 else 1))
+        }
+        private fun port(type: Int) = when (type) {
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "BluetoothA2DP"
+            AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "BluetoothHFP"
+            AudioDeviceInfo.TYPE_BLE_HEADSET, AudioDeviceInfo.TYPE_BLE_SPEAKER -> "BluetoothLE"
+            AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "Headphones"
+            AudioDeviceInfo.TYPE_USB_HEADSET, AudioDeviceInfo.TYPE_USB_DEVICE -> "USBAudio"
+            else -> type.toString()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         running = this
@@ -56,10 +81,10 @@ class MusicService : Service() {
                 .apply { setShowBadge(false) })
         session = MediaSession(this, "Montana").apply {
             setCallback(object : MediaSession.Callback() {
-                override fun onPlay() = MusicPlayer.resume()
-                override fun onPause() = MusicPlayer.pause()
-                override fun onSkipToNext() = MusicPlayer.next()
-                override fun onSkipToPrevious() = MusicPlayer.prev()
+                override fun onPlay() { remote("play"); MusicPlayer.resume() }
+                override fun onPause() { remote("pause"); MusicPlayer.pause() }
+                override fun onSkipToNext() { remote("next"); MusicPlayer.next() }
+                override fun onSkipToPrevious() { remote("prev"); MusicPlayer.prev() }
                 override fun onSeekTo(ms: Long) { val d = MusicPlayer.duration; if (d > 0) MusicPlayer.seek(ms / 1000.0 / d) }
                 override fun onStop() = MusicPlayer.stop()
                 override fun onCustomAction(action: String, extras: android.os.Bundle?) { if (action == CLOSE) MusicPlayer.stop() }
@@ -68,14 +93,15 @@ class MusicService : Service() {
             isActive = true
         }
         registerReceiver(noisy, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+        getSystemService(AudioManager::class.java).registerAudioDeviceCallback(outs, null)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // the notification's own buttons (before Android 13 the shade draws these; later it draws the session's)
         when (intent?.action) {
-            "prev" -> MusicPlayer.prev()
-            "toggle" -> MusicPlayer.toggle()
-            "next" -> MusicPlayer.next()
+            "prev" -> { remote("prev"); MusicPlayer.prev() }
+            "toggle" -> { remote("toggle paused=" + (if (MusicPlayer.playing) 0 else 1)); MusicPlayer.toggle() }
+            "next" -> { remote("next"); MusicPlayer.next() }
             CLOSE -> MusicPlayer.stop()
         }
         // started in the foreground's name, the service stands there at once — even a track gone meanwhile is shown, then let go
@@ -89,6 +115,7 @@ class MusicService : Service() {
     override fun onDestroy() {
         running = null
         runCatching { unregisterReceiver(noisy) }
+        getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(outs)
         session.isActive = false
         session.release()
         super.onDestroy()
@@ -113,9 +140,13 @@ class MusicService : Service() {
         val t = MusicPlayer.current
         val playing = MusicPlayer.playing
         val title = t?.title ?: getString(R.string.app_music)
+        val art = t?.let { TrackArt.of(this, it) } ?: TrackArt.lockIcon(this)
         session.setMetadata(MediaMetadata.Builder()
             .putString(MediaMetadata.METADATA_KEY_TITLE, title)   // USER-DATA: the track's own name
-            .putString(MediaMetadata.METADATA_KEY_ARTIST, "Montana")
+            // the artist its own tags name, never where the track lies; none named -- the app's name (iOS pushNowPlaying 779-786)
+            .putString(MediaMetadata.METADATA_KEY_ARTIST, t?.artist ?: "Montana")
+            // THE LOCK SCREEN'S PICTURE (the author's word 29.09 ~23:10): the track's own cover, else the app's own icon (TrackArt)
+            .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art)
             .putLong(MediaMetadata.METADATA_KEY_DURATION, (MusicPlayer.duration * 1000).toLong())
             .build())
         // the system's clock runs the position on from here by itself: nothing is said at each tick (iOS pushNowPlaying)
@@ -130,7 +161,8 @@ class MusicService : Service() {
         val n = Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title)   // USER-DATA: the track's own name
-            .setContentText("Montana")
+            .setContentText(t?.artist ?: "Montana")
+            .setLargeIcon(art)
             .setContentIntent(open())
             .setDeleteIntent(PendingIntent.getService(this, CLOSE.hashCode(), Intent(this, MusicService::class.java).setAction(CLOSE), PendingIntent.FLAG_IMMUTABLE))
             .setVisibility(Notification.VISIBILITY_PUBLIC)

@@ -226,6 +226,7 @@ object VoicePlayer {
     fun toggle(path: String, onProgress: (Int, Int) -> Unit, stopped: () -> Unit, then: (() -> Unit)? = null, sender: String = "", fromPeer: Boolean = false) {
         if (playing == path) { if (paused) resume() else pause(); return }
         if (CallSound.refused("voice message")) return   // the call holds the sound (iOS MontanaMedia 372)
+        YouTube.rest()   // one sound: YouTube rests where it stands, its window stays (iOS MontanaMedia 381)
         stop()
         NoteOpen.close?.invoke()   // one thing plays: a voice closes the open note (iOS MontanaVideoDock)
         // THE RECEIVER IS THE CATEGORY'S OWN DEFAULT (iOS: no .defaultToSpeaker on the voice's playAndRecord category,
@@ -240,8 +241,13 @@ object VoicePlayer {
             // THE REPLY AT THE EAR FOLLOWS THE PEER'S VOICE ONLY (iOS VoicePlayer end, MontanaMedia.swift:623-631 at 2155, the
             // author's word 14.09): the last voice of theirs ended while the phone was at the ear -- one's own, listened back, asks
             // for no answer; a voice with a next one walks on to it
-            val atEar = then == null && this.fromPeer && proximityArmed && Proximity.isNear
-            Log.d("Montana", "voice_end ear=" + (if (atEar) 1 else 0) + " theirs=" + (if (this.fromPeer) 1 else 0))
+            // THE EAR IS A WINDOW, NOT AN INSTANT (iOS 51fca1bf, T1 09.11): a head that moved as the voice fell silent read «far»;
+            // a «near» within the last second and a half counts as the ear, the recording asks the sensor once more after the tone
+            val near = Proximity.isNear
+            val recent = Proximity.nearWithin(1500)
+            val atEar = then == null && this.fromPeer && proximityArmed && recent
+            Log.d("Montana", "voice_end ear=" + (if (atEar) 1 else 0) + " theirs=" + (if (this.fromPeer) 1 else 0) +
+                " armed=" + (if (proximityArmed) 1 else 0) + " near=" + (if (near) 1 else 0) + " recent=" + (if (recent) 1 else 0))
             // A TO B DIRECTLY (iOS finished, MontanaMedia.swift:613-615 at 2155): a voice handed on to the next keeps the track
             // that stepped aside for it aside -- the track plays on when nothing follows, never in the moment between two voices
             val aside = then != null && musicAside
@@ -282,6 +288,7 @@ object VoicePlayer {
     fun resume() {
         val p = player ?: return
         if (CallSound.refused("voice message")) return   // iOS MontanaMedia 482
+        YouTube.rest()   // one sound (iOS MontanaMedia 500)
         val path = playing ?: return
         runCatching { p.start(); speed(p) }; paused = false; armProximity(); tick(path); Playing.changed()
     }
@@ -370,7 +377,7 @@ object VoiceLength {
  *  MontanaMedia.swift:606-621 -- atoms 187adeae0742 and eb49f096614a). */
 private fun chatVoiceQueue(chat: Chat): List<Triple<String, String, Boolean>> = chat.msgs.mapNotNull { r ->
     val man = r.meta?.let { runCatching { JSONObject(it) }.getOrNull() } ?: Media.inline(r.text)
-    if (man?.optString("k") != "aud") return@mapNotNull null
+    if (man?.optString("k") != "aud" || OldRecordings.caption(man)) return@mapNotNull null
     val f = r.file?.takeIf { File(it).exists() } ?: return@mapNotNull null
     Triple(f, if (r.mine) Prefs.userName.trim() else chat.shown, r.mine)
 }
@@ -398,18 +405,32 @@ fun voiceBody(c: Context, m: Msg, du: Double, into: LinearLayout, wave: FloatArr
     val waveDp = minOf(maxOf(76f, window * 0.8f - 111f), maxOf(76f, 60f + total / 1000f * 8f))
     val ink = if (m.mine) Color.rgb(158, 222, 255) else Color.WHITE   // iOS (0.62, 0.87, 1.0) on one's own, white on theirs
     val time = c.text(fmt(total), 13f, MT.withAlpha(BubbleStyle.text(m.mine), 0.85f)).apply { fontFeatureSettings = "tnum" }
+    val lines = maxOf(8, (waveDp / 4).toInt())
     val bar = WaveView(c).apply {
-        bars = resampleWave(wave, maxOf(8, (waveDp / 4).toInt()))
+        bars = resampleWave(wave, lines)
         barDp = 2f
         played = ink; rest = MT.withAlpha(ink, if (VoicePlayer.playing == path && path != null) 0.4f else 0.9f)
     }
+    // THE VOICE'S OWN WAVE FROM ITS FILE (iOS voiceCapsuleBubble .task: MTWaveform.samples once the file is on the disk, kept on
+    // the shelf): a letter that brought no wave draws the one its file holds, measured once and kept, never a flat line.
+    if (wave == null && path != null) trackWaves.get(path)?.let { bar.bars = resampleWave(it, lines) }
+        ?: Thread { Waveform.compute(File(path))?.let { w -> trackWaves.put(path, w); MainThread.post { bar.bars = resampleWave(w, lines) } } }.start()
+    // THE ROUND SAYS WHERE THE VOICE IS (iOS voicePlayRound): the play glyph on the phone, the arrow down while it waits to come,
+    // the ring of its transfer, in the letter's ink, while it rides either way -- the wave and the length stay where they are.
     val mark = ImageView(c).apply {
-        setImageResource(if (VoicePlayer.sounding(path)) R.drawable.ic_pause_fill else R.drawable.ic_play_fill)
+        setImageResource(if (path == null) R.drawable.ic_arrow_down else if (VoicePlayer.sounding(path)) R.drawable.ic_pause_fill else R.drawable.ic_play_fill)
         imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
         background = c.voiceRoundPlate()   // the round of glass with the quiet prism sheen (iOS MTVoiceRound)
         setPadding(c.dp(12), c.dp(12), c.dp(12), c.dp(12))
-        alpha = if (path == null) 0.4f else 1f
     }
+    val ring = VoiceRing(c, tint)
+    val ride: () -> Unit = {
+        val p = Transfers.progress(m.mid)
+        ring.visibility = if (p == null) View.GONE else View.VISIBLE
+        mark.visibility = if (p == null) View.VISIBLE else View.GONE
+        if (p != null) ring.share = p
+    }
+    ride()
     mark.setOnClickListener {
         // automatic download off, a voice of theirs waits: the play key asks for it (iOS: a tap starts the queued download)
         val p = path ?: run { if (Media.waiting(c, m)) Media.tapped(c, m); return@setOnClickListener }
@@ -437,7 +458,7 @@ fun voiceBody(c: Context, m: Msg, du: Double, into: LinearLayout, wave: FloatArr
     }
     // the bar rests and plays this voice too: the play mark follows what the one player does (iOS: the bubble reads the one player)
     val follow: () -> Unit = {
-        mark.setImageResource(if (VoicePlayer.sounding(path)) R.drawable.ic_pause_fill else R.drawable.ic_play_fill)
+        if (path != null) mark.setImageResource(if (VoicePlayer.sounding(path)) R.drawable.ic_pause_fill else R.drawable.ic_play_fill)
         val chosen = path != null && VoicePlayer.playing == path
         val want = MT.withAlpha(ink, if (chosen) 0.4f else 0.9f)
         if (bar.rest != want) bar.rest = want
@@ -449,8 +470,8 @@ fun voiceBody(c: Context, m: Msg, du: Double, into: LinearLayout, wave: FloatArr
         else if (!chosen && bar.progress != 0f) { bar.progress = 0f; time.text = fmt(total) }
     }
     mark.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(v: android.view.View) { Playing.listen(follow) }
-        override fun onViewDetachedFromWindow(v: android.view.View) { Playing.unlisten(follow) }
+        override fun onViewAttachedToWindow(v: android.view.View) { Playing.listen(follow); Transfers.listen(m.mid, ride); ride() }
+        override fun onViewDetachedFromWindow(v: android.view.View) { Playing.unlisten(follow); Transfers.forget(m.mid, ride) }
     })
     // the capsule: the letter's own plate is laid down and the capsule wears it, the pills stand under it on the feed
     into.background = null
@@ -460,12 +481,173 @@ fun voiceBody(c: Context, m: Msg, du: Double, into: LinearLayout, wave: FloatArr
         background = BubbleStyle.capsule(c, m.mine)
         minimumHeight = c.dp(54)
         setPadding(c.dp(8), 0, c.dp(14), 0)
-        addView(android.widget.FrameLayout(c).apply { addView(mark, android.widget.FrameLayout.LayoutParams(c.dp(40), c.dp(40), Gravity.CENTER)) }, lp(c.dp(44), c.dp(44)))
-        addView(if (path == null) android.widget.ProgressBar(c).apply { isIndeterminate = true } else bar,
-            lp(if (path == null) c.dp(28) else c.dp(waveDp.toInt()), WRAP).apply { marginStart = c.dp(3) })
+        addView(android.widget.FrameLayout(c).apply {
+            addView(mark, android.widget.FrameLayout.LayoutParams(c.dp(40), c.dp(40), Gravity.CENTER))
+            addView(ring, android.widget.FrameLayout.LayoutParams(c.dp(40), c.dp(40), Gravity.CENTER))
+        }, lp(c.dp(44), c.dp(44)))
+        // the wave stands whether the file is here or not (iOS voiceLine: the shelf's samples, a quiet line with none)
+        addView(bar, lp(c.dp(waveDp.toInt()), WRAP).apply { marginStart = c.dp(3) })
         addView(time, lp(WRAP, WRAP).apply { marginStart = c.dp(8) })
-        setOnClickListener { mark.performClick() }   // the whole capsule plays (iOS primaryTap: «a tap anywhere on the bubble»)
+        setOnClickListener { if (mark.visibility == View.VISIBLE) mark.performClick() }   // the whole capsule plays (iOS primaryTap: «a tap anywhere on the bubble»)
     }, LinearLayout.LayoutParams(WRAP, WRAP))
+}
+
+/** The voice's transfer on its round (iOS voicePlayRound while mediaProgress rides): a circle of the letter's ink at a quarter,
+ *  the done part whole over it, 2 points, from twelve o'clock. */
+private class VoiceRing(c: Context, ink: Int, lineDp: Float = 2f) : View(c) {
+    var share = 0f
+        set(v) { if (field != v) { field = v; invalidate() } }
+    private val line = lineDp * c.resources.displayMetrics.density
+    private val pale = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.STROKE; strokeWidth = line; color = MT.withAlpha(ink, 0.25f) }
+    private val done = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { style = android.graphics.Paint.Style.STROKE; strokeWidth = line; color = ink; strokeCap = android.graphics.Paint.Cap.ROUND }
+    private val box = android.graphics.RectF()
+    override fun onDraw(cv: android.graphics.Canvas) {
+        box.set(line / 2, line / 2, width - line / 2, height - line / 2)
+        cv.drawOval(box, pale)
+        cv.drawArc(box, -90f, 360f * share.coerceIn(0f, 1f), false, done)
+    }
+}
+
+private val trackWaves = Caches.kept("track_waves", android.util.LruCache<String, FloatArray>(64))
+
+/** A letter's file is music by its name (iOS mtIsAudioName on docName, else on the file). */
+fun isTrackLetter(m: Msg, man: JSONObject?): Boolean =
+    man?.optString("k") == "doc" && (Waveform.isAudio(man.optString("n")) || Waveform.isAudio(m.file ?: ""))
+
+/**
+ * THE CHAT'S MUSIC IS THE PLAYER'S QUEUE, IN THE CHAT'S ORDER (iOS openMusic, MontanaConversation.swift:1351-1376 at 2322): a track
+ * on the phone plays from its file; A TRACK NOT YET WHOLE PLAYS FROM ITS FIRST PIECES (25.09) on its one loader (Streams), and lands,
+ * once whole, as the download's would (Media.landed); a track with no manifest in hand is not in the queue yet.
+ */
+private fun chatTracks(c: Context, chat: Chat): List<Pair<String, Track>> {
+    val app = c.applicationContext
+    return chat.msgs.toList().mapNotNull { r ->
+        val man = Media.manifestOf(r)
+        if (!isTrackLetter(r, man) || man == null || OldRecordings.caption(man)) return@mapNotNull null
+        val name = man.optString("n").ifEmpty { r.file?.let { File(it).name } ?: return@mapNotNull null }
+        val uri = r.file?.let(::File)?.takeIf { it.exists() }?.let { android.net.Uri.fromFile(it) } ?: run {
+            val dest = Media.file(app, r.mid, man.optString("e"))
+            Streams.address(app, dest, man) { Media.landed(app, chat.ref, r.mid, man, dest, own = r.mine) } ?: return@mapNotNull null
+        }
+        r.mid to Track(uri, name).apply { length = man.optDouble("du", 0.0) }
+    }
+}
+
+/**
+ * A MUSIC FILE IN ITS BUBBLE (iOS audioBubble voice=false, MontanaBubble.swift:1338-1420 at 2322; the author's word 10.09: one audio
+ * bubble for a voice and a music file): the play round, the wave that rode the letter, the times -- then the track's name, and under
+ * it the note and the file's size. The round is the only start: the chat's music becomes the one player's queue, this track first
+ * (chatTracks); a track not yet on the phone waits for its download as any file does. The wave follows the one player.
+ */
+fun trackBody(c: Context, m: Msg, man: JSONObject, into: LinearLayout, chat: Chat?) {
+    val tint = BubbleStyle.text(m.mine)
+    val f = m.file?.let(::File)?.takeIf { it.exists() }
+    val uri = f?.let { android.net.Uri.fromFile(it) }
+    fun fmt(s: Double) = "%d:%02d".format(s.toInt() / 60, s.toInt() % 60)
+    val title = man.optString("n").ifEmpty { f?.name ?: "" }
+    val wave = man.optString("wv").takeIf { it.isNotEmpty() }?.let { runCatching { android.util.Base64.decode(it, android.util.Base64.DEFAULT) }.getOrNull() }
+    val total = man.optDouble("du", 0.0).takeIf { it > 0 } ?: f?.let { VoiceLength.of(it.path)?.div(1000.0) } ?: 0.0
+    fun mine() = uri != null && MusicPlayer.current?.uri == uri
+    val ink = if (m.mine) Color.rgb(158, 222, 255) else Color.WHITE
+    val bar = WaveView(c).apply {
+        bars = resampleWave(wave?.let { b -> FloatArray(b.size) { (b[it].toInt() and 0xFF) / 255f } }, 44)
+        barDp = 2f
+        played = ink; rest = MT.withAlpha(ink, 0.5f)
+    }
+    // A TRACK WITHOUT ITS WAVE IN THE LETTER IS MEASURED FROM ITS FILE (iOS waveColumn: MTWaveform.samples once on the disk), kept
+    if (wave == null && f != null) trackWaves.get(f.path)?.let { bar.bars = resampleWave(it, 44) }
+        ?: Thread { Waveform.compute(f)?.let { w -> trackWaves.put(f.path, w); MainThread.post { bar.bars = resampleWave(w, 44) } } }.start()
+    val now = c.text(fmt(0.0), 11f, MT.withAlpha(tint, 0.8f)).apply { fontFeatureSettings = "tnum" }
+    val length = c.text(fmt(total), 11f, MT.withAlpha(tint, 0.8f)).apply { fontFeatureSettings = "tnum" }
+    val mark = ImageView(c).apply {
+        imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+        background = c.voiceRoundPlate()
+        setPadding(c.dp(12), c.dp(12), c.dp(12), c.dp(12))
+    }
+    val follow: () -> Unit = {
+        val on = mine()
+        mark.setImageResource(if (on && MusicPlayer.playing) R.drawable.ic_pause_fill else R.drawable.ic_play_fill)
+        val at = if (on) MusicPlayer.fraction else 0.0
+        bar.progress = at.toFloat()
+        now.text = fmt(at * (if (on) MusicPlayer.duration.takeIf { it > 0 } ?: total else total))
+    }
+    follow()
+    mark.alpha = if (f == null) 0.4f else 1f
+    mark.setOnClickListener {
+        // automatic download off, the file waits: the round asks for it (iOS: a tap starts the queued download)
+        if (f == null) { if (Media.waiting(c, m)) Media.tapped(c, m); return@setOnClickListener }
+        if (mine()) { MusicPlayer.toggle(); return@setOnClickListener }
+        val act = c as? MainActivity ?: return@setOnClickListener
+        val queue = chat?.let { chatTracks(c, it) }.orEmpty()
+        val k = queue.indexOfFirst { it.first == m.mid }
+        val list = if (k == -1) listOf(Track(uri!!, title).apply { this.length = total }) else queue.map { it.second }
+        Log.d("Montana", "music_open i=" + (maxOf(k, 0) + 1) + " n=" + list.size + " streamed=" + list.count { it.uri.scheme == "content" })
+        MusicPlayer.play(act, list, maxOf(k, 0))
+    }
+    // THE FINGER ON THE WAVE (iOS MontanaScrubber on the wave): playing, it moves the place; at rest, the place starts it
+    bar.onSeek = { p -> if (f != null) { if (!mine()) mark.performClick(); MusicPlayer.seek(p.toDouble()) } }
+    // THE ROUND GIVES WAY TO THE TRANSFER'S RING (iOS audioBubble `if let p = mediaProgress`): while the track rides either way a
+    // circle of the letter's ink at a quarter, the done part whole over it, 3.5 points, 42 across; the wave stands beside it as it
+    // stands with the file on the phone; under the name the size gives way to «N% · word» in the bubble's ink.
+    val ring = VoiceRing(c, tint, 3.5f)
+    val sizeWord = android.text.format.Formatter.formatShortFileSize(c, man.optLong("sz").takeIf { it > 0 } ?: f?.length() ?: 0L)
+    val info = c.text(sizeWord, 11f, MT.withAlpha(tint, 0.7f))   // USER-DATA: a measured size
+    val ride: () -> Unit = {
+        val p = Transfers.progress(m.mid)
+        ring.visibility = if (p == null) View.GONE else View.VISIBLE
+        mark.visibility = if (p == null) View.VISIBLE else View.GONE
+        if (p == null) {
+            info.text = sizeWord; info.setTextColor(MT.withAlpha(tint, 0.7f)); info.typeface = android.graphics.Typeface.DEFAULT
+        } else {
+            ring.share = p
+            info.text = "${(p * 100).toInt()}%" + (Transfers.word(m.mid)?.let { " · $it" } ?: "")   // USER-DATA: a measured number
+            info.setTextColor(tint); info.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        }
+    }
+    ride()
+    mark.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) { Playing.listen(follow); Transfers.listen(m.mid, ride); follow(); ride() }
+        override fun onViewDetachedFromWindow(v: View) { Playing.unlisten(follow); Transfers.forget(m.mid, ride) }
+    })
+    // THE BUBBLE'S WIDTH FOLLOWS THE NAME (iOS audioBubble bubbleW): from 252 to the name's width +30% (+28 of the margins), never
+    // past 0.78 of the window; the wave takes what the round leaves (42 and 12 between), the name is cut in its middle.
+    val dens = c.resources.displayMetrics.density
+    val nameDp = android.graphics.Paint().apply {
+        textSize = 15f * c.resources.displayMetrics.scaledDensity
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
+    }.measureText(title) / dens
+    val winDp = c.resources.displayMetrics.widthPixels / dens
+    val innerDp = maxOf(252f, minOf(nameDp * 1.3f + 28f, winDp * 0.78f)) - 28f
+    into.addView(c.vstack(Gravity.NO_GRAVITY) {
+        setPadding(c.dp(2), c.dp(4), c.dp(2), c.dp(2))
+        addView(c.hstack {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(android.widget.FrameLayout(c).apply {
+                addView(mark, android.widget.FrameLayout.LayoutParams(c.dp(42), c.dp(42), Gravity.CENTER))
+                addView(ring, android.widget.FrameLayout.LayoutParams(c.dp(42), c.dp(42), Gravity.CENTER))
+            }, lp(c.dp(44), c.dp(44)))
+            addView(c.vstack(Gravity.NO_GRAVITY) {
+                // the wave stands whether the file is here or not (iOS waveColumn onDisk=false: the letter's samples, a quiet line with none)
+                addView(bar, lp(MATCH, c.dp(26)))
+                addView(c.hstack {
+                    addView(now, lp(0, WRAP).apply { weight = 1f })
+                    addView(length, lp(WRAP, WRAP))
+                }, lp(MATCH, WRAP))
+            }, lp(c.dp(innerDp.toInt() - 44 - 10), WRAP).apply { marginStart = c.dp(10) })
+        }, lp(WRAP, WRAP))
+        addView(c.text(title, 15f, tint, bold = true).apply {   // USER-DATA: the track's file name
+            maxWidth = c.dp(innerDp.toInt()); setSingleLine(true); ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+        }, lp(WRAP, WRAP).apply { topMargin = c.dp(7) })
+        // THE BOTTOM ROW (iOS audioBubble [C-1]): the note and the size or percent on the left, the stamp at the row's right end --
+        // docLay moves the bubble's stamp into this row, as it does for a file's
+        addView(c.hstack {
+            gravity = Gravity.CENTER_VERTICAL
+            tag = DOC_STAMP_TAG
+            addView(c.icon(R.drawable.ic_music_note, MT.withAlpha(tint, 0.7f)), lp(c.dp(10), c.dp(10)))
+            addView(info, lp(WRAP, WRAP).apply { marginStart = c.dp(4) })
+            addView(View(c), lp(0, 1).apply { weight = 1f; marginStart = c.dp(10) })
+        }, lp(MATCH, WRAP).apply { topMargin = c.dp(7) })
+    }, LinearLayout.LayoutParams(WRAP, WRAP).apply { bottomMargin = c.dp(4) })
 }
 
 

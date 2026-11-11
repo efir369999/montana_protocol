@@ -42,7 +42,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <!-- A newer Montana from the site installs from inside the app (Update.kt): the system's own installer, which asks the person once. -->
+    <!-- A pair call is also the system's own self-managed call, so it lands in the phone's call log (SystemCall.kt, iOS CallKit's Recents). -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+    <!-- The app brings its own newer build from the site (GooglePlay.SELF_UPDATE, the author's word 04.11.2026). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- The active seed lives device-only (iOS AfterFirstUnlockThisDeviceOnly): no file of the app is copied —
@@ -68,11 +70,20 @@
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTask">
-            <!-- AN INVITATION OPENS THE APP (iOS handleLink): the card's web link on both sites (montana.quest; montana.xxx, where the Business writes, iOS MontanaCard.linkHosts) and its scheme form, as the system camera reads them. -->
+            <!-- «CALL BACK» FROM THE PHONE'S OWN CALL LOG (SystemCall.kt; Android 17's integrated call logs): the system writes the calls
+                 of an app only when the app takes this back road, and «call back» on a row comes here. -->
+            <intent-filter>
+                <action android:name="android.telecom.action.CALL_BACK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- AN INVITATION OPENS THE APP (iOS handleLink): the card's web link on every site (montana.one, where the Messenger writes since 10.11; montana.quest; montana.xxx, where the Business writes, iOS MontanaCard.linkHosts) and its scheme form, as the system camera reads them. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="montana.one" android:pathPrefix="/perp/" />
+                <data android:scheme="https" android:host="montana.one" android:pathPrefix="/temp/" />
+                <data android:scheme="https" android:host="montana.one" android:pathPrefix="/r/" />
                 <data android:scheme="https" android:host="montana.quest" android:pathPrefix="/perp/" />
                 <data android:scheme="https" android:host="montana.quest" android:pathPrefix="/temp/" />
                 <data android:scheme="https" android:host="montana.quest" android:pathPrefix="/r/" />
@@ -112,9 +123,8 @@
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden" />
-        <!-- THE APP'S ICON, CHOSEN IN «APPEARANCE» (iOS MTAppIconChooser, setAlternateIconName): the launcher entry is one of two
-             aliases of the one activity, and exactly one of them is enabled — the liquid glass (iOS primary, AppIcon.icon)
-             by default, the gold on black (iOS AppIconGold) when chosen. -->
+        <!-- THE APP'S ICON: one icon, no variants (iOS 68bbc2d1). The launcher entry is the alias of the liquid glass; the gold alias
+             stands disabled only so a phone that had chosen it keeps an entry until AppIcon.primary brings it back. -->
         <activity-alias
             android:name="quest.montana.app.IconGlass"
             android:targetActivity="quest.montana.app.MainActivity"
@@ -125,6 +135,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name="quest.montana.app.IconGold"
@@ -136,6 +147,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
         <!-- The app's own door to its received files (Media.kt): read-only, granted address by address. -->
         <provider
@@ -163,6 +175,15 @@
             android:name="quest.montana.app.CallService"
             android:exported="false"
             android:foregroundServiceType="microphone|camera|mediaProjection" />
+        <!-- The system's door to our calls (SystemCall.kt): only Telecom may bind it. -->
+        <service
+            android:name="quest.montana.app.CallsService"
+            android:exported="true"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
         <!-- The ear with the app closed (EarService.kt): every conversation's lane held, so a call rings at once. -->
         <service
             android:name="quest.montana.app.EarService"

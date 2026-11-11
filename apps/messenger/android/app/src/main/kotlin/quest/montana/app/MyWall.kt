@@ -61,7 +61,8 @@ object MyWall {
     private val mine = mutableListOf<JSONObject>()
     private val cap = HashSet<String>()                    // correspondents whose build speaks the wall — told by their own words
     private val sent = HashMap<String, String>()           // the version each was last carried, written by the receipt alone
-    private val inFlight = HashMap<String, Triple<String, Long, String>>()   // the page handed to the queue: version, moment, letter
+    // the page handed to the queue: version, moment, letter -- kept on the disk (iOS 73c9fdfa): a memory of the run died with every launch
+    private val inFlight = HashMap<String, Triple<String, Long, String>>()
     private val answeredAt = HashMap<String, Long>()
     private val pushing = HashSet<String>()
     @Volatile private var versionKept = "0"
@@ -80,6 +81,7 @@ object MyWall {
         o?.optJSONArray("mine")?.let { a -> for (i in 0 until a.length()) a.optJSONObject(i)?.let { mine.add(it) } }
         o?.optJSONArray("cap")?.let { a -> for (i in 0 until a.length()) cap.add(a.optString(i)) }
         o?.optJSONObject("sent")?.let { s -> s.keys().forEach { k -> sent[k] = s.optString(k) } }
+        o?.optJSONObject("way")?.let { s -> s.keys().forEach { k -> s.optJSONArray(k)?.let { a -> inFlight[k] = Triple(a.optString(0), a.optLong(1), a.optString(2)) } } }
         // a post on its way outlives the run; one a run died under is due again (iOS saveGoing 455, roadBack 1922)
         runCatching { DeviceVault.unseal(goingFile().readBytes())?.let { JSONArray(String(it, Charsets.UTF_8)) } }.getOrNull()?.let { a ->
             for (i in 0 until a.length()) a.optJSONObject(i)?.let { g -> going[g.optString("id")] = g.put("failed", true) }
@@ -89,15 +91,63 @@ object MyWall {
         versionKept = postsTag()
     }
     private fun write() {
-        val o = JSONObject().put("mine", JSONArray(mine)).put("cap", JSONArray(cap.toList())).put("sent", JSONObject(sent as Map<*, *>))
+        val way = JSONObject(); for ((k, f) in inFlight) way.put(k, JSONArray().put(f.first).put(f.second).put(f.third))
+        val o = JSONObject().put("mine", JSONArray(mine)).put("cap", JSONArray(cap.toList())).put("sent", JSONObject(sent as Map<*, *>)).put("way", way)
         val sealedBytes = DeviceVault.seal(o.toString().toByteArray(Charsets.UTF_8)) ?: return
         val part = File(file().path + ".part")
         runCatching { part.writeBytes(sealedBytes); part.renameTo(file()) }
     }
     /** The person forgotten: their wall leaves with them. */
     fun wipe() = synchronized(lock) {
-        mine.clear(); cap.clear(); sent.clear(); inFlight.clear(); going.clear(); loaded = false
-        file().delete(); goingFile().delete(); store().deleteRecursively()
+        mine.clear(); cap.clear(); sent.clear(); inFlight.clear(); going.clear(); loaded = false; drafts = null
+        file().delete(); goingFile().delete(); store().deleteRecursively(); draftsFile().delete()
+        File(File(Book.ctx.filesDir, "board"), "picked").deleteRecursively()   // the drafts' files leave with them (iOS e1c0002c)
+    }
+
+    // ── a post being written (iOS MTBoard.draft/lay/dropDraft, MontanaBoard.swift:2071-2099; MTBoardComposer.init, 25.09) ──
+    /** A post not yet posted, on its wall ("" my own): its words, its files in the picked folder, and the moment it was begun. */
+    class Draft(val text: String, val files: List<Attachment>, val at: Double)
+    private var drafts: JSONObject? = null
+    private fun draftsFile() = File(File(Book.ctx.filesDir, "board").apply { mkdirs() }, "drafts.sealed")
+    private fun draftsHeld(): JSONObject = drafts ?: (runCatching { DeviceVault.unseal(draftsFile().readBytes())?.let { JSONObject(String(it, Charsets.UTF_8)) } }.getOrNull()
+        ?: JSONObject()).also { drafts = it }
+    private fun saveDrafts() {
+        val sealedBytes = DeviceVault.seal(draftsHeld().toString().toByteArray(Charsets.UTF_8)) ?: return
+        val part = File(draftsFile().path + ".part")
+        runCatching { part.writeBytes(sealedBytes); part.renameTo(draftsFile()) }
+    }
+    /** THE PAGE OPENS AS IT WAS LEFT: the draft on this wall, its files that still lie in their folder. */
+    fun draft(wall: String): Draft? = synchronized(lock) {
+        val d = draftsHeld().optJSONObject(wall) ?: return null
+        val fs = d.optJSONArray("files") ?: JSONArray()
+        val files = (0 until fs.length()).mapNotNull { i -> fs.optJSONObject(i) }.map { f ->
+            Attachment(File(f.optString("path")), f.optString("kind"), f.optString("name"), f.optString("ext"),
+                f.optJSONObject("fr"), f.optDouble("dur", 0.0).takeIf { it > 0 })
+        }.filter { it.file.exists() }
+        Draft(d.optString("text"), files, d.optDouble("at", System.currentTimeMillis() / 1000.0))
+    }
+    /** EVERY CHANGE IS LAID INTO THE WALL'S STORE: the words as typed, a file the moment it is picked or taken off; an empty draft
+     *  is let go. A file taken off leaves the folder at the page itself. */
+    fun layDraft(wall: String, text: String, files: List<Attachment>, at: Double, told: Boolean = false) = synchronized(lock) {
+        if (text.isBlank() && files.isEmpty()) { dropDraft(wall, "emptied"); return@synchronized }
+        val born = !draftsHeld().has(wall)
+        val fs = JSONArray()
+        for (f in files) fs.put(JSONObject().put("path", f.file.path).put("kind", f.kind).put("name", f.name).put("ext", f.ext).apply {
+            f.frame?.let { put("fr", it) }; f.dur?.let { put("dur", it) }
+        })
+        draftsHeld().put(wall, JSONObject().put("text", text).put("files", fs).put("at", at))
+        saveDrafts()
+        if (born) Log.i("Montana", "post_draft born wall=" + (if (wall.isEmpty()) "mine" else "theirs"))
+        if (born || told) changed()   // the wall draws its draft as it was left (told: its page closed over it)
+    }
+    /** A draft let go -- posted or emptied. Its files are the page's to keep (posted: they moved into the store) or delete; thrown
+     *  away from the wall's trash (iOS MTBoardDraftCell, files = true) they leave with it. */
+    fun dropDraft(wall: String, why: String, files: Boolean = false) = synchronized(lock) {
+        val d = draftsHeld().remove(wall) as? JSONObject ?: return@synchronized
+        saveDrafts()
+        if (files) d.optJSONArray("files")?.let { fs -> for (i in 0 until fs.length()) fs.optJSONObject(i)?.optString("path")?.takeIf { it.isNotEmpty() }?.let { File(it).delete() } }
+        changed()
+        Log.i("Montana", "post_draft dropped why=" + why + " files=" + (d.optJSONArray("files")?.length() ?: 0) + " chars=" + d.optString("text").length)
     }
 
     // ── the shape of a post, owner and visitor ──
@@ -144,6 +194,7 @@ object MyWall {
     }
     /** One who hides their presence carries the wall only right after an act of their own (the critic's N6). */
     fun renewVersion(own: Boolean = false) {
+        if (own) WallGlobal.laySoon()   // my wall moved: the table for everyone hears it (iOS renewVersion 542)
         synchronized(lock) { ensure(); versionKept = postsTag() }
         changed()
         if (own || Presence.sharing) schedulePush()
@@ -207,8 +258,13 @@ object MyWall {
             })
         }
     }
-    /** The same page already stands in the queue for them, handed less than half an hour ago. */
-    private fun onItsWay(conv: String, v: String): Boolean = inFlight[conv]?.let { it.first == v && System.currentTimeMillis() - it.second < 1_800_000L } == true
+    /**
+     * THE SAME PAGE IS ON ITS WAY TO THEM (iOS onItsWay, 73c9fdfa, 16.10.2026 No.72): the record outlives the run, as the queue does on
+     * the iPhone -- a memory of half an hour died with every launch, and T1 carried its page of near a megabyte to twenty-eight people at
+     * each (311 pages in five hours) while a person's photos waited. A page no receipt answered in its hour is carried again (the state's
+     * hour in the queue).
+     */
+    private fun onItsWay(conv: String, v: String): Boolean = inFlight[conv]?.let { it.first == v && System.currentTimeMillis() - it.second < 3_600_000L } == true
 
     /**
      * THE ONE PAGE THIS OWNER SENDS (iOS sendPage 683-690): only one who may see may write; the page is «sent» at its receipt; a
@@ -220,12 +276,13 @@ object MyWall {
         if (sees) synchronized(lock) { ensure(); ordered().take(PAGE_SIZE).forEach { ps.put(seen(it, conv, conceal = true)) } }
         val word = JSONObject().put("t", "page").put("w", sees && WallRule.admits(conv, WallRule.Act.WRITE)).put("ps", ps).put("v", v)
         val mid = Board.sendWord(conv, word) ?: return
-        synchronized(lock) { inFlight[conv] = Triple(v, System.currentTimeMillis(), mid); answeredAt[conv] = System.currentTimeMillis() }
+        synchronized(lock) { ensure(); inFlight[conv] = Triple(v, System.currentTimeMillis(), mid); answeredAt[conv] = System.currentTimeMillis(); write() }
         Log.d("Montana", "wall_page posts=" + ps.length())
     }
     /** The receipt of a page letter: the version it carried is the one that visitor now holds (iOS delivered 692-701). */
     fun delivered(ref: String, mid: String) {
         synchronized(lock) {
+            ensure()   // a receipt may come before anything else of the wall was read in this run
             val f = inFlight[ref] ?: return
             if (f.third != mid) return
             sent[ref] = f.first
@@ -262,8 +319,14 @@ object MyWall {
             .put("liked", has(arr(p, "likes"), by)).put("kept", has(arr(p, "keepers"), by)).put("reposted", has(arr(p, "reposts"), by))
             .put("mine", author == by).put("views", arr(p, "views").length())
         p.optString("from").takeIf { it.isNotEmpty() }?.let { x.put("from", it) }
-        if (!(author.isEmpty() && !p.has("from"))) p.optString("face").takeIf { it.isNotEmpty() }?.let { x.put("face", it) }
-        if (author.isEmpty() && (!p.has("from") || p.optString("srcBy", "-") == "")) x.put("own", true)
+        // A REPOST OF MINE IS MINE (iOS 8b1932d3 (6) at 2351, the author's word 14476: «a repost is made in the name of the one who
+        // reposted, and below it the note whose post it is»): the visitor is told its writer is the page's owner and wears the face
+        // the visitor holds for them; the line under it names the wall it came from (from)
+        if (author.isNotEmpty()) p.optString("face").takeIf { it.isNotEmpty() }?.let { x.put("face", it) }
+        if (author.isEmpty()) x.put("own", true)
+        // WHO LIKED IT, by the names they gave themselves (iOS MTBoardSeen.ln, said(p.likes), 8b1932d3 (5)): fifty at most, the newest
+        // last, on a page to a pipe-holder alone -- the table names nobody (publicPosts); who saw stays with me (Board.people)
+        arr(p, "likes").takeIf { it.length() > 0 }?.let { x.put("ln", said(it)) }
         p.optString("lp").takeIf { it.isNotEmpty() }?.let { x.put("lp", it) }
         if (p.has("n")) x.put("n", p.optInt("n"))
         return x
@@ -405,12 +468,73 @@ object MyWall {
     fun posts(): List<JSONObject> = synchronized(lock) { ensure(); ordered().map { seen(it, "", conceal = false) } }
     fun post(id: String): JSONObject? = synchronized(lock) { ensure(); mine.firstOrNull { it.optString("id") == id }?.let { seen(it, "", conceal = false) } }
     /** The correspondents whose build speaks the wall (iOS cap): the visitor's sweep asks for the walls among them never seen (Board.sweep). */
+    /**
+     * MY POSTS AS THE TABLE CARRIES THEM TO EVERYONE (iOS publicPosts, MontanaBoard.swift:735-757 at 2316): my own words on my own wall
+     * -- never a post another wrote here, never a repost -- the newest first, with my name and my face as they stand now. Nobody's comment
+     * leaves (its writer showed it to my wall alone), and a post past the table's room sheds its posters from the last file. Each with
+     * its digest: what was laid is not laid again.
+     */
+    fun publicPosts(limit: Int, budget: Int): Map<String, Pair<String, JSONObject>> {
+        val name = Prefs.userName.trim().take(64)
+        val face = Board.myFace()
+        val own = synchronized(lock) {
+            ensure()
+            mine.filter { it.optString("author").isEmpty() && !it.has("from") }.sortedByDescending { it.optDouble("at") }.take(limit)
+                .map { seen(it, "", conceal = true) }
+        }
+        val out = HashMap<String, Pair<String, JSONObject>>()
+        for (p in own) {
+            val x = Board.clean(p)
+            if (name.isNotEmpty()) x.put("byName", name)
+            if (face != null) x.put("face", face) else x.remove("face")
+            for (k in listOf("mine", "pinned", "liked", "kept", "reposted", "ln")) x.remove(k)   // the table names nobody who liked
+            x.put("own", true).put("comments", JSONArray()).put("commentCount", 0)
+            val ms = x.optJSONArray("media") ?: JSONArray()
+            var i = ms.length() - 1
+            while (0 <= i && budget < x.toString().toByteArray().size) { ms.optJSONObject(i)?.remove("thumb"); i-- }
+            val d = x.toString().toByteArray()
+            if (budget < d.size) continue
+            out[x.optString("id")] = hex(java.security.MessageDigest.getInstance("SHA-256").digest(d)) to x
+        }
+        return out
+    }
+    /** My own posts with files, the newest first: the table's files their owner keeps (iOS keepFiles 2704-2706). */
+    fun ownMedia(limit: Int): List<Pair<String, JSONArray>> = synchronized(lock) {
+        ensure()
+        mine.filter { it.optString("author").isEmpty() && !it.has("from") && (it.optJSONArray("media")?.length() ?: 0) > 0 }
+            .sortedByDescending { it.optDouble("at") }.take(limit).map { it.optString("id") to JSONArray(it.getJSONArray("media").toString()) }
+    }
     fun speakers(): List<String> = synchronized(lock) { ensure(); cap.toList() }
-    /** WHOSE POST ON MY WALL (iOS writer(of:on:), MontanaBoard.swift:2142-2149 at 2155): "" -- mine, a reference -- its writer's; null --
-     * no post of that name, or a repost whose writer this phone was not told. */
+    /** The wall a repost of mine was taken from, by its reference (the seen post carries only its public name). */
+    fun srcOf(id: String): String? = synchronized(lock) {
+        ensure()
+        mine.firstOrNull { it.optString("id") == id && it.has("from") }?.optString("src")?.takeIf { it.isNotEmpty() }
+    }
+    /** WHOSE POST ON MY WALL (iOS writer(of:on:), MontanaBoard.swift:2331-2345 at 2351): "" -- mine, a reference -- its writer's; null --
+     * no post of that name. A REPOST ON MY WALL IS MINE (8b1932d3 (6), the author's word 14476): its byline is me, the line under it
+     * names the wall it came from. */
     fun writerOf(id: String): String? = synchronized(lock) {
         ensure()
-        mine.firstOrNull { it.optString("id") == id }?.let { p -> if (p.has("from")) p.optString("srcBy", "-").takeIf { it != "-" } else p.optString("author") }
+        mine.firstOrNull { it.optString("id") == id }?.optString("author")
+    }
+    /** The writer of a post of mine that stands as itself, not as a repost (iOS originalWriter's first look, 2303). */
+    fun originalWriterOf(id: String): String? = synchronized(lock) {
+        ensure()
+        mine.firstOrNull { it.optString("id") == id && !it.has("from") }?.optString("author")
+    }
+    /** WHO PUT THE MARK, BY THE NAME THEY GAVE THEMSELVES (iOS MTBoard.said, 8b1932d3 (5) at 2351): my own name for "" and, for a
+     *  correspondent, the name they declared or their @name -- never the name this phone keeps for them. Fifty at most, the newest last. */
+    private fun said(refs: JSONArray): JSONArray {
+        val all = (0 until refs.length()).map { refs.optString(it) }
+        return JSONArray(all.takeLast(Board.NAMES_SHOWN).map { r -> if (r.isEmpty()) Prefs.userName.trim().take(64) else Board.publicName(r) })
+    }
+    /** THE PEOPLE UNDER A POST'S LIKE OR ITS EYE ON MY WALL (iOS MTBoard.people, 8b1932d3 (5)): the post's own references, the newest
+     *  first -- "" is me; null -- no such post here. Who saw is mine alone to know: no page carries it. */
+    fun people(id: String, likes: Boolean): List<String>? = synchronized(lock) {
+        ensure()
+        val p = mine.firstOrNull { it.optString("id") == id } ?: return null
+        val a = arr(p, if (likes) "likes" else "views")
+        (0 until a.length()).map { a.optString(it) }.reversed()
     }
     /** WHO WROTE A COMMENT ON MY WALL (iOS commenter, MontanaBoard.swift:2199-2202 at 2155): "" -- I did, a reference -- its writer's. */
     fun commenterOf(postId: String, cid: String): String? = synchronized(lock) {
@@ -419,7 +543,8 @@ object MyWall {
         (0 until (cs?.length() ?: 0)).mapNotNull { cs?.optJSONObject(it) }.firstOrNull { it.optString("id") == cid && it.has("ref") }?.optString("ref")
     }
     // ── a post on its way: its files on the node, then the post (iOS begin, publish, lay 1764-1932) ──
-    class Attachment(val file: File, val kind: String, val name: String, val ext: String)
+    /** A file of a post being written; a picture's frame (iOS MTBoardDraftFile.fr) and a track's or a film's length ride with it. */
+    class Attachment(val file: File, val kind: String, val name: String, val ext: String, var frame: JSONObject? = null, var dur: Double? = null)
     /** A post on its way as its bar reads it (iOS MTBoardOutgoing 282-298): the bytes the node confirmed of all its files, and the wall
      * it goes to -- "" my own. */
     class Going(val id: String, val post: JSONObject, val total: Long, val done: Long, val failed: Boolean, val wall: String = "") {
@@ -464,7 +589,7 @@ object MyWall {
             val m = JSONObject().put("kind", a.kind).put("name", a.name.take(120)).put("ext", a.ext).put("size", f.length())
                 .put("key", "").put("chunks", JSONArray())
             if (a.kind == "img" || a.kind == "vid") {
-                val fr = Media.preview(Book.ctx, f, a.kind, 256)?.let { b -> WallFiles.ownFrame(b.width, b.height) }
+                val fr = a.frame ?: Media.preview(Book.ctx, f, a.kind, 256)?.let { b -> WallFiles.ownFrame(b.width, b.height) }
                 fr?.let { m.put("fr", it) }
                 WallFiles.poster(Book.ctx, f, a.kind, fr)?.let { m.put("thumb", it) }
             }

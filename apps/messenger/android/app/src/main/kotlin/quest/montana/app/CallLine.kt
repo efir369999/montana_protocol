@@ -154,6 +154,7 @@ object CallLine {
      * then waits for it as long as a ring rings -- its run comes back within it. */
     @Volatile var peerRebuilds = false
         private set
+
     fun learnCaps(ref: String, epoch: String, caps: JSONObject?) {
         if (caps?.optBoolean("rejoin") != true || peerRebuilds) return
         if (mine(ref, epoch) == null && Calls.peer() != ref) return
@@ -182,6 +183,11 @@ object CallLine {
     // MY OWN CAMERA WAS TAKEN BY THE SYSTEM (iOS CallUIModel.selfPaused 5482, noteSelfPicture 3900-3906): its own two words --
     // taken (disconnected, a fault) and given back (its first frame) -- never a guess from frames
     @Volatile var selfPaused = false
+    // MY CAMERA RESTS, THE PEER'S PICTURE STAYS (iOS cameraMutedByPerson, CallUIModel.cameraOff and peerCameraOff, 2360): each side
+    // turns off only its own camera; the video ends when the last live camera leaves
+    @Volatile var rests = false
+    @Volatile var peerCameraOff = false
+    @Volatile private var askedAt = 0L   // my last ask: a yes after the plate's 30 s still turns the call, within 120 s (iOS videoAskedAt, K2)
         private set
     // THE LIGHT BEFORE THE CALL'S NAME (iOS MTCallLight 5424-5435, CallUIModel.signal 5466): 2 green -- clean at the top
     // step, 1 yellow -- held below it, 0 red -- squeezed now; a break reddens it whatever the ladder says.
@@ -202,18 +208,21 @@ object CallLine {
         private set
     @Volatile var changed: (() -> Unit)? = null   // the call's screen, told on the main thread when the picture's state moves
     @Volatile private var askRound = 0
+    @Volatile var joinPending = false   // I said yes and wait for the asker's picture (iOS videoJoinPending): the Video button stands lit
+        private set
+    @Volatile private var joinRound = 0
     @Volatile private var sniffed = false
 
     /** My camera stands in the call. */
     val camera: Boolean get() = synchronized(gate) { line?.vtrack != null }
 
     /** A picture's way to the screen (iOS VideoView's side): the track draws into it, the screen lends it a surface or none. */
-    class Slot : VideoSink {
+    class Slot(private val local: Boolean) : VideoSink {
         @Volatile var into: VideoSink? = null
         override fun onFrame(f: VideoFrame) { into?.onFrame(f) }
     }
-    val theirs = Slot()
-    val own = Slot()
+    val theirs = Slot(false)
+    val own = Slot(true)
 
     // their frames pass here first: the first one drawn makes the call a video call (iOS MTFirstFrameSniffer, remoteVideoArrived)
     private val sniff = object : VideoSink {
@@ -244,16 +253,6 @@ object CallLine {
 
     /** The moment the voice joined, for the call's clock; 0 — not yet. */
     val connectedAt: Long get() = synchronized(gate) { line?.connectedAt ?: 0L }
-    /** The second of talk now (iOS MontanaCall.talkSecond, MontanaCall.swift:672-677; CallMint): the call's peer, a name of this call
-     * alone — the first eight bytes of its seed in hex, or its connect's millisecond — and a name of this call's second. */
-    class TalkSecond(val peer: String, val call: String, val ref: String)
-    fun talkSecond(): TalkSecond? {
-        val l = synchronized(gate) { line?.takeIf { it.connectedAt != 0L } } ?: return null
-        val at = l.connectedAt
-        val seed = runCatching { android.util.Base64.decode(l.seed, android.util.Base64.DEFAULT) }.getOrNull()
-        val call = seed?.takeIf { it.isNotEmpty() }?.take(8)?.joinToString("") { "%02x".format(it) } ?: at.toString()
-        return TalkSecond(l.ref, call, call + ":" + (System.currentTimeMillis() - at) / 1000)
-    }
 
     /** «Answer» with the offer in hand (iOS proceedAccept): the line is built on its own queue, the answer leaves at once. */
     fun answer(ref: String, seed: String, offer: String) = work.execute {
@@ -376,7 +375,7 @@ object CallLine {
             runCatching { replacing.remote?.dispose() }
             runCatching { replacing.pc.dispose() }
             runCatching { replacing.source.dispose() }
-            remoteLive = false; peerSharing = false; sniffed = false
+            remoteLive = false; peerSharing = false; sniffed = false; rests = false; peerCameraOff = false
             moved()
             return l
         }
@@ -495,7 +494,6 @@ object CallLine {
                 startRouteWatch(l)
                 if (l.connectedAt == 0L) {
                     l.connectedAt = System.currentTimeMillis()
-                    MintBeat.run()   // both sides mint or burn the talk by the second (iOS MontanaCall.swift:4417-4419, CallMint)
                     l.sum.battStart = power().level   // iOS 4420: every call's battery at its connect, a voice call's too
                     CallService.sync()
                     autoSpeaker(l)
@@ -659,7 +657,7 @@ object CallLine {
             l.remoteSet = true
             drain(l)
             // the offer decides whether the call goes on with video (iOS adoptVideoFromOffer, 3685-3686)
-            if (offer.contains("m=video")) { video = true; if (camera(l)) place(l) } else if (video) { video = false; remoteLive = false }
+            if (offer.contains("m=video")) { video = true; if (camera(l)) place(l) } else if (video) { video = false; remoteLive = false; if (rests) { runCatching { l.pc.transceivers.firstOrNull { it.mediaType == MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO }?.sender?.setTrack(null, false) }; cameraOff(l) }; rests = false; peerCameraOff = false }
             moved()
             CallService.sync()
             l.pc.createAnswer(sdp(onMade = { d ->
@@ -760,14 +758,14 @@ object CallLine {
         lost = false
         held = false
         heldByPeer = false
-        video = false; asking = false; asked = false; offerMine = false; remoteLive = false; peerSharing = false; swapped = false
+        video = false; asking = false; joinPending = false; joinRound++; asked = false; offerMine = false; remoteLive = false; peerSharing = false; swapped = false
+        rests = false; peerCameraOff = false; askedAt = 0L
         front = true; sniffed = false; askRound++; sharing = false; peerPaused = false; selfPaused = false; cameraTold = false; peerShape = null
         peerRebuilds = false
         powerFloorNow = 0; powerSaving = false; signal = 2   // the counters and the lights belong to one call (iOS 3066-3072)
         l.measureGen++   // no tick of the ended call survives into the next one (iOS K-9, 3081)
         breakTone(false)
         theirs.into = null; own.into = null
-        AvatarMask.set(false, "call-end")   // the mask lives inside one call (iOS MontanaCall.swift 3110)
         moved()
         return spoken
     }
@@ -869,7 +867,7 @@ object CallLine {
         am.mode = AudioManager.MODE_IN_COMMUNICATION
         // EVERY ROUTE CHANGE DURING A CALL IS NAMED (iOS 15.28, 1369): where the sound went; the platform tells no reason
         if (Build.VERSION.SDK_INT >= 31) runCatching { am.addOnCommunicationDeviceChangedListener(java.util.concurrent.Executor { it.run() }, routeWatch) }
-        route(speaker)
+        route(speaker, system = speaker)   // the system's call starts on its own default; only a chosen loudspeaker is asked of it
     }
     private val routeWatch = AudioManager.OnCommunicationDeviceChangedListener { d -> log("audio_route_change now=" + way(d?.type)); MainThread.post { updateProximity() } }
     private fun way(t: Int?): String = when (t) {
@@ -887,7 +885,7 @@ object CallLine {
     private fun audioOff() {
         val am = am() ?: return
         if (Build.VERSION.SDK_INT >= 31) runCatching { am.removeOnCommunicationDeviceChangedListener(routeWatch) }
-        route(false)
+        route(false, system = false)
         am.mode = AudioManager.MODE_NORMAL
         focus?.let { am.abandonAudioFocusRequest(it) }
         focus = null
@@ -898,13 +896,19 @@ object CallLine {
     /** The loudspeaker, or whatever the system holds for a call (the earpiece, the headset): its own communication device. */
     fun setSpeaker(on: Boolean) { speaker = on; synchronized(gate) { line }?.speakerDecided = true; route(on); MainThread.post { updateProximity() } }
 
+    /** iOS reassertSpeaker (MontanaCall.swift 5755): the loudspeaker chosen before a moment that re-routes the call survives it. */
+    fun reassertRoute(why: String) { if (!speaker) return; log("audio_route reassert why=" + why); route(true) }
+
     @Suppress("DEPRECATION")
-    private fun route(on: Boolean) {
+    private fun route(on: Boolean, system: Boolean = true) {
+        // the system's own call (SystemCall) holds the route while it stands: the way is asked of it too, else it takes it back
+        if (system) SystemCall.routeTo(if (on) AudioDeviceInfo.TYPE_BUILTIN_SPEAKER else AudioDeviceInfo.TYPE_BUILTIN_EARPIECE)
         val am = am() ?: return
         if (Build.VERSION.SDK_INT >= 31) {
             val loud = am.availableCommunicationDevices.firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (on && loud != null) am.setCommunicationDevice(loud) else am.clearCommunicationDevice()
-            log("audio_route speaker=" + (if (on) 1 else 0) + " landed=" + way(am.communicationDevice?.type))   // the switch names where it landed (1369)
+            val took = if (on && loud != null) am.setCommunicationDevice(loud) else { am.clearCommunicationDevice(); true }
+            if (!took) am.isSpeakerphoneOn = on   // a phone that refuses the device keeps the old switch
+            log("audio_route speaker=" + (if (on) 1 else 0) + (if (took) "" else " refused") + " landed=" + way(am.communicationDevice?.type))   // the switch names where it landed (1369)
         } else am.isSpeakerphoneOn = on
     }
 
@@ -957,6 +961,7 @@ object CallLine {
             out.add(Way(name, now?.id == d.id) {
                 speaker = d.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
                 synchronized(gate) { line }?.speakerDecided = true
+                SystemCall.routeTo(d.type, d.productName?.toString())   // the system's own call holds the route (route above)
                 am.setCommunicationDevice(d)
             })
         }
@@ -997,13 +1002,23 @@ object CallLine {
     fun toggleVideo() {
         val l = synchronized(gate) { line } ?: return
         if (sharing) return stopShare()   // «Video» ends the share; the camera comes back as it was (iOS 3139)
-        if (video) { work.execute { drop(l, aloud = true) }; return }
-        if (asking) return
+        // IN VIDEO WITHOUT MY CAMERA (iOS 214dc096, K4): the peer's picture came first -- the press joins my camera, never ends the video
+        if (video && l.vtrack == null) { l.armedAt = 0L; work.execute { enableMine(l) }; return }
+        // MY PRESS RESTS MY CAMERA ONLY (iOS 2360, toggleVideo): the video ends at both only when the last live camera leaves
+        if (video) {
+            work.execute { if (rests) raise(l) else if (!peerCameraOff) rest(l) else drop(l, aloud = true) }
+            return
+        }
+        // THE YES ALREADY GIVEN WAITS FOR THE ASKER'S PICTURE (iOS K1): a press between my consent and their offer asks nothing anew
+        if (fresh(l)) { log("video: consent already given -- the camera joins with the offer"); return }
+        // A PRESS WHILE ASKING ASKS AGAIN (iOS 2360): the first word may have gone through a door that did not deliver; the 30 s start anew
+        val again = asking
         asking = true
+        askedAt = System.currentTimeMillis()
         val round = ++askRound
         moved()
         work.execute { say(l, JSONArray().put(word(l, "call-video-ask"))) }
-        log("video: consent asked")
+        log(if (again) "video: consent asked again" else "video: consent asked")
         MainThread.later(30_000) { if (askRound == round && asking) { asking = false; moved(); log("video: consent timeout") } }
     }
 
@@ -1012,6 +1027,10 @@ object CallLine {
         val l = synchronized(gate) { line } ?: return
         asked = false
         l.armedAt = System.currentTimeMillis()
+        // the yes given lights the Video button as long as the consent lives (iOS K3, videoJoinPending)
+        joinPending = true
+        val round = ++joinRound
+        MainThread.later(40_000) { if (joinRound == round && joinPending) { joinPending = false; moved() } }
         moved()
         work.execute { say(l, JSONArray().put(word(l, "call-video-ok"))) }
         log("video: consent accepted")
@@ -1053,10 +1072,31 @@ object CallLine {
             return@execute
         }
         when (ctrl) {
-            "call-video-ask" -> { asked = true; log("video: consent asked by peer") }
-            "call-video-ok" -> { askRound++; log("video: consent granted"); if (asking) { asking = false; upgrade(l) } }
-            "call-video-no" -> { askRound++; asking = false; log("video: consent declined") }
+            // THE ASK MEETS A CALL ALREADY ON ITS WAY TO VIDEO (iOS 214dc096, K2, the author's words 16421 and 16428): a call in video
+            // answers yes by itself, no plate; asks that crossed leave the caller's: the callee yields and says yes, so one offer rides
+            "call-video-ask" -> when {
+                video -> { say(l, JSONArray().put(word(l, "call-video-ok"))); log("video: consent asked by peer in video -- granted by itself") }
+                asking && l.caller -> log("video: asks crossed -- the caller's ask stands")
+                asking -> { askRound++; asking = false; log("video: asks crossed -- the callee yields"); acceptAsk() }
+                else -> { asked = true; log("video: consent asked by peer") }
+            }
+            // A YES AFTER THE PLATE'S TIMEOUT STILL TURNS THE CALL (iOS 2360, K2): my ask lives 120 s; a yes without my ask is ignored
+            "call-video-ok" -> {
+                askRound++
+                log("video: consent granted")
+                val mine = asking || System.currentTimeMillis() - askedAt < 120_000L
+                asking = false; askedAt = 0L
+                if (!mine) log("video: consent granted without my ask -- ignored") else if (!video) upgrade(l)
+            }
+            "call-video-no" -> { askRound++; asking = false; askedAt = 0L; log("video: consent declined") }
             "call-video-end" -> drop(l, aloud = false)
+            // THEIR CAMERA RESTS (iOS 3281-3291): their picture wears their cover; if mine rests too, both sides reach the voice
+            "call-camera-off" -> if (video) {
+                peerCameraOff = true
+                log("video: peer's camera rests mine=" + (if (rests) "resting" else "live"))
+                if (rests) drop(l, aloud = false)
+            }
+            "call-camera-on" -> { peerCameraOff = false; log("video: peer's camera rises again") }
             "call-restart" -> restart(l, w)
             "call-restart-answer" -> restartAnswer(l, w)
             // their screen (iOS 2509-2543): it grows a voice call into a video one while it rides; its end says what the call was.
@@ -1094,9 +1134,7 @@ object CallLine {
             val cam = en.createCapturer(name, cameraEvents(l, gen)) ?: return false
             val src = f.createVideoSource(false)
             val helper = SurfaceTextureHelper.create("mt_camera", egl.eglBaseContext)
-            // THE MASK'S DOOR STANDS BETWEEN THE CAMERA AND THE SOURCE (iOS FrameCountingCapturerDelegate, MontanaCall.swift
-            // 7221-7224, atom c98a92d589e3): while the mask is on, the camera's frame is read on this phone and never reaches the source
-            cam.initialize(helper, Book.ctx, AvatarMask.Door(src.capturerObserver))
+            cam.initialize(helper, Book.ctx, src.capturerObserver)
             cam.startCapture(1280, 720, 30)
             val track = f.createVideoTrack("mt_video", src)
             track.addSink(own)
@@ -1424,7 +1462,11 @@ object CallLine {
             for ((id, f) in pictureNow) l.pictureSeen[id] = maxOf(l.pictureSeen[id] ?: 0L, f)
             if (movedNow) { l.pictureStall = 0; notePeerPicture(false) }
             else { sm.videoDarkS += 2; l.pictureStall++; if (l.pictureStall == 2) notePeerPicture(true) }
-        } else if (!video) { l.pictureStall = 0; notePeerPicture(false) }
+        } else if (!video) {
+            // video left the call: the next rise may count its frames from zero on the same stream id, and the old larger count
+            // would keep the cover over a live picture for as long as the first video lasted (A1, 04.11.2026: 18 s after 17 s of video)
+            l.pictureStall = 0; l.pictureSeen.clear(); notePeerPicture(false)
+        }
         val now = System.currentTimeMillis()
         if (now - l.lastJournalAt < 5000) return   // the journal keeps its five-second rhythm (iOS 4080-4087)
         l.lastJournalAt = now
@@ -1464,10 +1506,11 @@ object CallLine {
 
     /** My camera joins their picture (iOS enableMyVideo 3227): only in a call that stands; a camera already there is lit again. */
     private fun enableMine(l: Line) {
+        joinRound++; joinPending = false
         offerMine = false
         if (synchronized(gate) { line !== l } || l.connectedAt == 0L) return moved()
         val track = l.vtrack
-        if (track != null) { track.setEnabled(true); return moved() }
+        if (track != null) { if (rests) raise(l) else track.setEnabled(true); return moved() }
         video = true
         if (camera(l)) { place(l); reoffer(l) }
         moved()
@@ -1481,11 +1524,36 @@ object CallLine {
         if (aloud) say(l, JSONArray().put(word(l, "call-video-end")))
         runCatching { l.pc.transceivers.firstOrNull { it.mediaType == MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO }?.sender?.setTrack(null, false) }
         cameraOff(l)
-        video = false; remoteLive = false; offerMine = false; swapped = false
-        AvatarMask.set(false, "video-end")   // no camera, no mask (iOS MontanaCall.swift 3201)
+        video = false; remoteLive = false; offerMine = false; swapped = false; rests = false; peerCameraOff = false
         moved()
         CallService.sync()
         log("video: ended aloud=" + aloud)
+    }
+
+    /** My camera rests (iOS restMyCamera): the capturer stops, the track falls silent, the far side is told so its cover stands at once. */
+    private fun rest(l: Line) {
+        if (!video || rests || sharing) return
+        rests = true
+        l.camGen++   // a fault of the capturer stopped here raises nothing
+        val cam = l.cam
+        l.cam = null
+        runCatching { cam?.stopCapture() }
+        runCatching { cam?.dispose() }
+        runCatching { l.vtrack?.setEnabled(false) }
+        say(l, JSONArray().put(word(l, "call-camera-off")))
+        moved()
+        log("video: my camera rests, the peer's picture stays")
+    }
+
+    /** My camera rises again (iOS raiseMyCamera): into the same track through a fresh capturer. */
+    private fun raise(l: Line) {
+        if (!video || !rests) return
+        rests = false
+        runCatching { l.vtrack?.setEnabled(true) }
+        startCam(l)
+        say(l, JSONArray().put(word(l, "call-camera-on")))
+        moved()
+        log("video: my camera rises again")
     }
 
     /** Their first frame drawn (iOS remoteVideoArrived 5191): the call grows video; my fresh «yes» brings my camera, else it is offered. */
@@ -1618,7 +1686,7 @@ object CallLine {
             runCatching { l.helper?.dispose() }
             val helper = SurfaceTextureHelper.create("mt_camera", egl.eglBaseContext)
             l.helper = helper
-            cam.initialize(helper, Book.ctx, AvatarMask.Door(src.capturerObserver))   // the mask's door, as at the camera's birth
+            cam.initialize(helper, Book.ctx, src.capturerObserver)
             cam.startCapture(1280, 720, 30)
             l.cam = cam
             log("camera back front=" + front)
@@ -1780,6 +1848,7 @@ object CallLine {
                 if (l.vtrack != null) bound(l)
                 // my «yes» joins here, on their picture's offer, while it is fresh — never on fresh checks (iOS K-6)
                 if (fresh(l) && rsn != "ice") { l.armedAt = 0L; enableMine(l) }
+                else if (rsn != "ice") { joinRound++; joinPending = false }   // a stale yes lights nothing (iOS remoteVideoArrived)
             }, onFail = { e -> log("restart answer refused here: " + e) }), tuned)
         }, onFail = { e -> log("restart answer unbuilt: " + e) }), MediaConstraints())
         l.pc.setRemoteDescription(sdp(onSet = { answerIt() }, onFail = { e ->
@@ -1843,12 +1912,17 @@ object Proximity {
     @Volatile private var near = false
     /** The sensor's word now, as iOS reads UIDevice.proximityState; meaningful while a hand holds the sensor. */
     val isNear: Boolean get() = near
+    /** THE SENSOR'S LAST «NEAR» (iOS MTProximity.lastNearAt, 51fca1bf): one owner of the reading, read by the ear's reply. */
+    @Volatile private var lastNearAt = 0L
+    /** The ear within a window (iOS MTProximity.nearWithin): the sensor says «near» now, or said it within the last `ms`. */
+    fun nearWithin(ms: Long): Boolean = near || android.os.SystemClock.elapsedRealtime() - lastNearAt < ms
     /** Who hears the sensor change (iOS UIDevice.proximityStateDidChangeNotification): the reply at the ear, on the main thread. */
     var onChange: ((Boolean) -> Unit)? = null
     private val ear = object : android.hardware.SensorEventListener {
         override fun onSensorChanged(e: android.hardware.SensorEvent) {
             val max = e.sensor?.maximumRange ?: 5f
             val now = e.values.isNotEmpty() && e.values[0] < minOf(max, 5f)
+            if (now) lastNearAt = android.os.SystemClock.elapsedRealtime()
             if (now == near) return
             near = now
             note(if (now) "near" else "far", "sensor")
