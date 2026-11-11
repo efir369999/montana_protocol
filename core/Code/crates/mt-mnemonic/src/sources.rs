@@ -1,4 +1,4 @@
-// The root is never taken from a single source. Bitcoin Core is built the same way: the system
+// The root is never taken from a single source. Mature key generators are built the same way: the system
 // generator is mixed with CPU instructions, time counters and an internal pool;
 // a hardware wallet does likewise, adding its own randomness to foreign randomness.
 //

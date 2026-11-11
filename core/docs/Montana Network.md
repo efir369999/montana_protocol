@@ -1,6 +1,6 @@
 # Montana — Network
 
-**Version:** 4.0.0
+**Version:** 3.3.1
 
 Network holds delivery: how a thing crosses from one person to another when neither of them
 has an address and no map of the network exists. It is the layer that makes the transport
@@ -8,8 +8,7 @@ invariant real, and it is written from that invariant rather than from any earli
 
 ## Scope
 
-**In scope.** The pipe and its tag; the holder a tag chooses; the label of a step; the renewal of the
-keys of a link and the heal of a pipe; the right that governs
+**In scope.** The pipe and its tag; the holder a tag chooses; the label of a step; the right that governs
 injection, collection and carriage; the cell; the canonical slot; deferred collection;
 rendezvous for a stream; a channel and how a publication reaches whoever reads it;
 the path and its owners; what a hop knows; discovery without a map;
@@ -23,32 +22,19 @@ Identity. Windows and quorum — Consensus. Why any of it must hold — Constitu
 Everything below rests on a secret two devices hold and nobody else does, so this is where that
 secret begins.
 
-Two devices that have never spoken agree on one by a post-quantum key agreement. The side that
-opens the connection holds an acquaintance of the other — an address, the key it answers with and a
-static ML-KEM-768 key — and makes a first encapsulation to that static key; then each sends a key
-encapsulation to the other under ML-KEM-768 drawn for this handshake alone, each opens what it
-received, and the three resulting values are folded together with the transcript of the exchange
-into a master secret under the domain Canon names for it. From that master secret two directional
-keys are derived, one for each direction of the handshake, so a value that protects what one side
-sends never protects what the other sends.
+Two devices that have never spoken agree on one by a post-quantum key agreement: each sends a
+key encapsulation to the other under ML-KEM-768, each opens what it received, and the two
+resulting values are folded together with the transcript of the exchange into a master secret
+under the domain Canon names for it. From that master secret two directional keys are derived,
+one for each direction of the handshake, so a value that protects what one side sends never
+protects what the other sends.
 
 **Both sides prove who they are, and neither says who they are to anyone else.** Each signs the
 transcript with its ML-DSA identity key, and the signature covers the key material of the
 exchange, so an attacker who relays the messages of two honest devices cannot place itself in
-the middle: the transcripts it would have to sign are not the ones it holds. The identity key of
-the side that opened crosses only sealed under a key of the first encapsulation, the identity key
-of the other side never crosses because the acquaintance already holds it, and both signatures
-cross sealed under keys of the master, so an observer of the wire learns neither key and can test
-no signature against a key it suspects.
-
-**A machine answers only whoever was handed its acquaintance.** A first flight that was not made to
-its static key opens to nothing, and the machine writes not one byte: it holds the connection the
-way it holds a first flight left unfinished, reading and discarding until the far side ends it or
-falls silent for the patience, and only then lets it go. Ending the connection at the last unit of
-a refused flight would answer a probe by its own length — one unit short held, the full count
-closed at once — so the refusal is not allowed to be sooner than an unfinished flight. A side
-scanning addresses learns that something accepts a connection there, which is what it learns of a
-closed device, and not that it is a machine.
+the middle: the transcripts it would have to sign are not the ones it holds. The identity keys
+are exchanged inside the encapsulation, never in the open, so an observer of the wire learns
+neither key.
 
 **The transcript is the binding, and it is exposed on purpose.** Both sides compute the same
 value from the exchange, and each signature covers it, so a handshake whose transcript the two
@@ -65,11 +51,10 @@ retroactively would open every letter that ever crossed it.
 
 **Invariants of the exchange:**
 
-- Every secret of a handshake derives from all three encapsulations and the transcript; a derivation from one side's material alone is a defect that hands the handshake to whoever supplied it.
+- Every secret of a handshake derives from both encapsulations and the transcript; a derivation from one side's material alone is a defect that hands the handshake to whoever supplied it.
 - The two directions carry different keys, derived under different domains.
 - Both identity signatures cover the transcript, and a handshake whose signature does not verify is abandoned in silence rather than answered.
-- The identity keys travel inside the encapsulation and never in the open: the initiator's sealed under the first encapsulation, the responder's not at all, and both signatures sealed.
-- A first flight that does not open under the static key of the machine it reached is answered by no byte.
+- The identity keys travel inside the encapsulation and never in the open.
 - The transcript value the two sides compare is the same value or the handshake is not theirs.
 
 ## There is no address
@@ -164,7 +149,7 @@ no separate expiry is introduced — the window already sets the horizon of fres
 **Invariants of a right of carriage:**
 
 - A right is extinguished exactly once; a second presentation is refused in silence.
-- Its nullifier is recorded at the holder for the window and never enters consensus state. This is what separates it from the right to a window's coin, whose nullifier is consumed inside a payment and does enter the set of the chain: one buys carriage and dies with its window, the other buys value and is spent once for good.
+- Its nullifier is recorded at the holder for the window and never enters consensus state. This is what separates it from the right to a window's seconds, whose nullifier is consumed inside a payment and does enter the set of the chain: one buys carriage and dies with its window, the other buys value and is spent once for good.
 - A false route costs a wait and never a disclosure: a deposit under a tag the holder does not hold is refused, and the sender's queue keeps the letter.
 - No hop can spend a right it forwarded, because no hop ever holds one.
 
@@ -204,133 +189,6 @@ reads the size of nothing.
 acquaintance handed it a way to, and what was handed over — an address, a port, a route — is of the
 world and not of the set. Freezing one here would be publishing the very quantity that must not
 exist, so the set names none, and an implementation carries what its acquaintance gave it.
-
-## How a link renews its keys
-
-**Status: adopted (issue #75).** The Author adopted this section and its form in Canon on
-2026-10-29 (decision 333 = (b), constitution record 338), together with the heal of a pipe in band,
-and fixed when a heal is offered (constitution record 356). The text is in force. The code that runs
-a renewal on a link and a heal in a client follows at stage 18, after the full network run of
-issue #24, so the wire does not change under the runs in progress; until it lands no implementation
-meets item 23 of the conformance set, and the Registry says so at NET-25. The council's answer to
-the RFC of issue #75, the derivation of the ceiling, the cost in units and the plan of the code
-stand in `core/docs/protocol-13/75-RFC-GPA.md`, which is not part of the set.
-
-A link keeps today the two directional keys its handshake gave it for as long as it stands, so
-whoever reads those keys out of a machine reads every unit of that link — the ones recorded before
-and the ones still to come — until the link ends. This section bounds both directions of that
-exposure: a link renews its keys once in every window it carries anything, by fresh post-quantum
-encapsulations folded into a secret that walks one way, so a key read at one moment opens neither
-what the link carried before its last renewal nor what it carries after its next one.
-
-**What a link holds.** The secret of a link begins as the master of its handshake, and the two
-directional keys are derived from the secret of the link exactly as the handshake derives them
-from the master, under the same two domains. A link that has never renewed therefore carries the
-keys it carries today, and the handshake, its transcript, its signatures and its vectors are
-untouched by anything here. What people compare out of band stays the transcript of the handshake;
-a renewal adds nothing to compare.
-
-**What a renewal is.** Three messages of the link, each sealed like every other message under the
-keys the link holds when it is sent:
-
-- an **offer**, carrying an ML-KEM-768 encapsulation key drawn for this renewal alone;
-- an **answer**, carrying an encapsulation to that key and an encapsulation key the answering side drew for this renewal alone;
-- a **finish**, carrying an encapsulation to the answering side's key.
-
-Each side opens what was encapsulated to it, and the new secret of the link is the hash, under a
-domain of its own that Canon names (`mt-link-renew`), of the previous secret, both shared secrets and the
-four public values of the renewal, folded in the order of the roles of the handshake — the values
-of the side that opened the link first — and never in the order of the renewal, so both sides
-compute one value whichever of them offered. Both encapsulations enter, as both enter the master
-of a handshake, so the new secret is beyond whoever holds neither of the two fresh decapsulation
-keys. Nothing is signed: the three messages travel inside the channel the handshake authenticated,
-under its keys. No primitive is added: the encapsulation is the handshake's and the folding is
-SHA-256.
-
-**When a link renews.** A side about to send a message in a window later than the window in which
-the secret of its link was set — by the handshake or by the last renewal — first sends an offer and
-then its message. The message travels under the keys the link holds, and the switch takes place
-when the renewal completes, so a renewal adds units and never a wait. A renewal is never sent on
-its own account: a link that carries nothing in a window renews nothing in it, sends nothing, and
-is released by the rule that releases a link carrying nothing.
-
-The window decides, and not a count of units, for three reasons. It is a count of the chain both
-sides read, and [I-15] keeps physical seconds out of anything visible on the wire. It needs no
-counter both sides would have to keep alike — a counter shared by the two ends of a wire of
-datagrams diverges at the first unit lost, and a divergence there is a link neither side can open.
-And the secret of a pipe already walks once per window, so the two secrets a machine holds of one
-delivery advance at one rate.
-
-**And when the chain does not advance.** A window can stall, and a stalled window must not leave one
-key over an unbounded volume. A side therefore also offers a renewal when the units it has sealed
-under its current sending key reach `rekey_units`, a ceiling that enters the Decree of Canon with
-the code of stage 18 (2^23 units, derived in `core/docs/protocol-13/75-RFC-GPA.md`). The count is
-the sender's own, of what it sealed: it never crosses the wire and is never compared with the other
-side's, so nothing can diverge on it. A key that has sealed twice `rekey_units` without a completed
-renewal ends its link: an offer nobody answers holds no key over a volume without bound.
-
-**Two offers that cross.** If both sides offer in one window, the offer of the side that opened the
-link stands: the other side erases the key it drew, answers that offer, and its own offer is
-discarded in silence. A link renews once in a window.
-
-**The switch.** The offering side seals the finish under the keys it held and every unit after it
-under its new sending key. The answering side, once it has opened the finish, seals every unit
-after it under its new sending key. Each side keeps its previous receiving key only until the first
-unit that opens under the new one, and then erases it together with the previous secret of the
-link, the decapsulation key it drew and both shared secrets. A unit that opens under neither key
-ends the link, exactly as a unit that does not open ends it today, and a new handshake replaces the
-link. A renewal that does not complete therefore costs a handshake and never leaves the two ends
-holding two secrets.
-
-**What an attacker holding a link learns.** Suppose an attacker reads, at one moment, everything one
-side holds of a link — its secret, both directional keys and any renewal in flight.
-
-- Until the next renewal completes, it reads and can forge every unit of the link in both directions, as it can today for the whole life of a link.
-- Units sealed before the last renewal preceding that moment stay sealed: the secret of a link walks one way, and every earlier key was erased.
-- After the next renewal it reads nothing, provided it did not alter that renewal. The new secret folds two shared secrets of encapsulation keys drawn after the moment of reading, and ML-KEM-768 keeps them from whoever sees only the encapsulation keys and the encapsulations — which it does see, since the keys it holds open the units carrying them.
-- If it alters the renewal — offering a key of its own, which the keys it holds let it seal — it stays in the middle. No renewal heals a link against an attacker that holds the link and acts. A renewal is not signed because the answering key of a machine is derived from the secret of that machine, so an attacker that took the machine signs whatever it likes; a signature would heal only against a reading of the link alone, and whether that case is worth its cost is left open beside the answer to the RFC.
-- If it keeps the machine, nothing heals. A machine is its operator's to guard, as a device is its holder's.
-
-**What a renewal costs.** The units of its three messages — two encapsulation keys and two
-encapsulations of ML-KEM-768, cut into pieces like any message of a link — and no signature: fewer
-than half the units of a new handshake, once in each window a link carries anything, and two key
-generations, two encapsulations, two decapsulations and one hash of computation.
-
-**What it does for a pipe.** A pipe is not a link. Renewing a link renews nothing of the pipes whose
-cells cross it: the inner layer of a cell is sealed under the key of its pipe, which no hop holds.
-The walk of the secret of a pipe gives it forward secrecy and no healing, and the threat model
-below names that. A pipe heals by the same construction carried in its own letters:
-
-- A letter of a pipe may carry a **heal offer**: an ML-KEM-768 encapsulation key its sender drew for that offer alone.
-- The letter that answers it carries an encapsulation to that key. From the window after the one whose tag the answering letter travelled under, the pipe stands on a **healed walk**: its first value is the hash, under a domain of its own that Canon names (`mt-pipe-heal`), of the value the old walk reaches at the window of the answering letter, the shared secret and the two public values of the heal; it walks on by the ordinary rule, and every quantity of a window is derived from it as from any value of a walk.
-- The offering side holds the healed walk once it opens the answering letter, and sends under it from the first window the healed walk stands at. The answering side keeps sending under the old walk until it opens a letter under the healed one, then sends under the healed walk alone and erases the old one. The offering side collects under both walks until it opens a letter of the answering side under the healed walk, and then erases the old one.
-- A side holds at most one heal of its own pending. The answering letter names the offer it answers by the last 32 bytes of that offer's encapsulation key (its ρ, already inside the offer; no new domain). The offering side opens an answer only with the key of the offer it names and drops any other: ML-KEM never refuses a ciphertext, so an answer opened with another key would put the offering side on a walk the answering side does not hold. An offer answered by nothing in its window is replaced by the first letter its side sends in a later window, and the key drawn for it is erased; a late answer to it names a key no longer held and is dropped. A lost letter costs a heal and never a pipe (the Author's decision, constitution record 409; the iOS client counts these windows in UTC days, record 400).
-- An attacker that read the old walk at some moment reads the offer and the answer, and loses the pipe from the healed walk on, provided it did not alter them and the offer was drawn after the moment it read. Until the offering side next writes, the answering side's letters stay under the old walk and readable to it; that residue is named and not closed. An attacker that read the old walk and also stands on the path of the pipe's letters can strip the offer from each of them and re-seal the rest, so no heal happens and it keeps reading; offers that go unanswered tell a side nothing it can act on, and that case is named and not closed.
-
-A correspondent offers a heal in the first letter it sends in a window while it holds one walk and
-awaits no answer to an offer of its own drawn in that window (the Author's decisions, constitution
-records 356, 392 and 409); an offer of an earlier window is not awaited but replaced, as above.
-A pipe has at most one heal in flight. When both correspondents write in one window, their offers
-cross, each side having offered before it opened the other's. Of two crossing offers, the one whose
-encapsulation key is lower in byte order stands. The side whose offer did not stand erases the key
-it drew and answers the standing offer as its answering side, as the offer of the side that opened
-a link stands when two renewals of that link cross. The side whose offer stands answers nothing to
-the other offer. Both sides compare the same two keys, so they agree on one heal and one healed
-walk without a further letter.
-
-**Invariants of a renewal:**
-
-- The secret of a link begins as the master of its handshake, and the directional keys are derived from it under the domains of the handshake; a link that never renewed carries exactly the keys of its handshake.
-- A renewal folds both shared secrets and all four public values in the order of the roles of the handshake, under a domain of its own; a renewal from one side's material alone is a defect that hands the link to whoever supplied it.
-- A link renews before a message its side is about to send, and never on its own account: at most once in a window by the rule of the window, and again whenever its own count of units sealed under one sending key reaches `rekey_units`, which in a stalled window may be more than once.
-- No count, index or window of a renewal crosses the wire: its three messages are messages of the link, of the one shape, their kind inside the seal.
-- Every previous secret, key, drawn decapsulation key and shared secret is erased once the renewal completes and the first unit opens under the new key; a value kept past that is a defect.
-- A unit that opens under neither key ends the link in silence.
-- A heal of a pipe derives the healed walk from the old walk at the window of the answering letter, and each side erases the old walk only on opening a letter of the other side under the healed one.
-- A pipe has at most one heal in flight: a side offers only while it holds one walk and awaits no answer to its own offer of the same window; an offer unanswered in its window is replaced in a later one and its key erased; an answer names its offer by ρ, and an answer to any other offer is dropped unopened; of two crossing offers the one with the lower encapsulation key in byte order stands, and the side that drew the other erases it; two healed walks from one old walk are a defect.
-
-**What this adds to the ledger and the conformance set.** Two rows of the observability ledger,
-*that a link renewed in a window* and *that a pipe healed*, and item 23 of the conformance set.
 
 ## The path
 
@@ -706,7 +564,7 @@ links that stand: a ranking is a second mechanism, and whatever it ranks by is w
 optimises for.
 
 **A link that carried nothing across a window is released.** Occupation therefore costs carriage —
-the very work the network pays the coin of a window for — and a flood that holds slots without
+the very work the network pays a window's seconds for — and a flood that holds slots without
 carrying gives them back within one window. Nothing here observes idleness of a person or of a
 machine: what is observed is that this link carried nothing, which the device holding it knows
 without asking anyone.
@@ -762,8 +620,7 @@ Canon derives the points of a round and of a window from the window, the chain, 
 index, so every machine computes them alone and none can choose to stand at one. Everything a
 window carries stands there: a beacon and the attestations answering it at the points of their
 round, a frame at the points of the round its canonical slot names, an operation of the identity
-plane likewise, a proposal and its roll at the points of the window it closes, and a
-pledge of the agreement at the points of the window it is made in. A machine deposits at every
+plane likewise, and a proposal at the points of the window it closes. A machine deposits at every
 point and collects from every point; the right to collect is public, because what stands there
 names nobody, and a runner assembles a window from what it collects rather than from what anybody
 chose to hand it. Withholding a round
@@ -801,9 +658,6 @@ External tunnels serve the circumvention of censorship and may hide a network ad
 are **not** a source of privacy: switched off, they take none of it away. A construction that
 needed them would have no privacy of its own.
 
-Nor does this text claim that traffic of Montana cannot be recognized as Montana's. The
-observability ledger names that limit; hiding the protocol itself is what external tunnels are for.
-
 ## Threat model of the wire
 
 | Adversary | What they get |
@@ -817,10 +671,10 @@ observability ledger names that limit; hiding the protocol itself is what extern
 | an observer of both ends of one delivery | the correlation of envelopes, at a price set by the delay profile and the volume carried — the single case the transport invariant does not close |
 | an adversary who tears connections | nothing: the set of entries is a function of the period, not of events |
 | an adversary who delays traffic in a pattern | loss rather than a watermark, and loss is repaired by the erasure code |
-| an adversary scanning for participants | the fact that something accepts a connection at some address, and then silence: a first flight not made to the static key of that machine is answered by no byte, which is what a closed device gives, so there is no way to tell whether it is a machine |
+| an adversary scanning for participants | the fact that some machine answers at some address, and no way to tell whether it is a machine |
 | that a device is at its ceiling of links | closed: a refusal is silence and reads exactly as an address where nothing listens |
 | that a link carried nothing in a window | **observable to the device holding it, and to nobody else**: it is the one fact the release stands on, it names no person and no machine, and it leaves the device with the window it was read in |
-| whoever takes a device, or a copy of its storage | every pipe of that device from the window of the taking on, and nothing before it: the secret of a pipe walks one way and the earlier values are erased, so a cell recorded earlier stays sealed. **What follows the taking is named rather than closed**: the walk alone does not heal, so the pipe is read from that window until the correspondents complete a heal the taker did not alter or strip ("How a link renews its keys") or establish a new secret; a taker that keeps the device keeps reading, and a device is its holder's to guard |
+| whoever takes a device, or a copy of its storage | every pipe of that device from the window of the taking on, and nothing before it: the secret of a pipe walks one way and the earlier values are erased, so a cell recorded earlier stays sealed. **What follows the taking is named rather than closed**: the walk does not heal, so the pipe is read from that window until the correspondents establish a new secret, and a device is its holder's to guard |
 
 ## Observability ledger
 
@@ -841,11 +695,7 @@ observability ledger names that limit; hiding the protocol itself is what extern
 | that a device serves this tenant | **a named physical prohibition**: a machine serving a tenant receives that tenant's bytes by the definition of serving, and being served while invisible to the server cannot both hold. What it does not learn is what is carried; and where the device is the tenant's own, there is no second party left to know |
 | that a device went on or off, and that mail arrived near that moment | closed: the link of a sleeping device is held by the reachable side out of the transit it carries anyway, so switching on and off is not an event of the network and intersection by presence has nothing to intersect |
 | the machine a cell is being carried toward | **deliberately observable to a hop**: routing cannot move a cell toward a target without naming the target. It names a machine and never a party, many pipes of many strangers share one holder in one window, and nothing of the sender, the recipient or the letter follows from it |
-| that a machine answers at an address | **a named physical prohibition**: accepting a connection is observable at the wire; what it does not reveal is whose it is or whether it is a machine, since a first flight not made to its static key is answered by no byte and held exactly as an unfinished one is. **One limit is named**: a side that keeps sending past a whole first flight is read no further than the largest message of this wire, and then the connection ends — the bound that keeps a stranger from holding a thread without end, observable only to a side that sends that much |
-| that a line carries Montana | **a named limit, not claimed** (the Author's decision, constitution record 394): every unit that crosses the wire is one length, `cell_bytes` = 1 232 bytes (Canon:955), and a handshake is an ML-KEM-768 exchange of fixed lengths, so an observer who inspects packets can tell that a line carries Montana. That is all it learns: nothing of what is carried, by whom or for whom. Hiding the protocol itself is left to external tunnels ("Privacy is not rented"); a transport shaped like other traffic would be a decision of its own |
-| that an address is a machine, to whoever holds its acquaintance | **deliberately observable to that holder, and named**: the acquaintance is what lets a first flight open, so whoever was handed one can confirm the machine it names. The acquaintances of the opening machines travel inside every client, so those machines stay confirmable by anybody until their lines leave the client |
-| the identity key of an initiator, to whoever later takes the responder's machine secret | **a named limit**: the key crosses sealed under the encapsulation to the responder's static key, so a taker of that machine's secret who recorded first flights opens the identity keys of their initiators. The channel keys do not follow: they fold both encapsulations drawn for the handshake alone, which the taking does not open |
-| that a recorded first flight is replayed to its machine | **observable to the replayer, and named**: the machine opens it and answers with fresh values, and the replayer, holding no signature key of the initiator, finishes nothing; what it learns is that the address is the machine the flight was made to, which the recording already showed it |
+| that a machine answers at an address | **a named physical prohibition**: answering is observable at the wire; what it does not reveal is whose it is or whether it is a machine |
 | that some record asked what a slot publishes in a window | **deliberately observable to the answering machine**: it sees a slot and a nullifier that names nobody, and learns neither who asked nor whether anything followed |
 | that a person claimed no name | closed: claiming is an act and not claiming is not, so nothing is published either way; a correspondence begun by acquaintance is indistinguishable from one begun by a name, and no quantity marks a record as nameless |
 | that a contact point of a claimed name was used | **claimed by the person, not created by the protocol**: the point exists only where a name was published by a deliberate act, it is computable by anyone who knows that name, and it yields no address, no record, no other name and no evidence that a deposit was collected. What is deposited there is a request and never a letter, so no correspondence crosses it and nothing of one — content, size or moment — is observable at it. Requests enter the canonical slot like all others, so their number and moment carry no signal |
@@ -854,8 +704,6 @@ observability ledger names that limit; hiding the protocol itself is what extern
 | that some record read a channel | **deliberately observable to the machine at that point**: it sees a point of one window and a collection, and learns neither who collected, nor which other channels they follow, nor whether the body was reconstructed. The point joins to no other window, so two collections of one reader are not joinable |
 | which channels one record follows | closed: a reach carries no index and joins to no other reach, and no subscription is held anywhere, so the set a reader follows exists on a device and in no other place |
 | how many readers a channel has | closed: nothing counts them — a publisher deposits once whatever the number, and no party holds a list to count |
-| that a link renewed in a window | **deliberately observable to an observer of that line, and named**: a link that carries anything in a window carries a renewal in it, a fixed count of units each way with one round trip between them; the units are of the one shape and their kind rides inside the seal, so which units they are is not readable, and what the renewal marks is that the link carried something in that window, which that observer holds already |
-| that a pipe healed | closed: the offer and the answer ride inside the inner seal of letters, and the tags of a healed walk join to the tags of the old one no more than any two tags do; what the holder of a pipe sees is a letter larger by an encapsulation key or an encapsulation, and the size of one letter is already deliberately observable to it |
 
 ## Conformance set
 
@@ -881,6 +729,5 @@ An implementation conforms to this document when all of the following hold.
 18. It accepts a head only against the key the channel slot published and against the head published before it, accepts a cell only against the root that head carries, deposits and collects by the messages Canon lays out — the right to a publication public, the right to mail from a pipe sealed to the window by the collect derivation — and holds no list of who reads what.
 19. It spends a reach to learn what a slot publishes and never for collecting a publication, and it deposits a channel again in every window it is to remain readable.
 20. It holds at most `inbound_slots` links it did not open, serves a deposit at a point of a window or of a round without taking a slot for it, refuses a further handshake at that ceiling in silence, releases a link that carried nothing across a whole window, counts neither its own entries against that ceiling nor releases them by that rule, divides the budget of a window equally across every link it holds, and drops what exceeds a share without an answer and without remembering it.
-21. It deposits at every point Canon derives — a beacon and an attestation at the points of their round, a frame and an operation of the identity plane at the points of the round their slot names, a proposal and its roll at the points of its window, a pledge at the points of the window it is made in — collects from every one of them and takes the union, treats the right to collect there as public, and floods nothing to anybody.
+21. It deposits at every point Canon derives — a beacon and an attestation at the points of their round, a frame and an operation of the identity plane at the points of the round their slot names, a proposal at the points of its window — collects from every one of them and takes the union, treats the right to collect there as public, and floods nothing to anybody.
 22. It walks the secret of a pipe one step per window under the domain Canon names, derives the tag, the right to collect and the key of the inner seal of a window from the value of that window alone, holds the value of the earliest window it still accepts a cell at and erases every earlier one, and reproduces the frozen vectors of the walk.
-23. It renews the keys of a link as "How a link renews its keys" states, folds both encapsulations in the order of the roles of the handshake, renews once per window before a message or at the ceiling, erases what the renewal replaced, ends a link on a unit that opens under neither key, heals a pipe by a pair of letters without breaking it when a letter is lost, and reproduces the frozen vectors of the renewal and of the heal.

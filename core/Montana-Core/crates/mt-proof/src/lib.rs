@@ -35,7 +35,6 @@ pub mod air;
 pub mod cement;
 pub mod circuit;
 pub mod commit;
-pub mod credited;
 pub mod ext;
 pub mod fabric;
 pub mod field;

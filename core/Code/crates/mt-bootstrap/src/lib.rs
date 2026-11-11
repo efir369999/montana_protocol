@@ -1,6 +1,6 @@
 //! Bootstrap (Montana P2P Network, Stage 5): entering the network from zero knowledge without our
 //! server. Byte-exact formats QRBootstrap (QR from a friend) and SeedList (embedded node list,
-//! Bitcoin model) + learned-node cache + anchor arbiter. mDNS/BLE/Reality/Snowflake are
+//! the classic seed model) + learned-node cache + anchor arbiter. mDNS/BLE/Reality/Snowflake are
 //! network/platform layers on top of this core. After the QR endpoint goes stale, the friend's address
 //! is resolved via the DHT by dk (Stage 4, mt-rendezvous).
 
@@ -229,7 +229,7 @@ pub enum DeepLink {
     Address(String), // "mt" ‖ base58(account_id ‖ checksum)
 }
 
-// Bitcoin base58 (without 0 O I l).
+// The base58 alphabet (without 0 O I l).
 fn is_base58_char(c: u8) -> bool {
     matches!(c, b'1'..=b'9' | b'A'..=b'H' | b'J'..=b'N' | b'P'..=b'Z' | b'a'..=b'k' | b'm'..=b'z')
 }

@@ -215,12 +215,7 @@ fn generator_is_alive(block: &[u8]) -> bool {
 }
 
 fn sorted(samples: &[u8]) -> Vec<&[u8]> {
-    let mut v: Vec<&[u8]> = samples
-        .as_chunks::<SAMPLE>()
-        .0
-        .iter()
-        .map(|sample| sample.as_slice())
-        .collect();
+    let mut v: Vec<&[u8]> = samples.chunks_exact(SAMPLE).collect();
     v.sort_unstable();
     v
 }

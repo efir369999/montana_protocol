@@ -6,6 +6,13 @@ Each `// SPEC DEVIATION DEV-NNN: ...` comment in code refers to a specific entry
 
 Closed `DEV-N` entries are kept in this file as a historical record with `Status: closed (commit <sha>)`.
 
+**Current review, 2026-10-14:** a historical closure describes its own source and
+checks. It does not establish that the current runtime is conformant. DEV-015
+and DEV-044 remain open for authenticated bootstrap; DEV-054 records the cement
+validation defects and the candidate fixes. DEV-055 corrects the incomplete
+post-state commitment behind the earlier DEV-042 closure. The runtime of `Montana-Core` is
+reviewed separately in [the reference audit](../../Montana-Core/AUDIT.md).
+
 ---
 
 ## DEV-001: NodeRegistration with ssha_chain_length=0
@@ -70,7 +77,7 @@ Closed `DEV-N` entries are kept in this file as a historical record with `Status
 **File:line:** `crates/montana-node/src/commands/start.rs:102-128`
 **Spec section:** «Proposal header» / «Canonical acceptance» / «apply_proposal Step 4»
 **Spec quote:** «the winner forms a `ProposalHeader` (1080 bytes) with `included_bundles + included_reveals + state_root`, signs it, archives it. The validator recomputes state_root and compares.»
-**What the code does:** directly `account.balance += 13_000_000_000` bypassing `apply_emission`; ProposalHeader is not formed; `archive_proposal` is not called
+**What the code does:** directly `account.balance += emission_moneta` bypassing `apply_emission`; ProposalHeader is not formed; `archive_proposal` is not called
 **Severity:** mainnet blocker (full Step 4 of apply_proposal bypassed)
 **Closure path:** form a `mt_consensus::ProposalHeader` with the correct fields (`canonical_proposer`, `included_bundles`, `included_reveals`, `state_root`), `validate_acceptance`, emission via `mt_account::apply_proposal`, `mt_store::archive_proposal`
 **Closure cost:** ~12 hours of code
@@ -134,38 +141,20 @@ Closed `DEV-N` entries are kept in this file as a historical record with `Status
 
 ---
 
-## DEV-011: hardware calibration of initial D for the target window time
+## DEV-011: historical hardware calibration of initial D
 
 **Crate:** `montana-node`
-**File:line:** `crates/montana-node/src/commands/start.rs` function
-              `calibrate_d_for_target_window` + first run of start
-**Spec section:** «Engines → TimeChain SSHA — oscillator», «Calibration of D₀»
-**Spec quote:** «Mainnet calibration `D₀` targets τ₁ ≈ 60 seconds wall-clock
-                 on median commodity hardware (engineering target, not a protocol
-                 invariant)»
-**What the code does:** on the first run of the node (timechain.bin did not exist)
-                    it runs benchmark ssha_step(zeros, 10M) → measures
-                    the hardware SHA-256 rate → calibrates `current_d` so that
-                    a window ≈ 60 s wall-clock on this machine.
-**What the spec says:** spec `D₀ = 252M` — engineering calibration target for
-                 median commodity. Per-node actual wall-clock varies ×20
-                 (Apple Silicon ~53s, idle x86_64 VPS ~68s, loaded ~1145s).
-                 Adaptive D feedback at the τ₂ boundary automatically
-                 adjusts D to the median network rate.
-**Severity:** cosmetic — D in the genesis node = local state, not shared
-              consensus invariant with other nodes (there are none).
-              When new network nodes appear, their D will be calibrated
-              independently or synchronized via canonical params.d0.
-**Closure path:** when finalizing multi-node M6+ — nodes will sync via
-                  canonical D from the Genesis Decree or negotiate via
-                  network consensus. Hardware calibration remains for
-                  the genesis node as the initial value.
-**Closure cost:** acknowledged as a permanent feature for the genesis node,
-                  no closure required
-**Status:** acknowledged (genesis-node local hardware calibration —
-            an explicit operator choice, not a silent shortcut)
-**Acknowledged:** author 2026-04-28 «make my node produce roughly
-                  a 60-second window»
+**Source:** `timechain_state::load_or_init_timechain`, `commands::start::run`
+**Current reading (2026-10-14):** a new state takes `current_d` from
+`genesis_params().d0`. The former `calibrate_d_for_target_window` function is
+absent. `start` still exposes an explicit test override; timing the progress bar
+is not calibration of the production initial value.
+
+**Status:** the described first-run calibration is obsolete in the reviewed
+source. This is a correction of this tracker, not a new implementation fix.
+The older request to target a roughly sixty-second local window and its
+historical implementation do not establish current network conformance.
+Wall-clock proposer scheduling and other open consensus findings remain separate.
 
 ---
 
@@ -240,7 +229,7 @@ Closed `DEV-N` entries are kept in this file as a historical record with `Status
   5. **Wire format Proposal envelope schema bump.** From 3722-byte header-only to header + length-prefixed BC set. Network spec v1.1.0 → v1.2.0; binding KAT vector regenerated for the new wire format.
   6. **Tests.** mt-net-transport e2e integration test with 3 in-process operators reaching quorum via multi-confirmer cementing across simulated balanced chain_length distribution.
 
-**Operational note (current production state).** Moscow's `chain_length = 25 766` is dominant (Frankfurt, Helsinki, Armenia each `≤ 1`); Moscow's BC alone already satisfies `67% × Σ active_chain_length` quorum. The multi-confirmer protocol becomes operationally consequential only once non-bootstrap operators accumulate non-negligible chain_length over many τ₂ epochs — well after the v1.0.0 mainnet tag. The protocol is the explicit gate to v1.0.1; the bootstrap-proposer baseline is the v1.0.0 mainnet baseline. Historical (marked 2026-10-27 UTC): this note is the state of 2026-05 (the dates of this section run to 2026-05-21, `e1a0bd0`); it is kept as written, and the chain lengths and the proposer it names are not claimed for today.
+**Operational note (current production state).** Moscow's `chain_length = 25 766` is dominant (Frankfurt, Helsinki, Armenia each `≤ 1`); Moscow's BC alone already satisfies `67% × Σ active_chain_length` quorum. The multi-confirmer protocol becomes operationally consequential only once non-bootstrap operators accumulate non-negligible chain_length over many τ₂ epochs — well after the v1.0.0 mainnet tag. The protocol is the explicit gate to v1.0.1; the bootstrap-proposer baseline is the v1.0.0 mainnet baseline.
 
 **Precedent (historical).** the Frankfurt node became Active on genesis bootstrap (registration_window=45916, start_window=46032, chain_length=1) and immediately landed in a multi-node situation (state.nodes = {msk, fra}). 4,790 montana-node restarts over 24 hours with the error `singleton cementing: cemented=1, active=25767, quorum=17264` — msk had chain_length=25766 in Frankfurt's state (received via P2P sync), fra had its own chain_length=1. The `follower_skip` patch (commit `e1a0bd0`) replaces the crash with passive follower mode; the node stays in Active phase, keeps heartbeating to peers, and only advances its cemented head via apply_proposal from the bootstrap proposer.
 
@@ -276,7 +265,7 @@ Closed `DEV-N` entries are kept in this file as a historical record with `Status
   - (b) Write a custom Noise_PQ handler outside libp2p's `noise` upgrade module, wrapping it as a `libp2p::core::upgrade::OutboundConnectionUpgrade` / `InboundConnectionUpgrade`. Reuse the `mt-crypto::keypair_from_seed_mlkem` and `mt-crypto::Mlkem*` types already present in `mt-crypto`. Estimated effort: 4 weeks.
   Either path requires byte-exact KAT vectors checked into `mt-conformance` and differential testing against at least one independent reference implementation.
 - **Phase 2 — Hybrid coexistence period.** Capability negotiation through the `pq_transport_version` wire field. Peers advertise both classical and Noise_PQ; the connection negotiates the highest mutually supported version. A chain_length-weighted majority signal (≥ 67% of active_chain_length advertising Noise_PQ for ≥ τ₂) triggers the deprecation of classical inbound. Estimated wall-clock: 2 weeks of soak-time on the genesis 3-node network plus observability collection.
-- **Phase 3 — Classical removal.** TLS 1.3 layer dropped entirely. The transport stack becomes TCP → Noise_PQ → Yamux. Uniform framing preserved at the application layer for DPI obfuscation. Spec bump removes `pq_transport_version` once capability negotiation is no longer needed. Estimated wall-clock: 1 week including spec patch + node deployment + 24-hour soak.
+- **Phase 3 — Classical removal.** TLS 1.3 layer dropped entirely. The transport stack becomes TCP → Noise_PQ → Yamux. The uniform framing of `mt-net` (1024-byte frames with a padding flag in the clear) was never wired to a transport and is removed: the set forbids synthetic filler (Constitution, "Nothing is made even") and a padding frame announcing itself in the clear would be the mark the set names. Spec bump removes `pq_transport_version` once capability negotiation is no longer needed. Estimated wall-clock: 1 week including spec patch + node deployment + 24-hour soak.
 
 **Closure cost:** 3–5 weeks wall-clock for Phase 1 + 1–2 weeks for Phases 2 + 3 = total **5–7 weeks** for production-grade closure with KATs, differential testing, and three-node soak. This is M6 milestone scope, not single-session work.
 
@@ -312,23 +301,35 @@ PeerId derivation: SHA-256 multihash of the peer's ML-DSA-65 identity public key
 
 ---
 
-## DEV-015: M7 fast-sync client-side handler
+## DEV-015: fast-sync trust and integration
 
-**Crate:** `montana-node`
-**File:line:** `crates/montana-node/src/commands/start.rs` — message-dispatch drain
-**Spec section:** «Sync protocols → fast-sync» in `Montana Network v1.1.0.md` (lines 964–970)
-**What the code does:** the M7 algorithmic layer is complete: `mt_sync::Snapshot::{from_tables, to_wire_chunks, build_tables}` and `SnapshotVerifier::verify` (Sparse Merkle production root, byte-equal cross-implementation conformance, 17 unit tests). The server-side dispatcher in `start.rs` answers `MsgType::FastSyncRequest` by broadcasting chunked `FastSyncResponse` envelopes carrying the requester's `request_id`. The client-side handler — drain chunks by `request_id`, reassemble Snapshot, verify against the anchor `ProposalHeader.state_root`, swap the local `LocalState.{accounts, nodes, candidates}` — is not yet wired into the dispatcher.
+**Crate:** `montana-node`, `mt-sync`
+**Source:** `commands::start::handle_protocol_message`, `FastSyncClient::finalize`
+**Current reading (2026-10-14):** the response handler is wired. It decodes and
+reassembles chunks, checks the reconstructed root against `recent_roots`, applies
+the tables and persists the window. The earlier statement that the handler was
+absent was stale.
 
-**Severity:** v1.0.1 hot-fix track. New operators today join the live mesh by replaying the canonical history via the existing `apply_proposal`-from-peers path; fast-sync becomes a CPU/time win at long-running mesh depth, not a correctness requirement.
+**Status:** secure bootstrap remains open. Before this change the lagging-node
+request path copied a proposed root into `recent_roots` before verifying that proposal's
+signature, eligibility, quorum and state transition. Matching a snapshot to that
+root proves agreement with the sender, not with the chain. The request identifier
+was not bound to the active response session. Existing table reconstruction
+tests did not close these trust boundaries.
 
-**Closure path:**
-  1. Add a per-`request_id` accumulator keyed by `(anchor_window, request_id)` to the dispatcher state.
-  2. On `MsgType::FastSyncResponse` arrival, decode `mt_net::FastSyncResponseChunk`, append records to the corresponding `Snapshot` instance.
-  3. When `chunk_index + 1 == total_chunks` for the highest-seen chunk in a given `request_id`, call `SnapshotVerifier::verify(&snap, &expected_state_root)` against the anchor `ProposalHeader.state_root` retrieved from any honest peer's archived proposal at the same `anchor_window`.
-  4. On verify success, call `snap.build_tables()` and swap into `LocalState`; persist via `FsStore`; bump `current_window` to `anchor_window`.
-  5. On verify failure, increment an attempt counter and retry against a different peer.
+**Candidate mitigation:** `FastSyncSession` pins a root and clock already in the
+verified local histories, the window and the request identifier. The request path
+no longer adds a remote root or clock to those histories. Unrelated responses
+leave the session untouched. Six fast-sync tests pass, including rejection of
+untrusted or moved anchors. This prevents the unsafe shortcut; it does not supply
+the authenticated history/checkpoint needed by a fresh operator. Such a join now
+waits instead of accepting arbitrary state.
 
-**Status:** open for v1.0.1.
+**Closure criterion:** only an independently authenticated anchor may authorize
+state replacement; unrelated, replayed or mismatched sessions must leave state
+untouched. A new operator must either verify history from its trusted origin or
+verify an explicitly authenticated checkpoint. An unverified remote head must
+never authenticate its own snapshot.
 
 ## DEV-016: N_SEED multi-Active genesis cohort
 
@@ -695,12 +696,11 @@ Spec: "the aggregate of signatures of the cemented BundledConfirmation of window
 
 ## DEV-025: lottery target without τ₂ calibration
 
-**Status: removed (issue #18; see DEV-054 for the reveals, the winner and the proposer rule).** The author's decision on issue #18 (council link 7796) removes the threshold and its calibration from `Code`: `calibrate_target` with TA1-TA5, the τ₂ ticket counter, the persistent target (the clock record is written as v1 again; a v2 record is read without its lottery fields), the candidacy gate and the follower's target cross-check are gone; the header field `target` carries the fixed value `u128::MAX` (since DEV-054 / S3: zero). Earlier text, kept for history: **closed (commit baca884).** `mt_lottery::calibrate_target` — integer form of the spec (u256 intermediate, saturation, TA4 zero case); binding vectors TA1-TA5 byte-for-byte in the tests. Node: the counter of cemented tickets per τ₂ and the threshold target are persistent (timechain v2), recomputation at the τ₂ boundary in a single state transition, candidacy gate weighted_ticket < target at ticket publication, target in the header and verification by followers.
+**Status: closed (commit baca884).** `mt_lottery::calibrate_target` — integer form of the spec (u256 intermediate, saturation, TA4 zero case); binding vectors TA1-TA5 byte-for-byte in the tests. Node: the counter of cemented tickets per τ₂ and the threshold target are persistent (timechain v2), recomputation at the τ₂ boundary in a single state transition, candidacy gate weighted_ticket < target at ticket publication, target in the header and verification by followers.
 
-## DEV-026 (closed, issue #18 S4): leader equivocation — the applied decision stands, the pair is kept
+## DEV-026 (open): leader equivocation — first valid wins, not reject-both
 
 Spec: "Two proposals from the same proposer_node_id in one window: both are rejected". Implementation: the first valid quorum envelope is applied; the second is rejected by window monotonicity. Safety rests on the BC quorum (identical content is deterministic); divergence is possible only in metadata (prev_proposal_hash during a fallback race). Closure: buffering of competing envelopes of the window + a selection rule.
-**Closed (issue #18, S4), accepted by core/docs Consensus:1455** (invariant 13: a machine "treats a decided window as final: it never abandons a decision it verified"), with :425-428 (of two proposals of one height the chain keeps the one the agreement of the window after decided, never by a comparison) and :1239-1243 (two decisions that both verify are an equivocation, and the contradicting pairs are the evidence). "Reject both" would abandon a decision the node verified and applied, so it is ruled out (the chairman's answer in PR #73). The rule of core/Code: a second, different envelope of a window already applied is refused and nothing moves (tables, `current`, `current_window`, `meta_last_cemented`, the archive); when it comes from the proposer of the applied one and verifies under that proposer's key, the pair (applied envelope, second envelope) is kept as equivocation evidence (montana-node start.rs `keep_equivocation`; test `order_tests::a_second_envelope_of_an_applied_window_is_refused_and_the_pair_kept`). Two proposers of one window at two cascade depths (S4b) fall under the same finality rule and are recorded in the issue, not changed here.
 
 ## DEV-027 (closed): supply formula corrected to EMISSION_moneta × W (EXT-MON-01, spec v35.26.2)
 
@@ -830,7 +830,16 @@ exact-anchor binding (pass requested anchor to the client, verify chunk
 anchor_window equality) is a follow-on hardening, not required to close the
 self-block.
 
-## DEV-044 (closed): FastSync exact-anchor binding (EXT-SYNC-01 residual, REAUDIT-03)
+## DEV-044 (partially closed): FastSync exact-anchor binding (EXT-SYNC-01 residual, REAUDIT-03)
+
+**Reopened 2026-10-14:** exact matching against a root advertised by the same
+unverified envelope was not authentication. The candidate pins the requested
+window, request identifier, previously verified root and timechain value in a
+`FastSyncSession`; chunks cannot choose their own trusted anchor. A server serves
+only the requested current window. Six fast-sync module tests pass locally.
+Fresh-node authenticated bootstrap remains open (DEV-015). The earlier account
+below is historical and its closure does not cover this trust gap.
+
 
 **Crate:** `mt-sync`, `montana-node`, spec `Montana Network`
 **Spec section:** «Sync protocols → FastSyncResponse» / «State root verification»
@@ -974,7 +983,7 @@ Mitigated by DEV-042: a divergence triggered by this race is now rejected and re
 
 **Closure (commit see git log).** The follower acceptance path no longer computes a per-node wall-clock `silence`/`fallback_secs` depth to gate the proposer. Leader legitimacy is decided ONLY by `validate_proposer_is_canonical(header, sorted_W-2)` — i.e. `proposer_node_id == fallback_proposer(W-2, header.fallback_depth)` — a pure function of the signed header and the cemented W-2 candidate set, identical on every honest node. The cascade depth is the depth DECLARED in the signed header, not a local timer. Wall-clock survives ONLY in the proposer-side self-action decision ("do I lead this window"), which never enters consensus state: competing proposals of different depth for the same window carry an identical `state_root` (deterministic from cemented sets), so a depth race cannot diverge state. Residual metadata-only divergence of `prev_proposal_hash` under concurrent fallback is tracked as DEV-026 (not state-affecting: `prev_proposal_hash` is not cross-checked in `validate_header` and is not part of `state_root`). [I-3] restored.
 
-## DEV-044 (closed): devnet ssha_entry_windows / selection_interval = 1 (production = 20160 / 336)
+## DEV-044 (open, acknowledged): devnet ssha_entry_windows / selection_interval = 1 (production = 20160 / 336)
 
 **Crate:**           mt-genesis
 **File:line:**       crates/mt-genesis/src/lib.rs (genesis_params)
@@ -986,8 +995,6 @@ Mitigated by DEV-042: a divergence triggered by this race is now rejected and re
 **Closure cost:**    minutes (two constants); re-baking the Genesis State Hash is not required.
 **Status:**          open (devnet override, author-acknowledged for local testing)
 **Acknowledged:**    the author explicitly chose "leave 1 for the test" (2026-06-23)
-
-**Closed (issue #17 K5, the author's decision at council link 7790, question 5, 2026-10-25):** `genesis_params` carries `ssha_entry_windows = 20 160` and `selection_interval = 336`, equal to `conformance/spec-v35.27.0.contract`. The two lines "not part of the ... Genesis State Hash composition" and "re-baking the Genesis State Hash is not required" above were wrong: `ProtocolParams::encode` writes both fields (`crates/mt-genesis/src/lib.rs`, `write_u64` of `ssha_entry_windows` and `selection_interval`), and `compute_genesis_state_hash` hashes that encoding. The Genesis State Hash of the earlier core therefore moves, explicitly: the contract now pins it as `hash genesis_state_hash 1fa530475e4bda2e4041822c023f1b9908444c1103a3974e51012881df9337d8`, records the devnet value it moved from (`c8f6243c6b74f1d77ecad05c4a6e5d1b56012ff455d4b94c8d24fdedf2e19942`), and the conformance gate asserts the code against it (`genesis.genesis_state_hash`). A network opened under the devnet Decree is a different network.
 
 
 ---
@@ -1115,28 +1122,192 @@ Mitigated by DEV-042: a divergence triggered by this race is now rejected and re
 **Status:**          closed — spec aligned to code in P2P Network v0.14.0 (§453/§469 «Noise_PQ XX» → «ML-KEM-768 sealed-box», mt_crypto::seal_to); code unchanged (already ML-KEM); consistent with fetch §542 and improves [I-7] (one sealed primitive)
 **Acknowledged:**    author approved the spec edit (2026-07-14); firewall — code was correct, spec brought into agreement
 
-## DEV-054 (closed): the lottery removed; the proposer is the lowest ticket by the aggregate; one second, one coin (issue #18)
 
-**Crate:**           mt-consensus, mt-account, mt-lottery, mt-codec, montana-node
-**Decision:**        the author's decision 279 = (b), constitution chain record 288 (2026-10-27 14:11 UTC): "remove the lottery and carry over the rule of Montana-Core (the lowest ticket by the aggregate) and 1 second = 1 coin from #14; the fields target/reveals_root/winner in the header -- zeros, with no change of the wire."
-**Spec quote:**      core/docs Consensus, "The runner's draw": every living machine computes its ticket "from its own secret and the cemented aggregate of the window two before the one being drawn"; "The threshold of the draw, and the order of the runners": "the machine whose ticket is lowest usually carries the decision first and alone". Constitution, "Constitutional limits on the scope of a change": "every machine living in a window is credited one coin for every second of that window ... `window_credit` = 86 400 / `segment_windows` coins".
-**What the code does:**
-- Proposer (S1): `mt_consensus::proposer_at(W, aggregate(W-2), electorate(W), fallback_depth)`, ticket = SHA-256("mt-ticket" ‖ 0x00 ‖ aggregate(W-2) ‖ node_id), electorate = the active nodes of the Node Table, ascending by (ticket, node_id). The aggregate is `cemented_bundle_aggregate(W-2, confirmers of W-2)`, the confirmers being those the proposal of W-1 included (bc_set_history); a follower that does not hold them refuses. The fallback cascade (DEV-023/DEV-043) walks the same order.
-- Removed: SshaReveal and its pool, compute_endpoint, validate_reveal, weights and ln_q64, Candidate, determine_winner, the cascade over lottery candidates, winner_history, lottery_history, validate_winner, validate_included_reveals, the leader penalty helper. MsgType::SshaReveal stays a wire code and is ignored; BundledConfirmation.reveal_hashes stays in the layout and is published empty.
-- Issuance (S2): `apply_emission` (EMISSION_moneta to the operator of winner_id, panic on an unknown winner) is replaced by `apply_window_credit`: every cemented confirmer of W-1, counted once, is credited `window_credit_moneta` = 60 × 10^9 nɈ; a node or account missing from the tables is credited nothing, without a panic. `emission_moneta` stays in the Decree layout and is read by no issuance.
-**Deviation that remains:** the construction of the ticket, DEV-055.
-- Header (S3): `target`, `included_reveals_root`, `winner_endpoint` and `winner_id` stay in the signed 3722-byte layout at their offsets (396..412, 268..300, 300..332, 332..364) and are written as zeros; a follower refuses a header in which any of them is not zero (`mt_consensus::validate_retired_fields`). The layout and the sizes do not change.
-- Refusal (S5): an envelope whose confirmations of W-1, or whose evidence of W, name one node twice is refused whole (montana-node start.rs `names_a_node_twice`). Before it, the repeat was summed into the quorum and raised the node's chain_length twice in `apply_chain_length_increment`.
-**Status:**          closed for S1, S2 and S3; S4 (two proposals of one proposer for one window) is closed as DEV-026.
+## DEV-054: proposal cement was counted before uniqueness and context checks
 
-## DEV-055 (open): the ticket of core/Code is drawn from the node_id, not from the machine's secret (issue #18)
+**Crates:** `montana-node`, `mt-lottery`
+**Locations:** `commands/cement.rs`, `commands/start.rs::handle_protocol_message`,
+`mt_lottery::quorum`.
+**Severity:** consensus acceptance blocker.
 
-**Crate:**           mt-consensus, mt-codec
-**File:line:**       crates/mt-consensus/src/lib.rs `ticket` (Phase B); crates/mt-codec/src/lib.rs `domain::TICKET`
-**Spec section:**    core/docs Canon, "The draw, and the two canonical orders"; Consensus, "The runner's draw"
-**Spec quote:**      Canon: "ticket(W) = sponge("mt-ticket", cells(spending_half) || limbs(aggregate(W - 2)))" ... "it is never published: the proof the proposal carries asserts the clearing." Consensus, invariants of the draw: "A ticket is derived from the machine's secret and the cemented aggregate, and from nothing else; it is never published." core/Montana-Core: mt-derive/src/aggregate.rs `ticket` (the proof hash over the spending half of the secret).
-**What the code does:** ticket(W, node) = SHA-256("mt-ticket" ‖ 0x00 ‖ aggregate(W-2) ‖ node_id); the electorate is ordered by it and the lowest names the proposer of W (the author's decision 279, record 288).
-**Why:**             the decision carries over the rule "the lowest ticket by the aggregate", and core/Code must name one proposer per window that every follower can check. core/Code has no ticket proof and no proof hash, so a ticket from the machine's secret could be checked by nobody. The node_id is what every verifier holds; the construction takes the shape of Canon's public order keys (SHA-256 over a domain, the aggregate of W-2 and a public identity) under the ticket's own separator.
-**Consequence:**     the order of the proposers of W is public once the aggregate of W-2 is cemented, one window ahead, as the lottery's was; the secret ticket of core/Montana-Core is known to nobody.
-**Closure path:**    the author's word: keep this construction for core/Code (close as a recorded deviation of the earlier core), or carry over the secret ticket with a proof (a construction core/Code does not have).
-**Status:**          open; this row was asked for by the chairman (chain link 10052), and the closure is the author's.
+The previous envelope parser accepted repeated confirmations and trailing bytes.
+The receiver added their weights before inserting them into a deduplicating map,
+so a repeated signature could inflate the threshold sum. It did not check the
+bundle's window against the set being validated or the included bundle root
+against the header, counted inactive weight against an active-only denominator,
+and could insert an unverified previous endpoint into the trusted history. An
+empty previous set could skip validation beyond the first transition. Header
+ancestry was not checked. Separately, saturating multiplication lowered the 67%
+threshold at large u64 totals.
+
+The candidate uses one immutable `CementContext` for both proposer and follower.
+It checks unique signers, signatures, windows and the signed bundle root, counts
+only previously active standing, rejects an empty or overflowing total, requires
+a known previous endpoint, and permits an empty previous set only for legacy
+window one. It changes no state on rejection. The header must name the locally
+held predecessor. The parser bounds allocation by received bytes and consumes
+the whole envelope. The threshold is calculated in u128 and rounded upward
+before conversion to u64.
+
+**Evidence:** eight local cement regression tests pass. The unmodified baseline
+accepted both duplicate and extended envelopes, failing the two rejection tests;
+it also failed the exact-quorum test at the old overflow boundary. These are
+local parser and verifier tests, not attacks conducted on the deployed cohort.
+
+**Status:** repaired in the source candidate; deployment and full replay remain
+unverified. This does not close the legacy winner/pool gap, transactional state
+roots after selection, authenticated bootstrap, concentrated standing (DEV-012),
+or conformance to the newer anonymous consensus.
+
+
+## Review observation: cement progress, 2026-10-14
+
+`commands/progress.rs` reads the validated accumulator used by the legacy node.
+Its JSON event names the local head, the awaited window, both confirmation-set
+weights and the threshold. The active-standing function is shared with cement
+verification; weight addition is checked. A diagnostic timer emits observations
+but never authorizes a proposal, changes the active set or resets consensus.
+Repeated messages do not reset the observed head age. A missing matching
+archived envelope produces a null head hash, including after a snapshot jump.
+
+This is an operational addition, not a waiver of the no-clock rule or closure
+of DEV-011/DEV-012. Polling and an available log sink are required for reports;
+an external monitor must detect missing events too. No endpoint, signer
+identifier or secret enters this event. See the runtime QUICKSTART for fields.
+
+Six memory-only regressions cover minority and inactive weight, repeated
+messages, both quorum sets, missing endpoints, overflow and an exhausted window.
+They and the eight existing cement checks pass. Whole-workspace clippy and the
+release build pass. No live installation or external observation was performed.
+
+
+## DEV-055: the committed state root preceded expiry and selection
+
+**Location:** `montana-node/commands/start.rs::settle_and_bookkeep`, now sharing
+`commands/settlement.rs::prepare` between proposer and follower.
+**Severity:** consensus state-commitment blocker.
+
+The runtime retained the root returned by the account primitive, then expired
+candidates and activated selected ones. That primitive explicitly leaves entry
+transitions to its caller. As a result the reported root described an earlier
+state than the tables the runtime committed. On the proposer path the subsequent
+self-check could panic; on the follower path the expected root was compared with
+this partial root. The separate node, candidate and account roots in the signed
+header were not checked there.
+
+The candidate prepares all three tables in one pure operation, computes their
+roots after expiry and selection, and checks the combined root and every signed
+component before replacing live tables. The control root must be the empty root
+this runtime implements. Both paths supply the verified current timechain value
+explicitly; selection no longer falls back to a possibly earlier local value.
+Histories and persistence are reached only after this preparation succeeds.
+
+**Evidence:** preserving the old root timing while extracting this operation
+caused both the expiry and selection regression to fail. These are pre-fix tests
+of the extracted operation, not runs against an unchanged historical checkout.
+An initial selection fixture had an absent winner and panicked before reaching
+the root assertion; the corrected fixture reproduces the root mismatch. After
+the fix, four memory-only settlement tests and eight existing cement tests pass;
+whole-workspace clippy and release pass. The tests cover every signed component
+and preservation of the parent on a commitment mismatch.
+
+**Status:** source candidate repaired; no deployment or historical replay.
+Affected roots differ from the earlier runtime, so this is not an uncoordinated
+replacement for a live cohort. This fixes in-memory preparation, not crash-atomic
+storage. The incomplete lottery-pool acceptance path and unchecked reward-target
+assumptions remain open; the broad historical DEV-042 claim that no malformed
+envelope can crash a node is not established by these checks.
+
+
+## DEV-056: an incomplete ticket pool bypassed lottery verification
+
+**Locations:** `montana-node/commands/start.rs`, now sharing
+`commands/lottery.rs::complete` between proposer and follower.
+**Severity:** winner and state acceptance blocker.
+
+The follower's incomplete-pool branch explicitly accepted the declared winner
+without recomputing the reveal root or winner. The proposer could likewise build
+a partial candidate list from its local pool. Confirmation of a hash does not
+supply the missing reveal or establish its rank.
+
+Both paths now require every cemented reveal before calculating the root and
+winner. The receiver compares the root, winner and winner endpoint; the legacy
+empty-set fallback is bound to the proposing node with an empty endpoint.
+Unknown winners cannot pass this check into the reward lookup. Repeated hashes,
+a mismatched map key or a reveal of another window are refused. Reveal ingestion
+requires exact byte consumption and a known endpoint for its own window; an
+older reveal no longer borrows the current local endpoint.
+
+Missing data defers the envelope without changing state. The shared deferred
+queue deduplicates exact messages and is bounded by 512 entries and eight maximum
+wire payloads (8 MiB), whichever is reached first. At capacity new deferrals are
+dropped; this is an operational memory bound and never a quorum waiver. A future
+retransmission can retry. This change does not itself fetch missing historical
+reveals or make their transport available.
+
+**Evidence:** five memory-only complete-lottery checks and one deferred-queue
+budget check pass, together with four settlement and eight cement checks.
+Whole-workspace clippy and release pass. The first compile exposed a removed
+import still used by ticket publication; it was restored before these checks.
+The missing-pool bypass was established by source inspection; these new helper
+tests were not executed against an unchanged historical checkout. No deployed
+cohort or external verifier was exercised.
+
+**Status:** incomplete-data acceptance repaired in the source candidate.
+This is not complete lottery conformance: validation of the ticket cutoff against
+its historical threshold and target changes at an epoch boundary need a separate
+review. The old empty-set/self-proposer bootstrap and authenticated fresh-node
+join remain unresolved. Local reward arithmetic can still panic on an internally
+inconsistent account/node table or an exhausted counter.
+
+---
+
+## DEV-057: ML-DSA-65 and ML-KEM-768 stand on libcrux below 1.0 in the consensus path
+
+**Locations:** `Montana-Core/Cargo.toml:32-33` (exact pins `=0.0.10`), behind
+`crates/mt-suite/src/sign.rs` and `crates/mt-suite/src/kem.rs` alone.
+**Rule deviated from:** [C-6] Production Audit Readiness: a release below 1.0 is
+not admitted in the consensus path.
+**Severity:** audit-readiness deviation. No defect is known in what the code
+computes at the pinned version.
+**Acknowledgment:** the author, 2026-10-23 10:0x UTC, «yes» to decision 57 of the
+constitution chain (record 64).
+
+No 1.0 of `libcrux-ml-dsa` or `libcrux-ml-kem` is published: the newest of both
+on crates.io is 0.0.11 (2026-10-07), read 2026-10-24. The rule cannot be met by
+any version of the implementation the suite stands on, so the admission is
+recorded here instead of being implied by a pin.
+
+What holds the pin to account, each in the tree and each run:
+
+1. **Formal verification.** Both crates are extracted from F\* proofs by the hax
+   toolchain (`crates/mt-suite/DEPENDENCIES.md`).
+2. **Published vectors.** NIST ACVP-Server, FIPS 204 keyGen and deterministic
+   sigGen (`src/sign.rs:145`, `:164`), FIPS 203 keyGen, encapsulation and
+   decapsulation (`src/kem.rs:154`, `:170`, `:186`); fixtures
+   `tests/fixtures/mldsa65_acvp.txt` and `tests/fixtures/mlkem768_acvp.txt`.
+3. **A second implementation, OpenSSL 3.6** (`tests/differential.rs:64`, `:119`,
+   `:206`, `:274`): one key and one signature from one seed, each side verifies the
+   other, one shared secret.
+4. **A third implementation, independent of both: liboqs 0.16.0** (commit
+   5a1a854b, built without OpenSSL; `tests/differential.rs:430`, `:496`): one key
+   and one secret from one seed, verification both ways, the doctored refused. The
+   test refuses to pass on a machine without the library (`:388-394`), so a green
+   run compared something.
+
+**The boundary of the proofs, stated rather than implied.** The changelog of
+`libcrux-ml-dsa` names, in 0.0.8 (2026-03-19), «Fix incorrect norm check of
+signer response during verification» (#1347) and «Fix incorrect hint decoding»
+(#1348), and in 0.0.9 (2026-05-13) «Fix incorrect AVX2 use_hint implementation»
+(#1398) and «Fully reduce iNTT inputs on AVX2» (#1395). Defects in the check of
+a signature lived in the formally verified crate until March 2026: what the
+extraction proves is narrower than the crate that ships. This is why the
+vectors and two other implementations stand beside the proofs and not behind
+them.
+
+**Closure path:** move to a 1.0 release of the same implementation, or to
+another implementation meeting [C-6], through `src/sign.rs` and `src/kem.rs`
+alone; the vectors and both differential tests are what would catch a
+replacement that computes anything else.
+**Closure cost:** none on this side; it waits on the upstream release.
+**Status:** open, acknowledged by the author.

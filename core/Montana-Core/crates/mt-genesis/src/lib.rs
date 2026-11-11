@@ -4,8 +4,7 @@
 //
 // The encoding is the Decree's own rule: every parameter as an unsigned eight-byte little-endian
 // integer in the order the table stands; a ratio as two such integers, numerator first; a
-// parameter written as a hash as its thirty-two bytes. The credit of a window is a scalar like any
-// other: one coin for every second of it to every machine living in it, eight bytes by the general rule.
+// parameter written as a hash as its thirty-two bytes.
 
 #![forbid(unsafe_code)]
 #![deny(clippy::all)]
@@ -74,10 +73,7 @@ impl Entry {
 pub const PARAMETERS: &[Entry] = &[
     Entry::Scalar("hash_bytes", 32),
     Entry::Scalar("tau2", TAU2),
-    // One coin for every second a machine lived (constitution, article 11; the author's word of
-    // 2026-10-26 17:08 UTC): a window is 86 400 / segment_windows = 60 seconds, so its right is
-    // worth 60 coins, and tau-2 of them is node_lock. Derived from the count, never from a clock.
-    Entry::Scalar("window_credit", 86_400 / (TAU2 / 14)),
+    Entry::Scalar("window_seconds", 60),
     Entry::Scalar("slot_modulus", 64),
     Entry::Scalar("retarget_period", TAU2),
     Entry::Scalar("retarget_damping", 4),
@@ -123,9 +119,9 @@ pub const PARAMETERS: &[Entry] = &[
     Entry::Hash(
         "air_hash",
         [
-            0x44, 0xb3, 0x65, 0x42, 0xb8, 0xcf, 0xa0, 0xaa, 0x4d, 0xd4, 0x74, 0xf0, 0x14, 0x2a,
-            0xf2, 0xb0, 0x2d, 0x9f, 0x7d, 0x55, 0x38, 0x73, 0x68, 0xbb, 0xd1, 0x89, 0xa6, 0x7c,
-            0x27, 0xb9, 0x2a, 0x32,
+            0xb8, 0xf1, 0xbe, 0x4f, 0x24, 0x3c, 0x88, 0x7c, 0x10, 0xbc, 0x8f, 0xb4, 0x4f, 0x20,
+            0x59, 0xdf, 0x3b, 0x88, 0x54, 0xc9, 0x29, 0xb3, 0xa2, 0xef, 0x0c, 0x31, 0x66, 0x39,
+            0x95, 0xb4, 0xf8, 0x6d,
         ],
     ),
 ];
@@ -141,10 +137,6 @@ pub const FORMS: &[Entry] = &[
     Entry::Scalar("cell_bytes", 1_232),
     Entry::Scalar("erasure_group", 16),
     Entry::Scalar("path_max", 15),
-    // The units a side seals under one sending key of a link before it offers a renewal (Network,
-    // "How a link renews its keys"): the window renews a link first, and this binds when the chain
-    // stalls. A count each side keeps of its own units and never sends, so a boundary may move it.
-    Entry::Scalar("rekey_units", 8_388_608),
 ];
 
 // The parameters, encoded. There is no encoding of an incomplete Decree: what a chain opens on is
@@ -322,23 +314,6 @@ mod tests {
         assert_eq!(s("claim_spread"), s("segment_windows"));
         assert_eq!(s("retarget_period"), TAU2);
         assert_eq!(s("census_interval") * s("standing_censuses"), TAU2);
-        // One second, one coin: every machine living a window is credited one coin for every second of it, and
-        // the constitutional layer fixes the number.
-        assert_eq!(s("window_credit"), 60);
-        assert_eq!(s("window_credit") * s("segment_windows"), 86_400);
-    }
-
-    // The ramp of entry (Consensus, "Presence and admission"; constitution records 297 and 300)
-    // leaves `continuity_segments` exactly at the threshold only while the multiplier is the
-    // threshold turned over. It reaches `max_entry_segments` at four times the threshold, and the
-    // bitmap of a record is wide enough for that ceiling. A row moved alone breaks one of these.
-    #[test]
-    fn the_multiplier_of_entry_is_its_threshold_turned_over() {
-        let (num, den) = super::ratio("adaptive_entry_threshold").expect("the Decree names it");
-        assert_eq!(den, num * s("adaptive_entry_multiplier"));
-        assert_eq!((num, den), (1, 100));
-        assert_eq!(s("max_entry_segments"), 4 * s("continuity_segments"));
-        assert!(s("max_entry_segments") <= u64::from(u64::BITS));
     }
 
     #[test]

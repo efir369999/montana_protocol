@@ -56,12 +56,7 @@ pub mod domain {
     pub const MERKLE_NODE: &[u8] = b"mt-merkle-node";
     pub const STATE_ROOT: &[u8] = b"mt-state-root";
     pub const TIMECHAIN: &[u8] = b"mt-timechain";
-    // Retired with the lottery (issue #18): no hash of core/Code is taken under it any more;
-    // kept so that no later construction reuses the name.
     pub const LOTTERY: &[u8] = b"mt-lottery";
-    // The ticket that orders the proposers of a window (issue #18): core/docs Canon, registry
-    // of separators, `mt-ticket`; Registry CNS-06 owns it.
-    pub const TICKET: &[u8] = b"mt-ticket";
     pub const BC_AGGREGATE: &[u8] = b"mt-bc-aggregate";
     pub const BC_AGGREGATE_EMPTY: &[u8] = b"mt-bc-aggregate-empty";
     pub const SELECTION: &[u8] = b"mt-selection";
@@ -171,11 +166,11 @@ mod tests {
     }
 
     #[test]
-    fn write_u128_emission_moneta() {
-        // spec: EMISSION_moneta = 13_000_000_000
+    fn write_u128_window_moneta() {
+        // one coin a second: the 60-second window is worth 60_000_000_000 nɈ (Canon 9.0.0)
         let mut buf = Vec::new();
-        write_u128(&mut buf, 13_000_000_000u128);
-        let expected = 13_000_000_000u128.to_le_bytes();
+        write_u128(&mut buf, 60_000_000_000u128);
+        let expected = 60_000_000_000u128.to_le_bytes();
         assert_eq!(buf.as_slice(), &expected);
         assert_eq!(buf.len(), 16);
     }
@@ -210,12 +205,6 @@ mod tests {
             domain::LOTTERY,
             &[0x6D, 0x74, 0x2D, 0x6C, 0x6F, 0x74, 0x74, 0x65, 0x72, 0x79]
         );
-    }
-
-    #[test]
-    fn domain_ticket_ascii() {
-        assert_eq!(domain::TICKET, b"mt-ticket");
-        assert!(!domain::TICKET.starts_with(domain::LOTTERY));
     }
 
     #[test]
@@ -302,7 +291,7 @@ mod tests {
 
     #[test]
     fn all_domains_start_with_mt_dash() {
-        let all: [&[u8]; 33] = [
+        let all: [&[u8]; 32] = [
             domain::OP,
             domain::NODEREG,
             domain::PROPOSAL,
@@ -315,7 +304,6 @@ mod tests {
             domain::STATE_ROOT,
             domain::TIMECHAIN,
             domain::LOTTERY,
-            domain::TICKET,
             domain::BC_AGGREGATE,
             domain::BC_AGGREGATE_EMPTY,
             domain::SELECTION,
@@ -343,7 +331,7 @@ mod tests {
                 "domain does not start with mt-: {d:?}"
             );
         }
-        assert_eq!(all.len(), 33);
+        assert_eq!(all.len(), 32);
     }
 
     // Property-style test: write → read roundtrip for 1000 deterministic u64 values.

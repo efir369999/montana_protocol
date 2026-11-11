@@ -14,17 +14,7 @@ fn main() -> ExitCode {
     let result = match argv[1].as_str() {
         "init" => parse_init(&argv[2..]).and_then(init::run),
         "inspect" => parse_inspect(&argv[2..]).and_then(inspect::run),
-        // Issue #21: `status` exits with the code of the node's reading; an argument it cannot
-        // read gives no reading, `no diagnostics`.
-        "status" => {
-            return match parse_status(&argv[2..]) {
-                Ok(args) => ExitCode::from(status::run(args)),
-                Err(e) => {
-                    eprintln!("no diagnostics: {e}");
-                    ExitCode::from(montana_node::reading::Lack::Diagnostics.exit_code())
-                },
-            };
-        },
+        "status" => parse_status(&argv[2..]).and_then(status::run),
         "time" => parse_time(&argv[2..]).and_then(time::run),
         "start" => parse_start(&argv[2..]).and_then(start::run),
         "help" | "-h" | "--help" => {
@@ -51,14 +41,7 @@ fn main() -> ExitCode {
     match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            if argv[1] == "init" {
-                // Argument and dependency errors can contain operator-supplied secret text.
-                eprintln!("initialization failed; check inputs and private output permissions; existing recovery files are never overwritten");
-            } else if argv[1] == "start" {
-                montana_node::private_diagnostic!("node start failed", "error: {e}");
-            } else {
-                eprintln!("error: {e}");
-            }
+            eprintln!("error: {e}");
             ExitCode::from(1)
         },
     }
@@ -66,12 +49,12 @@ fn main() -> ExitCode {
 
 fn help_text() -> String {
     String::from(
-        "montana-node — Montana node (cross-machine M8 mode)\n\
+        "montana-node — Montana node (singleton or cross-machine M8 mode)\n\
          \n\
          Usage:\n\
          \n\
            montana-node init    [--data-dir <PATH>] [--mnemonic \"<24 words>\"]\n\
-                                 [--mnemonic-stdin] [--entropy <hex32>] [--force] [--recovery-file <PATH>]\n\
+                                 [--mnemonic-stdin] [--entropy <hex32>] [--force]\n\
          \n\
            montana-node inspect [--data-dir <PATH>] [--reveal-master-seed]\n\
          \n\
@@ -80,8 +63,8 @@ fn help_text() -> String {
            montana-node time    [--data-dir <PATH>]\n\
          \n\
            montana-node start   [--data-dir <PATH>] [--max-windows <N>]\n\
-                                 [--d-test-override <N>] [--open]\n\
-                                 --listen <multiaddr> --genesis-manifest <PATH>\n\
+                                 [--d-test-override <N>]\n\
+                                 [--listen <multiaddr>] [--genesis-manifest <PATH>]\n\
          \n\
          Commands:\n\
          \n\
@@ -109,10 +92,9 @@ fn help_text() -> String {
                                                    via apply_noderegistrations_batch)\n\
                        Registered → Active (via apply_selection_event at\n\
                                             the next W % 336 == 0)\n\
-                     A machine that opens window zero by --open is Active from it.\n\
                        Active: per window SshaReveal + BundledConfirmation +\n\
                                ProposalHeader + apply_proposal + archive_proposal,\n\
-                               state_root self-verify, 13 Ɉ emission to the operator\n\
+                               state_root self-verify, the window's 60 seconds as 60 Ɉ to the operator\n\
                      Ctrl-C — graceful shutdown with state save.\n\
          \n\
          Options:\n\
@@ -125,28 +107,18 @@ fn help_text() -> String {
            --mnemonic-stdin           Read the 24-word phrase from stdin (no leak\n\
                                        via ps aux).\n\
            --entropy <hex32>          Use 32-byte entropy (64 hex).\n\
-           --recovery-file <PATH>    New owner-only recovery file; default DATA_DIR/mnemonic.txt.\n\
-                                      Existing files are always refused, even with --force.\n\
            --force                    Overwrite existing identity.bin.\n\
            --reveal-master-seed       In inspect: show the full master_seed.\n\
            --max-windows <N>          In start: stop after N windows.\n\
-           --listen <multiaddr>       In start: libp2p listen address. Required.\n\
-           --genesis-manifest <PATH>  In start: genesis cohort peers. Required: there is\n\
-                                      no single mode without a manifest.\n\
-           --open                     In start: open a network — window zero, on the\n\
-                                      operator's cohort: this machine, which the manifest\n\
-                                      names as its bootstrap peer. Refused on a store that\n\
-                                      holds a chain; without it an empty store does not start.\n\
            --d-test-override <N>      In start: TEST-ONLY override D = N iterations.\n\
                                       Production uses params.d0 (Genesis Decree, value from mt-genesis).\n\
-                                      Debug and test builds only; a release build refuses it.\n",
+                                      Override is used in tests for speed.\n",
     )
 }
 
 fn parse_init(args: &[String]) -> Result<init::InitArgs, NodeError> {
     let mut data_dir: Option<PathBuf> = None;
     let mut mnemonic: Option<String> = None;
-    let mut recovery_file: Option<PathBuf> = None;
     let mut entropy_hex: Option<String> = None;
     let mut force = false;
 
@@ -155,10 +127,6 @@ fn parse_init(args: &[String]) -> Result<init::InitArgs, NodeError> {
         match args[i].as_str() {
             "--data-dir" => {
                 data_dir = Some(PathBuf::from(expect_value(args, i, "--data-dir")?));
-                i += 2;
-            },
-            "--recovery-file" => {
-                recovery_file = Some(PathBuf::from(expect_value(args, i, "--recovery-file")?));
                 i += 2;
             },
             "--mnemonic" => {
@@ -199,7 +167,6 @@ fn parse_init(args: &[String]) -> Result<init::InitArgs, NodeError> {
         mnemonic,
         entropy_hex,
         force,
-        recovery_file,
     })
 }
 
@@ -283,7 +250,6 @@ fn parse_start(args: &[String]) -> Result<start::StartArgs, NodeError> {
     let mut d_test_override: Option<u64> = None;
     let mut listen_multiaddr: Option<String> = None;
     let mut genesis_manifest: Option<PathBuf> = None;
-    let mut open = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -298,12 +264,6 @@ fn parse_start(args: &[String]) -> Result<start::StartArgs, NodeError> {
                 i += 2;
             },
             "--d-test-override" => {
-                // Test-only: a release build refuses it, D stays params.d0 of the Decree.
-                if !cfg!(debug_assertions) {
-                    return Err(NodeError::InvalidArguments(
-                        start::D_TEST_OVERRIDE_REFUSED.into(),
-                    ));
-                }
                 d_test_override = Some(
                     expect_value(args, i, "--d-test-override")?
                         .parse()
@@ -319,10 +279,6 @@ fn parse_start(args: &[String]) -> Result<start::StartArgs, NodeError> {
             },
             "--enable-names" => {
                 enable_names = true;
-                i += 1;
-            },
-            "--open" => {
-                open = true;
                 i += 1;
             },
             "--listen" => {
@@ -341,9 +297,10 @@ fn parse_start(args: &[String]) -> Result<start::StartArgs, NodeError> {
             },
         }
     }
-    if listen_multiaddr.is_none() || genesis_manifest.is_none() {
+    if listen_multiaddr.is_some() != genesis_manifest.is_some() {
         return Err(NodeError::InvalidArguments(
-            start::NO_MANIFEST_REFUSED.into(),
+            "--listen and --genesis-manifest must be given together (cross-machine mode) or both omitted (singleton mode)"
+                .into(),
         ));
     }
     Ok(start::StartArgs {
@@ -354,7 +311,6 @@ fn parse_start(args: &[String]) -> Result<start::StartArgs, NodeError> {
         d_test_override,
         listen_multiaddr,
         genesis_manifest,
-        open,
     })
 }
 

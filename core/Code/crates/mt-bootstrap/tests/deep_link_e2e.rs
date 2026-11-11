@@ -35,7 +35,7 @@ fn bootstrap_deep_link_full_journey() {
 fn mt_address_deep_link_resolves_identity_to_overlay() {
     // montana:// montana://<mt-address> → account_id → overlay_addr, all through the production crates, byte-exact.
     let account_id = [0x7Au8; 32];
-    let address = account_id_to_address(&account_id); // "mt..." Bitcoin-like
+    let address = account_id_to_address(&account_id); // "mt..." in base58
     assert!(address.starts_with("mt"));
     let link = format!("montana://{address}");
     match parse_deep_link(&link).unwrap() {

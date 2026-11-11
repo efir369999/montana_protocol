@@ -13,7 +13,6 @@ pub mod ballot;
 pub mod branch;
 pub mod capacity;
 pub mod compare;
-pub mod continuity;
 pub mod frame;
 pub mod lane;
 pub mod moment;

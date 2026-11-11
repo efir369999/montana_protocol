@@ -278,8 +278,7 @@ fn every_decoder_of_this_wire_survives_a_storm_of_arbitrary_bytes() {
     let mut hello = Hello {
         suite_id: 1,
         kem_key: [0u8; 1_184],
-        static_ct: [0u8; 1_088],
-        sealed_key: [0u8; 1_952 + 16],
+        answering_key: [0u8; 1_952],
     }
     .encode();
     for _ in 0..100 {

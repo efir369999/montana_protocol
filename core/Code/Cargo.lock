@@ -2012,6 +2012,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mt-agent"
+version = "1.2.0"
+dependencies = [
+ "hex",
+ "mt-crypto",
+ "mt-messenger-e2e",
+ "mt-mnemonic",
+ "mt-names",
+ "serde_json",
+ "zeroize",
+]
+
+[[package]]
 name = "mt-bindings"
 version = "1.2.0"
 dependencies = [
@@ -2209,7 +2222,6 @@ dependencies = [
 name = "mt-net"
 version = "1.2.0"
 dependencies = [
- "getrandom 0.2.15",
  "mt-codec",
  "mt-crypto",
  "sha2 0.10.9",
@@ -2311,7 +2323,6 @@ dependencies = [
  "mt-consensus",
  "mt-crypto",
  "mt-state",
- "sha2 0.10.9",
 ]
 
 [[package]]

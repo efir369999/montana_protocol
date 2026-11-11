@@ -13,7 +13,7 @@ use mt_crypto::{hash, Hash32};
 
 // PARAMS_ENCODED_SIZE: layout sum for protocol_params (see spec section "Genesis Decree").
 // Layout (LE):
-// d0(8) + reserved(8) + tau2(8) + emission(16) + target_zero(32) + quorum_num(1)
+// d0(8) + reserved(8) + tau2(8) + window_moneta(16) + target_zero(32) + quorum_num(1)
 // + quorum_den(1) + dead_zone(2+2) + d_adj(2+2) + ssha_entry(8) + sel_interval(8)
 // + admission_divisor(8) + cand_expiry(8) + adapt_thr(2) + adapt_mult(2) + pruning(8)
 // + max_payload(4) + max_sf(4) + app_id(32) + content_hash(32)
@@ -22,6 +22,13 @@ use mt_crypto::{hash, Hash32};
 // the existing admission path (selection_slots(0)=1 self-admit, quorum(1)=1
 // self-cement).
 pub const PARAMS_ENCODED_SIZE: usize = 198;
+
+/// One coin a second (Canon 9.0.0). The window of this generation is 60 seconds of wall clock
+/// (`d0` is calibrated to it), so the window is worth its seconds: 60 coins, 60 × 10⁹ nɈ.
+/// No other number of a window stands in this tree.
+pub const WINDOW_SECONDS: u64 = 60;
+pub const COIN_NANO: u128 = 1_000_000_000;
+pub const WINDOW_MONETA: u128 = WINDOW_SECONDS as u128 * COIN_NANO;
 
 /// 32 bytes initial SSHA target. SHA-256("mt-genesis" || account_pk || node_pk
 /// || "montana-genesis-mainnet-2026-06-11").
@@ -41,9 +48,8 @@ pub struct ProtocolParams {
     pub d0: u64,
     pub reserved_m0: [u8; 8],
     pub tau2_windows: u64,
-    // Kept in the Decree layout (its bytes are bound by the Genesis State Hash), and read by no
-    // issuance since issue #18: a window credits one coin for every second of it to every living
-    // node (mt-account `window_credit_moneta`).
+    // The right of a window, one coin a second (Canon 9.0.0): the window of this generation
+    // runs WINDOW_SECONDS, so the row holds WINDOW_MONETA. `reward_moneta(W)` reads it.
     pub emission_moneta: u128,
     pub target_zero: [u8; 32],
     pub confirmation_quorum_num: u8,
@@ -107,7 +113,7 @@ pub fn genesis_params() -> &'static ProtocolParams {
         d0: 325_000_000,
         reserved_m0: [0u8; 8],
         tau2_windows: 20_160,
-        emission_moneta: 13_000_000_000,
+        emission_moneta: WINDOW_MONETA,
         target_zero: TARGET_ZERO_BYTES,
         confirmation_quorum_num: 67,
         confirmation_quorum_den: 100,
@@ -115,12 +121,11 @@ pub fn genesis_params() -> &'static ProtocolParams {
         participation_dead_zone_high: 95,
         d_adjustment_rate_num: 3,
         d_adjustment_rate_den: 100,
-        // Production (spec 2387): a candidate enters after τ₂ windows of SSHA. Decoupled
-        // from tau2_windows in required_ssha_length. The devnet value 1 is gone (issue #17 K5):
-        // the Genesis State Hash moved with it, see conformance/spec-v35.27.0.contract.
-        ssha_entry_windows: 20_160,
-        // Production: admission to Active every 336 windows (τ₂ / 60).
-        selection_interval: 336,
+        // TEST CONFIG (devnet, spec 2387): a candidate enters within 1 window.
+        // PRODUCTION = 20_160 (= τ₂). Decoupled from tau2_windows in required_ssha_length.
+        ssha_entry_windows: 1,
+        // TEST CONFIG: admission to Active every window. PRODUCTION = 336.
+        selection_interval: 1,
         admission_divisor: 130,
         candidate_expiry_windows: 60_480,
         adaptive_ssha_threshold: 1,
@@ -158,17 +163,19 @@ mod tests {
         assert_eq!(p.d0, 325_000_000);
         assert_eq!(p.reserved_m0, [0u8; 8]);
         assert_eq!(p.tau2_windows, 20_160);
-        assert_eq!(p.emission_moneta, 13_000_000_000);
+        assert_eq!(p.emission_moneta, WINDOW_MONETA);
+        assert_eq!(p.emission_moneta, 60_000_000_000);
         assert_eq!(p.confirmation_quorum_num, 67);
         assert_eq!(p.confirmation_quorum_den, 100);
         assert_eq!(p.participation_dead_zone_low, 85);
         assert_eq!(p.participation_dead_zone_high, 95);
         assert_eq!(p.d_adjustment_rate_num, 3);
         assert_eq!(p.d_adjustment_rate_den, 100);
-        // Production values (issue #17 K5): decoupled from tau2_windows in
-        // required_ssha_length / is_selection_window, equal to the spec Decree.
-        assert_eq!(p.ssha_entry_windows, 20_160);
-        assert_eq!(p.selection_interval, 336);
+        // devnet TEST CONFIG: ssha_entry_windows=1, selection_interval=1
+        // (production = 20_160 / 336). Calibration values are author-chosen and
+        // decoupled from tau2_windows in required_ssha_length / is_selection_window.
+        assert_eq!(p.ssha_entry_windows, 1);
+        assert_eq!(p.selection_interval, 1);
         assert_eq!(p.admission_divisor, 130);
         assert_eq!(p.candidate_expiry_windows, 60_480);
         assert_eq!(p.adaptive_ssha_threshold, 1);
@@ -179,10 +186,10 @@ mod tests {
     }
 
     #[test]
-    fn ssha_entry_is_tau2() {
-        // Rejects the devnet Decree where a candidate entered in 1 window.
+    fn ssha_entry_is_devnet_one_window() {
+        // devnet TEST CONFIG: a candidate enters in 1 window (production = τ₂).
         let p = genesis_params();
-        assert_eq!(p.ssha_entry_windows, p.tau2_windows);
+        assert_eq!(p.ssha_entry_windows, 1);
     }
 
     #[test]
@@ -199,10 +206,11 @@ mod tests {
 
     #[test]
     fn selection_interval_divides_tau2() {
-        // selection_interval=336 divides τ₂ sixty times.
+        // devnet TEST CONFIG: selection_interval=1 divides τ₂; ratio = τ₂
+        // (production selection_interval=336 → ratio 60).
         let p = genesis_params();
         assert_eq!(p.tau2_windows % p.selection_interval, 0);
-        assert_eq!(p.tau2_windows / p.selection_interval, 60);
+        assert_eq!(p.tau2_windows / p.selection_interval, p.tau2_windows);
     }
 
     #[test]
@@ -243,7 +251,7 @@ mod tests {
     fn bytes_24_to_40_encode_emission_moneta() {
         let mut buf = Vec::new();
         genesis_params().encode(&mut buf);
-        assert_eq!(&buf[24..40], &13_000_000_000u128.to_le_bytes());
+        assert_eq!(&buf[24..40], &60_000_000_000u128.to_le_bytes());
     }
 
     #[test]

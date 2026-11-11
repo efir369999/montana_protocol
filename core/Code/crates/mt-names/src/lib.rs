@@ -104,9 +104,9 @@ mod tests {
             ("🙂🙂", NameError::Charset),
             ("ALIÇE", NameError::Charset), // ç is outside the set -- a refusal, not a name substitution
             ("alice🙂", NameError::Charset),
-            ("алиса-alice", NameError::Charset),
+            ("алиса-alice", NameError::Charset), // CYRILLIC-DATA-OK: the refusal's own input
             ("alice montana", NameError::Charset), // space inside
-            ("  alice  ", NameError::Charset),     // trimming is the client's job, not the layer's
+            ("  alice  ", NameError::Charset),   // trimming is the client's job, not the layer's
             ("alice.montana", NameError::Charset),
             ("alice@montana", NameError::Charset), // only a leading @ is stripped
             ("abc", NameError::TooShort),

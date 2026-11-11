@@ -1,83 +1,78 @@
 #!/bin/bash
-# Montana node-only entrypoint. The genesis manifest is mounted from the
-# host (never baked into the image), so a node's genesis is decoupled from the
-# binary and cannot silently drift between machines.
-#
-# Env:
-#   MONTANA_LISTEN              default /ip4/0.0.0.0/tcp/8444
-#   MONTANA_MNEMONIC           fixed identity (otherwise generated on first run)
-#   MONTANA_GENESIS_MANIFEST   manifest path (default /etc/montana/genesis-manifest.json)
-#   MONTANA_MANIFEST_SHA256    if set, refuse to start unless manifest sha matches
-#   MONTANA_OPEN               1 = open a network: window zero, on an empty store, as the
-#                              manifest's bootstrap peer (otherwise an empty store does not start)
-# The image runs a release build, which refuses --d-test-override: D = params.d0.
+# The earlier node implementation. A cohort requires an operator manifest;
+# an isolated chain requires an explicit mode. Startup never reports to a third party.
 set -euo pipefail
+set -o noclobber
+umask 077
 
-DATA_DIR="/var/lib/montana"
+DATA_DIR="${MONTANA_DATA_DIR:-/var/lib/montana}"
 MANIFEST="${MONTANA_GENESIS_MANIFEST:-/etc/montana/genesis-manifest.json}"
 LISTEN="${MONTANA_LISTEN:-/ip4/0.0.0.0/tcp/8444}"
-
-mkdir -p "$DATA_DIR"
-chown -R montana:montana "$DATA_DIR"
-
-# 1. Generate identity once per data volume.
-if [ ! -f "$DATA_DIR/identity.bin" ]; then
-  echo "[entrypoint] first run on this volume — generating node identity"
-  # init owns mnemonic.txt. Keep its diagnostics in a separate owner-only file,
-  # and refuse recovery artifacts left by an unsuccessful initialization.
-  if [ -e "$DATA_DIR/mnemonic.txt" ] || [ -L "$DATA_DIR/mnemonic.txt" ]; then
-    echo "[entrypoint] recovery output already exists; inspect the volume before initializing" >&2
-    exit 1
-  fi
-  (
-    umask 0377
-    set -C
-    exec > "$DATA_DIR/init.log" 2>&1
-    chown montana:montana "$DATA_DIR/init.log"
-    umask 0077 # The private diagnostic file is open; init owns recovery creation.
-    # Detach from the container terminal as defence in depth, and keep
-    # both output streams in the private file even on failure. setsid --wait
-    # preserves the init exit status; a failed init must never start the node.
-    if [ -n "${MONTANA_MNEMONIC:-}" ]; then
-      printf '%s\n' "$MONTANA_MNEMONIC" | (
-        unset MONTANA_MNEMONIC
-        exec runuser -u montana -- setsid --wait /usr/local/bin/montana-node init --data-dir "$DATA_DIR" --mnemonic-stdin
-      )
-    else
-      unset MONTANA_MNEMONIC
-      runuser -u montana -- setsid --wait /usr/local/bin/montana-node init --data-dir "$DATA_DIR"
-    fi
-  )
-fi
-
+MODE="${MONTANA_MODE:-cohort}"
+recovery_words="${MONTANA_MNEMONIC:-}"
 unset MONTANA_MNEMONIC
 
-# 2. Optional manifest pin — refuse to start on sha mismatch (anti-drift).
-if [ -f "$MANIFEST" ] && [ -n "${MONTANA_MANIFEST_SHA256:-}" ]; then
-  actual="$(sha256sum "$MANIFEST" | cut -d' ' -f1)"
-  if [ "$actual" != "$MONTANA_MANIFEST_SHA256" ]; then
-    echo "[entrypoint] FATAL: manifest sha256 $actual != pinned $MONTANA_MANIFEST_SHA256"
+# Check the requested network before creating an identity or changing stored state.
+case "$MODE" in
+  cohort)
+    if [ ! -f "$MANIFEST" ] || [ ! -r "$MANIFEST" ]; then
+      echo '[entrypoint] FATAL: cohort mode requires a readable operator manifest' >&2
+      exit 1
+    fi
+    if [ -n "${MONTANA_MANIFEST_SHA256:-}" ]; then
+      actual="$(sha256sum "$MANIFEST")"
+      actual="${actual%% *}"
+      if [ "$actual" != "$MONTANA_MANIFEST_SHA256" ]; then
+        echo '[entrypoint] FATAL: manifest SHA-256 differs from the operator pin' >&2
+        exit 1
+      fi
+    fi
+    set -- start --data-dir "$DATA_DIR" --listen "$LISTEN" --genesis-manifest "$MANIFEST"
+    ;;
+  isolated)
+    if [ -e "$MANIFEST" ] || [ -n "${MONTANA_MANIFEST_SHA256:-}" ]; then
+      echo '[entrypoint] FATAL: isolated mode conflicts with a cohort manifest or pin' >&2
+      exit 1
+    fi
+    set -- start --data-dir "$DATA_DIR"
+    ;;
+  *)
+    echo '[entrypoint] FATAL: MONTANA_MODE must be cohort or isolated' >&2
     exit 1
+    ;;
+esac
+
+mkdir -p "$DATA_DIR"
+chmod 0700 "$DATA_DIR"
+chown montana:montana "$DATA_DIR"
+
+# Recovery words enter through stdin and are written only to a private file.
+# The initial umask protects the file from its creation, before init writes a byte.
+if [ ! -f "$DATA_DIR/identity.bin" ]; then
+  if [ -n "${MONTANA_MNEMONIC_FILE:-}" ]; then
+    if [ -n "$recovery_words" ]; then
+      echo '[entrypoint] FATAL: configure one mnemonic source' >&2
+      exit 1
+    fi
+    setsid --wait runuser -u montana -- /usr/local/bin/montana-node init --data-dir "$DATA_DIR" --mnemonic-stdin \
+      < "$MONTANA_MNEMONIC_FILE" > "$DATA_DIR/mnemonic.txt"
+  elif [ -n "$recovery_words" ]; then
+    # Compatibility for existing operators. A mounted secret file also keeps
+    # the recovery words out of the container's environment configuration.
+    printf '%s\n' "$recovery_words" | setsid --wait runuser -u montana -- /usr/local/bin/montana-node init \
+      --data-dir "$DATA_DIR" --mnemonic-stdin > "$DATA_DIR/mnemonic.txt"
+  else
+    setsid --wait runuser -u montana -- /usr/local/bin/montana-node init --data-dir "$DATA_DIR" > "$DATA_DIR/mnemonic.txt"
   fi
-  echo "[entrypoint] manifest sha256 verified: $actual"
+  chmod 0400 "$DATA_DIR/mnemonic.txt"
+  chown montana:montana "$DATA_DIR/mnemonic.txt"
+fi
+unset recovery_words MONTANA_MNEMONIC_FILE
+
+if [ -n "${MONTANA_D_TEST_OVERRIDE:-}" ]; then
+  set -- "$@" --d-test-override "$MONTANA_D_TEST_OVERRIDE"
+  echo '[entrypoint] test difficulty override enabled' >&2
 fi
 
-# 3. Start the node.
-# The node requires --listen and --genesis-manifest together: there is no single
-# mode without a manifest (issue #17 K5).
-if [ ! -f "$MANIFEST" ]; then
-  echo "[entrypoint] FATAL: no genesis manifest at $MANIFEST; a node does not start without one" >&2
-  exit 1
-fi
-set -- start --data-dir "$DATA_DIR" --listen "$LISTEN" --genesis-manifest "$MANIFEST"
-echo "[entrypoint] cross-machine mode"
-# Window zero opens only by the operator's explicit act on an empty store (issue #17 K5);
-# without it a node with an empty store does not start.
-if [ "${MONTANA_OPEN:-}" = "1" ]; then
-  set -- "$@" --open
-  echo "[entrypoint] --open: opening window zero"
-fi
-
-# No unsolicited site report: the node's identity, label, location and state
-# stay with its operator. This does not erase earlier disclosures.
+echo "[entrypoint] mode=$MODE; status is local to this node"
 exec runuser -u montana -- /usr/local/bin/montana-node "$@"

@@ -8,17 +8,18 @@ Completed by the architect before every external audit engagement. Every item mu
 
 - [x] **NIST FIPS 204 ML-DSA-65 KeyGen byte-exact** vs ACVP-Server published vectors (25 cases)
 - [x] **NIST FIPS 203 ML-KEM-768 KeyGen byte-exact** vs ACVP-Server published vectors (25 cases)
-- [x] **NIST FIPS 204 ML-DSA-65 SigGen deterministic byte-exact** for empty context (1 case)
+- [x] **NIST FIPS 204 ML-DSA-65 SigGen deterministic byte-exact** external pure (15 cases: 1 empty context + 14 with context)
 - [x] **NIST FIPS 180-4 SHA-256** vector "abc" → ba7816bf...15ad
 - [ ] **NIST FIPS 204 ML-DSA-65 SigVer** (deferred — confirmed indirectly through round-trip; a direct NIST KAT was not added in M1-F)
-- [ ] **NIST FIPS 203 ML-KEM-768 Encapsulate/Decapsulate** (deferred — the Montana M1-F scope is KeyGen only, encapDecap is needed in M6+)
+- [x] **NIST FIPS 203 ML-KEM-768 Decapsulate byte-exact** vs ACVP-Server published vectors (10 cases, encapDecap tgId=5)
+- [ ] **NIST FIPS 203 ML-KEM-768 Encapsulate** (no NIST KAT — `mt_mlkem_encapsulate` takes no seed `m`, OpenSSL draws the randomness)
 
 ## B. Code surface
 
-- [x] **Layer 1 Rust shim** **662 lines** (`crates/mt-crypto/src/lib.rs`), all **7** `unsafe` blocks carry `// SAFETY:` comments: 4 FFI sites (`fn keypair_from_seed`, `fn sign`, `fn verify`, `fn keypair_from_seed_mlkem`) + 3 mlock/munlock (`impl Drop for SecretKey`, `fn alloc_locked_secret_box`, `impl Drop for MlkemSecretKey`). Check exact lines via `grep -n "unsafe " crates/mt-crypto/src/lib.rs` (line refs are not fixed — they drift as the code grows).
-- [x] **Layer 2 own C wrapper** **457 lines** (`mt_crypto.c`) + **67 lines** (`mt_crypto.h`), focused EVP API wrapping, `-Wall -Wextra -Wpedantic -Werror`
+- [x] **Layer 1 Rust shim** **817 lines** (`crates/mt-crypto/src/lib.rs`), all **9** `unsafe` blocks carry `// SAFETY:` comments: 6 FFI sites (`fn keypair_from_seed`, `fn sign`, `fn verify`, `fn keypair_from_seed_mlkem`, `fn mlkem_encapsulate`, `fn mlkem_decapsulate`) + 3 mlock/munlock (`impl Drop for SecretKey`, `fn alloc_locked_secret_box`, `impl Drop for MlkemSecretKey`). Check exact lines via `grep -n "unsafe " crates/mt-crypto/src/lib.rs` (line refs are not fixed — they drift as the code grows).
+- [x] **Layer 2 own C wrapper** **638 lines** (`mt_crypto.c`) + **91 lines** (`mt_crypto.h`), focused EVP API wrapping, `-Wall -Wextra -Wpedantic -Werror`
 - [x] **Layer 3 vendored OpenSSL 3.5.5 LTS** via `openssl-src = "=300.5.5+3.5.5"` byte-pinned
-- [x] Total own audit surface (Layer 1 + Layer 2) **1280 lines** (662 Rust shim + 49 FFI bindings + 457 C wrapper + 67 C header + 45 build script) — small enough for thorough review. Exact numbers: `wc -l crates/mt-crypto/src/lib.rs crates/mt-crypto-native/src/lib.rs crates/mt-crypto-native/csrc/mt_crypto.{c,h} crates/mt-crypto-native/build.rs`.
+- [x] Total own audit surface (Layer 1 + Layer 2) **1673 lines** (817 Rust shim + 66 FFI bindings + 638 C wrapper + 91 C header + 61 build script) — small enough for thorough review. Exact numbers: `wc -l crates/mt-crypto/src/lib.rs crates/mt-crypto-native/src/lib.rs crates/mt-crypto-native/csrc/mt_crypto.{c,h} crates/mt-crypto-native/build.rs`.
 - [x] No `serde` auto-derive in consensus-critical types (custom `CanonicalEncode` trait)
 
 ## C. Memory safety + secret hygiene (Pass 17 enforcement)
@@ -104,7 +105,7 @@ List of all `panic!`/`assert!` in Montana lib code with justification. All of th
 | Site | File:line | Trigger | Justification |
 |------|-------------|---------|-------------|
 | `apply_transfer*` balance underflow | [crates/mt-account/src/lib.rs](../crates/mt-account/src/lib.rs) `fn apply_transfer{,_activation}` | `sender.balance.checked_sub(amount)` returns None | Protocol invariant breach: `validate_transfer*` guarantees `balance >= amount` BEFORE apply. A halt means the caller invoked apply without validate (programmer error or memory corruption). Not attacker-triggered: the validate-then-apply pattern is enforced. |
-| `apply_transfer*` receiver/operator balance overflow | [crates/mt-account/src/lib.rs](../crates/mt-account/src/lib.rs) `fn apply_transfer/apply_emission` | `balance.checked_add(amount)` returns None at u128::MAX | Encoded arithmetic horizon — the total per-account balance reached u128::MAX (~3.4×10³⁸ nɈ). Not reachable under the constant emission `EMISSION_moneta = 13 × 10⁹ nɈ` per window. Documented halt. |
+| `apply_transfer*` receiver/operator balance overflow | [crates/mt-account/src/lib.rs](../crates/mt-account/src/lib.rs) `fn apply_transfer/apply_emission` | `balance.checked_add(amount)` returns None at u128::MAX | Encoded arithmetic horizon — the total per-account balance reached u128::MAX (~3.4×10³⁸ nɈ). Not reachable under the constant emission `emission_moneta = WINDOW_MONETA = 60 × 10⁹ nɈ` per window (one second, one coin). Documented halt. |
 | `apply_*` op_height/account_chain_length overflow | [crates/mt-account/src/lib.rs](../crates/mt-account/src/lib.rs) `fn apply_*` | `u32` field counters reached u32::MAX (~4.29 billion operations per account) | Encoded arithmetic horizon: 4.29 billion operations per account, not reachable in a realistic timeframe. Documented halt. |
 | `window_w_to_u32` cast overflow | [crates/mt-account/src/lib.rs](../crates/mt-account/src/lib.rs) `fn window_w_to_u32` | `window_w: u64 > u32::MAX` on cast into an AccountRecord field | AccountRecord uses u32 for window fields (encoded size optimization 4B vs 8B). Horizon = ~4.29 billion windows ≈ 8000 years at 60 sec/window. Documented halt. |
 
@@ -336,8 +337,8 @@ cd "<repo-root>" && cargo fmt --all -- --check && cargo clippy --all-targets -- 
 
 ## H. M6 Network layer (mt-net + mt-net-transport)
 
-- [x] **mt-net wire format byte-exact** — ProtocolMessage envelope (14 B header + payload), 18 message types in registry, IBT online + mesh proof, Bootstrap PoW, Uniform Framing (1024 B fixed), 12 structured payloads (FastSync*, PeerList*, BatchLookup*, RangeSubscribe*, Bye)
-- [x] **mt-net 110 unit + integration tests pass** — `cargo test -p mt-net --features testing`
+- [x] **mt-net wire format byte-exact** — ProtocolMessage envelope (14 B header + payload), 18 message types in registry, IBT online + mesh proof, Bootstrap PoW, 12 structured payloads (FastSync*, PeerList*, BatchLookup*, RangeSubscribe*, Bye)
+- [x] **mt-net 103 unit + integration tests pass** — `cargo test -p mt-net --features testing`
 - [x] **mt-net-transport libp2p TCP+TLS 1.3+Noise+Yamux upgrade chain** — verified through `cargo test -p mt-net-transport --features testing` (14 tests pass)
 - [x] **Manual Validation Gate scenario 6 PASS** — two-node handshake e2e (commit `9a15f49`); `tests/e2e_two_node_handshake.rs::two_node_request_response_ping_pong`
 - [x] **Manual Validation Gate scenario 7 PASS** — proposal exchange e2e + 512 KiB boundary (commit `04f8d29`); `tests/e2e_proposal_exchange.rs::{proposal_envelope_round_trip, large_payload_near_max_limit}`

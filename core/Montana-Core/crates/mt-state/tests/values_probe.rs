@@ -36,7 +36,6 @@ fn print_them() {
         "records",
         "machines",
         "admitted",
-        "credited",
         "operations",
     ]
     .iter()

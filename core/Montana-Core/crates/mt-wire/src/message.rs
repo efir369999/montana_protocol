@@ -31,11 +31,6 @@ pub enum Kind {
     StateAnswer,
     SlotQuery,
     SlotAnswer,
-    TableQuery,
-    TableAnswer,
-    RenewOffer,
-    RenewAnswer,
-    RenewFinish,
 }
 
 impl Kind {
@@ -53,11 +48,6 @@ impl Kind {
             10 => Some(Self::StateAnswer),
             11 => Some(Self::SlotQuery),
             12 => Some(Self::SlotAnswer),
-            13 => Some(Self::TableQuery),
-            14 => Some(Self::TableAnswer),
-            15 => Some(Self::RenewOffer),
-            16 => Some(Self::RenewAnswer),
-            17 => Some(Self::RenewFinish),
             _ => None,
         }
     }
@@ -76,17 +66,12 @@ impl Kind {
             Self::StateAnswer => 10,
             Self::SlotQuery => 11,
             Self::SlotAnswer => 12,
-            Self::TableQuery => 13,
-            Self::TableAnswer => 14,
-            Self::RenewOffer => 15,
-            Self::RenewAnswer => 16,
-            Self::RenewFinish => 17,
         }
     }
 
     // Every kind of the vocabulary, in the order the set writes them. What it is for is the test
     // that no two carry one number and that the reading and the writing of a kind are one map.
-    pub const ALL: [Kind; 17] = [
+    pub const ALL: [Kind; 12] = [
         Kind::Deposit,
         Kind::Collect,
         Kind::CollectPublic,
@@ -99,11 +84,6 @@ impl Kind {
         Kind::StateAnswer,
         Kind::SlotQuery,
         Kind::SlotAnswer,
-        Kind::TableQuery,
-        Kind::TableAnswer,
-        Kind::RenewOffer,
-        Kind::RenewAnswer,
-        Kind::RenewFinish,
     ];
 }
 
@@ -341,10 +321,6 @@ pub fn largest_len() -> Result<usize, WireError> {
         head_query_len(),
         state_query_len(),
         slot_query_len(),
-        table_query_len(),
-        renew_offer_len(),
-        renew_answer_len(),
-        renew_finish_len(),
     ];
     Ok(held.into_iter().fold(0usize, usize::max))
 }
@@ -559,214 +535,6 @@ pub fn parse_slot_answer(bytes: &[u8]) -> Result<Vec<u8>, WireError> {
     Ok(bytes[2..].to_vec())
 }
 
-// **The tables of a head, leaf by leaf.** A device that walked to a head takes the plane of that
-// head (Consensus, "The join", step 5) as the leaves of each table in the layout the Canon folds
-// them in, and recomputes every root from them rather than accepting one. It asks one table at a
-// time and from the index of the first leaf it does not hold, because a table is longer than one
-// answer. The question names the network as a head query does, so an answerer of another network
-// is told apart before anything is read, and the window whose head the asker verified; what comes
-// back is leaves and never a root.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum TableIndex {
-    Notes,
-    Nullifiers,
-    Records,
-    Machines,
-    Admitted,
-    Credited,
-    Operations,
-}
-
-impl TableIndex {
-    // The seven tables in the order a proposal lays their roots out.
-    pub const ALL: [TableIndex; 7] = [
-        TableIndex::Notes,
-        TableIndex::Nullifiers,
-        TableIndex::Records,
-        TableIndex::Machines,
-        TableIndex::Admitted,
-        TableIndex::Credited,
-        TableIndex::Operations,
-    ];
-
-    pub fn of(byte: u8) -> Option<Self> {
-        Self::ALL.get(usize::from(byte)).copied()
-    }
-
-    pub fn byte(self) -> u8 {
-        match self {
-            Self::Notes => 0,
-            Self::Nullifiers => 1,
-            Self::Records => 2,
-            Self::Machines => 3,
-            Self::Admitted => 4,
-            Self::Credited => 5,
-            Self::Operations => 6,
-        }
-    }
-
-    // A leaf of the tree of records is its key and the record standing at it; a leaf of every other
-    // table is one value.
-    pub fn leaf_bytes(self) -> usize {
-        match self {
-            Self::Records => 64,
-            _ => 32,
-        }
-    }
-}
-
-pub fn table_query_len() -> usize {
-    mt_codec::size::HASH + 8 + 1 + 4
-}
-
-pub fn encode_table_query(
-    network: &[u8; mt_codec::size::HASH],
-    window: u64,
-    table: TableIndex,
-    from: u32,
-) -> Vec<u8> {
-    let mut out = Vec::with_capacity(table_query_len());
-    out.extend_from_slice(network);
-    out.extend_from_slice(&window.to_le_bytes());
-    out.push(table.byte());
-    out.extend_from_slice(&from.to_le_bytes());
-    out
-}
-
-// A table the set does not name is refused in silence, like every other malformed message.
-pub fn parse_table_query(
-    bytes: &[u8],
-) -> Result<([u8; mt_codec::size::HASH], u64, TableIndex, u32), WireError> {
-    if bytes.len() != table_query_len() {
-        return Err(width(table_query_len(), bytes.len()));
-    }
-    let hash = mt_codec::size::HASH;
-    let mut network = [0u8; mt_codec::size::HASH];
-    network.copy_from_slice(&bytes[..hash]);
-    let mut window = [0u8; 8];
-    window.copy_from_slice(&bytes[hash..hash + 8]);
-    let table = TableIndex::of(bytes[hash + 8]).ok_or(WireError::Opening)?;
-    let mut from = [0u8; 4];
-    from.copy_from_slice(&bytes[hash + 9..]);
-    Ok((
-        network,
-        u64::from_le_bytes(window),
-        table,
-        u32::from_le_bytes(from),
-    ))
-}
-
-// **The bound of one answer is the largest message of this wire, and no new number.** As many
-// leaves of the table asked as keep the answer within the answer of a collection, so the reader of
-// a link holds no more for one table answer than it already holds for one collection, and an asker
-// repeats until an answer carries fewer leaves than this.
-pub fn table_answer_max(table: TableIndex) -> Result<usize, WireError> {
-    let largest = 2 + collect_answer_max()? * cell_bytes()?;
-    Ok((largest - 4) / table.leaf_bytes())
-}
-
-// An answer of zero leaves is the ordinary one: for a table read to its end, and for a window whose
-// plane the answerer does not hold, which it does not tell apart.
-pub fn encode_table_answer(table: TableIndex, leaves: &[u8]) -> Result<Vec<u8>, WireError> {
-    let one = table.leaf_bytes();
-    if !leaves.len().is_multiple_of(one) {
-        return Err(width(leaves.len() - leaves.len() % one, leaves.len()));
-    }
-    let count = leaves.len() / one;
-    let bound = table_answer_max(table)?;
-    if count > bound {
-        return Err(width(bound, count));
-    }
-    let mut out = Vec::with_capacity(4 + leaves.len());
-    out.extend_from_slice(&(count as u32).to_le_bytes());
-    out.extend_from_slice(leaves);
-    Ok(out)
-}
-
-// The leaves of an answer, refused before one is read where the count declared passes the bound.
-pub fn parse_table_answer(table: TableIndex, bytes: &[u8]) -> Result<Vec<u8>, WireError> {
-    if bytes.len() < 4 {
-        return Err(width(4, bytes.len()));
-    }
-    let declared = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
-    let bound = table_answer_max(table)?;
-    if declared > bound {
-        return Err(width(bound, declared));
-    }
-    let expected = 4 + declared * table.leaf_bytes();
-    if bytes.len() != expected {
-        return Err(width(expected, bytes.len()));
-    }
-    Ok(bytes[4..].to_vec())
-}
-
-// **The three messages of a renewal of the keys of a link** (Network, "How a link renews its keys";
-// proposed, issue #75). Each carries the public material of ML-KEM-768 and nothing else, at one
-// length: no window, count or index of the renewal crosses the wire, so nothing of it can diverge
-// between the two ends. The widths are the suite's own, never written here a second time.
-const KEM_KEY: usize = mt_codec::size::KEM_PUBLIC_KEY;
-const KEM_CT: usize = mt_codec::size::KEM_CIPHERTEXT;
-
-pub fn renew_offer_len() -> usize {
-    KEM_KEY
-}
-
-pub fn renew_answer_len() -> usize {
-    KEM_CT + KEM_KEY
-}
-
-pub fn renew_finish_len() -> usize {
-    KEM_CT
-}
-
-// An offer carries the encapsulation key the offering side drew for this renewal alone.
-pub fn encode_renew_offer(kem_key: &[u8; KEM_KEY]) -> Vec<u8> {
-    kem_key.to_vec()
-}
-
-pub fn parse_renew_offer(bytes: &[u8]) -> Result<[u8; KEM_KEY], WireError> {
-    if bytes.len() != renew_offer_len() {
-        return Err(width(renew_offer_len(), bytes.len()));
-    }
-    let mut key = [0u8; KEM_KEY];
-    key.copy_from_slice(bytes);
-    Ok(key)
-}
-
-// An answer carries the encapsulation to the key of the offer, then the encapsulation key the
-// answering side drew: the order of the set, the encapsulation first.
-pub fn encode_renew_answer(kem_ct: &[u8; KEM_CT], kem_key: &[u8; KEM_KEY]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(renew_answer_len());
-    out.extend_from_slice(kem_ct);
-    out.extend_from_slice(kem_key);
-    out
-}
-
-pub fn parse_renew_answer(bytes: &[u8]) -> Result<([u8; KEM_CT], [u8; KEM_KEY]), WireError> {
-    if bytes.len() != renew_answer_len() {
-        return Err(width(renew_answer_len(), bytes.len()));
-    }
-    let mut ct = [0u8; KEM_CT];
-    ct.copy_from_slice(&bytes[..KEM_CT]);
-    let mut key = [0u8; KEM_KEY];
-    key.copy_from_slice(&bytes[KEM_CT..]);
-    Ok((ct, key))
-}
-
-// A finish carries the encapsulation to the key of the answer.
-pub fn encode_renew_finish(kem_ct: &[u8; KEM_CT]) -> Vec<u8> {
-    kem_ct.to_vec()
-}
-
-pub fn parse_renew_finish(bytes: &[u8]) -> Result<[u8; KEM_CT], WireError> {
-    if bytes.len() != renew_finish_len() {
-        return Err(width(renew_finish_len(), bytes.len()));
-    }
-    let mut ct = [0u8; KEM_CT];
-    ct.copy_from_slice(bytes);
-    Ok(ct)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -814,19 +582,19 @@ mod tests {
     #[test]
     fn every_kind_carries_one_number_and_reads_back_to_itself() {
         let mut seen: Vec<u8> = Kind::ALL.iter().map(|k| k.byte()).collect();
-        assert_eq!(seen.len(), 17);
+        assert_eq!(seen.len(), 12);
         for kind in Kind::ALL {
             assert_eq!(Kind::of(kind.byte()), Some(kind));
         }
         seen.sort_unstable();
         seen.dedup();
-        assert_eq!(seen.len(), 17, "two kinds carry one number");
+        assert_eq!(seen.len(), 12, "two kinds carry one number");
         assert_eq!(seen.first(), Some(&1), "the vocabulary opens at one");
-        assert_eq!(seen.last(), Some(&17), "the vocabulary ends at seventeen");
+        assert_eq!(seen.last(), Some(&12), "the vocabulary ends at twelve");
         // Zero is no kind, and neither is anything past the vocabulary: a piece naming one ends the
         // link rather than being read as something it is not.
         assert_eq!(Kind::of(0), None);
-        assert_eq!(Kind::of(18), None);
+        assert_eq!(Kind::of(13), None);
         assert_eq!(Kind::of(255), None);
     }
 
@@ -913,79 +681,5 @@ mod tests {
         // that named none would be answered with the first object of a point for ever.
         assert!(parse_collect_public(&public[..POINT_BYTES]).is_err());
         assert!(parse_collect_public(&sealed).is_err());
-    }
-
-    #[test]
-    fn a_table_answer_stays_within_the_largest_message_and_refuses_more() {
-        let largest = largest_len().expect("named");
-        let network = [0x44u8; mt_codec::size::HASH];
-        for table in TableIndex::ALL {
-            assert_eq!(TableIndex::of(table.byte()), Some(table));
-            let query = encode_table_query(&network, 1000, table, 7);
-            assert_eq!(query.len(), table_query_len());
-            assert_eq!(parse_table_query(&query), Ok((network, 1000, table, 7)));
-            assert!(parse_table_query(&query[..query.len() - 1]).is_err());
-            let bound = table_answer_max(table).expect("named");
-            let full = vec![0x55u8; bound * table.leaf_bytes()];
-            let answer = encode_table_answer(table, &full).expect("encodes");
-            assert!(
-                answer.len() <= largest,
-                "a table answer past the largest message"
-            );
-            assert_eq!(parse_table_answer(table, &answer), Ok(full));
-            // One leaf past the bound is refused on both sides, before a leaf is read.
-            let over = vec![0x55u8; (bound + 1) * table.leaf_bytes()];
-            assert!(encode_table_answer(table, &over).is_err());
-            let mut declared = answer.clone();
-            declared[..4].copy_from_slice(&((bound + 1) as u32).to_le_bytes());
-            assert!(parse_table_answer(table, &declared).is_err());
-            // Half a leaf is no leaf.
-            assert!(encode_table_answer(table, &[0u8; 31]).is_err());
-            // And an answer of nothing is ordinary.
-            let empty = encode_table_answer(table, &[]).expect("encodes");
-            assert_eq!(parse_table_answer(table, &empty), Ok(Vec::new()));
-        }
-        // A table past the seven is no table.
-        let mut query = encode_table_query(&network, 1000, TableIndex::Notes, 0);
-        query[mt_codec::size::HASH + 8] = 7;
-        assert!(parse_table_query(&query).is_err());
-    }
-
-    // The three messages of a renewal round-trip at their one length each, and one byte short or
-    // long is refused before a field is read. The named wrong implementation: an answer that laid
-    // the key before the encapsulation, of the same length, so only the order catches it.
-    #[test]
-    fn the_messages_of_a_renewal_hold_their_one_length_and_their_order() {
-        let key = [0x12u8; KEM_KEY];
-        let ct = [0x13u8; KEM_CT];
-        let offer = encode_renew_offer(&key);
-        assert_eq!(offer.len(), renew_offer_len());
-        assert_eq!(parse_renew_offer(&offer), Ok(key));
-        assert!(parse_renew_offer(&offer[..offer.len() - 1]).is_err());
-        let answer = encode_renew_answer(&ct, &key);
-        assert_eq!(answer.len(), renew_answer_len());
-        assert_eq!(&answer[..KEM_CT], &ct[..], "the encapsulation stands first");
-        assert_eq!(parse_renew_answer(&answer), Ok((ct, key)));
-        let mut swapped = key.to_vec();
-        swapped.extend_from_slice(&ct);
-        assert_eq!(swapped.len(), renew_answer_len());
-        assert_ne!(parse_renew_answer(&swapped), Ok((ct, key)));
-        let mut longer = answer.clone();
-        longer.push(0);
-        assert!(parse_renew_answer(&longer).is_err());
-        let finish = encode_renew_finish(&ct);
-        assert_eq!(finish.len(), renew_finish_len());
-        assert_eq!(parse_renew_finish(&finish), Ok(ct));
-        assert!(parse_renew_finish(&offer).is_err(), "an offer is no finish");
-        // All three stand under the largest message, so a reader holds no more for a renewal than
-        // it already holds for a collection.
-        let largest = largest_len().expect("named");
-        for held in [renew_offer_len(), renew_answer_len(), renew_finish_len()] {
-            assert!(held < largest);
-        }
-        // And their kinds read back to themselves, past the fourteen before them.
-        assert_eq!(Kind::of(15), Some(Kind::RenewOffer));
-        assert_eq!(Kind::of(16), Some(Kind::RenewAnswer));
-        assert_eq!(Kind::of(17), Some(Kind::RenewFinish));
     }
 }

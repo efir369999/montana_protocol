@@ -27,7 +27,7 @@ Network, App. The rules below hold the set together.
 |---|---|---|
 | **Constitution** | the invariants, the rules of the set, the evolution of the protocol | a value, a layout, the definition of a construction |
 | **Canon** | the Genesis Decree and its parameters, primitive sizes, the registry of domain separators, the rules of canonical serialization, every layout with its invariants, every test vector | a rule of behaviour, a rationale, a narrative |
-| **Consensus** | the canonical order, the windows, the round, the beacon, the chains of windows and of machine presence, the runner draw, the committee and the quorum, the closing of a window, finality, the admission of machines, the issue of the right to a window's coin | note mechanics, transport, records of people, numeric values |
+| **Consensus** | the canonical order, the windows, the round, the beacon, the chains of windows and of machine presence, the runner draw, the committee and the quorum, the closing of a window, finality, the admission of machines, the issue of the right to a window's seconds | note mechanics, transport, records of people, numeric values |
 | **Value** | the note, the commitment, the nullifier, the note tree, the shape of a spend, the proving root, the proof, the redemption of the right, anti-inflation, disclosure, the double spend | the transport of a payment, records of people, numeric values |
 | **Identity** | the record of a person, the operations of the identity plane, keys and their derivation, the fingerprint, the fabric of time, age stratification, the time barriers, the lifecycle of a record, the claiming of a name and of a channel and the slots they occupy, the slot of a channel | value mechanics, transport, numeric values |
 | **Network** | transport indistinguishability realized: the pipe, the tag, the holder, the cell, the canonical slot, first contact by a claimed name, the rendezvous, a channel and how a publication reaches whoever reads it, carriage as the goods paid for, near transports, discovery without a map, the transport threat model | records of people, notes, consensus rules, numeric values |
@@ -88,7 +88,7 @@ mechanism, ever: nullifiers of what it consumes, commitments of what it creates,
 nullifier holding the bound on payments per window without naming the payer, and a proof that
 value is conserved.
 
-What a nullifier position consumes is a note or a right to a window's coin, and the two are
+What a nullifier position consumes is a note or a right to a window's seconds, and the two are
 one kind: the positions are typeless, their count does not vary with what fills
 them, and the proof asserts a disjunction over each — a note or a right — without disclosing
 which branch holds. A position a payment does not use carries a note of zero value,
@@ -116,10 +116,11 @@ by the shape of what it spends. No quantity marks a redemption.
    redemption, the moment of it is computed rather than chosen, and the nullifier of a right
    names nobody. Value holds how a redemption is performed. A coin born from emission carries no funding edge at all — not hidden,
    non-existent — and no leaf of the note tree is ever attributable to anyone. Neither the
-   work of any machine, nor the standing it earned, nor whose any coin is is a public
-   quantity: what a window publishes is the count of its living, which is the count of coins
-   it credits, one to each, and the votes their standing drew, and each coin is redeemed
-   inside a payment that nothing distinguishes from any other.
+   work of any machine, nor the standing it earned, nor whose any right is is a public
+   quantity: what a window publishes is the count of its living, the votes their standing
+   drew and the rounds it ran — one right to the window's seconds to every living machine, the
+   same for all, follows from them — and each right is redeemed inside a payment that nothing
+   distinguishes from any other.
 
 No count of payments exists at any point of the system. The counter of meaningful
 quantities is closed for every plane at once by the closing rule of [I-16], and the
@@ -371,26 +372,16 @@ operating system, never the observable behaviour of the protocol: any quantity t
 what is visible on the wire — the moment of sending, an expiry, a lateness threshold — is
 expressed in windows or in rounds.
 
-The waits of a machine's conduct — the span of an attempt and the patience a machine spends
-before it proves its own proposal — may read the machine's local clocks, and no verifier reads
-them. They decide when a machine acts, never what is accepted: no rule of acceptance, no signed
-object and no hash composition carries a wait, and a machine that waited twice as long reaches
-the same decisions later (Consensus, "The threshold of the draw, and the order of the runners"
-and "The agreement on what a window decided"). The span stays counted in the machine's own
-askings; a clock only paces them.
-
 A violation is an automatic mainnet blocker: any dependence of the protocol on external or
 system time turns Montana into not-Montana, losing canonical determinism and the
 independence of the window chain.
 
-**[I-16] Transport indistinguishability.** The path an object takes discloses nothing that its
-content conceals. For any object the network carries — a payment, a message, a chunk of media, a
-unit of consensus data — an observer of the wire at one point, and at any set of points that
-does not hold both ends of the same delivery, cannot determine what the object is; its advantage
-in telling who originated it, for whom it is destined, or whether a given machine is its origin
-or a relay is bounded by the honest volume on the points it observes, by the delay profile and
-by the length of the path, and falls toward nothing as that volume grows. An observer holding
-both ends is the one case the invariant does not close: there the
+**[I-16] Transport indistinguishability.** The path an object takes discloses nothing that
+its content conceals. For any object the network carries — a payment, a message, a chunk of
+media, a unit of consensus data — an observer of the wire at one point, and at any set of
+points that does not hold both ends of the same delivery, cannot determine what the object is,
+who originated it, for whom it is destined, or whether a given machine is its origin or a
+relay. An observer holding both ends is the one case the invariant does not close: there the
 correlation of envelopes remains possible, its price is set by the delay profile and the
 volume carried, and the prohibition behind it is physical and named in the third requirement.
 Nothing weaker than both ends buys it. Cryptography
@@ -483,7 +474,7 @@ Requirements, every one of them obligatory:
    The tag is not merely a label — it is a right, and that difference is what keeps a machine
    from being named. A right is proven by possession and never by a name; it is derived rather
    than stored; it is spent once; it belongs to a window and is spent in that window, so the
-   moment of spending is computed and not chosen, as the coin of a window is; and two exercises
+   moment of spending is computed and not chosen, as a share of emission is; and two exercises
    of it are not linkable to each other. It is sealed to the holder, and no hop ever sees it:
    a hop reads the label of its own step and nothing more, so a right is neither a constant
    along the path nor a thing another hand could spend. What a hop carries and what a holder
@@ -688,7 +679,7 @@ enforces it here rather than being covered by implication:
 | Transport | [I-16] — no address, nothing constant along a path, origin not distinguishable from transit |
 | Identity | closed by the same construction as value: no identifier of a person exists, a record is a commitment, an action spends a nullifier, and lived time is carried inside and proven — there is no name for an observer to join two actions by |
 | Application | closed the same way: an application acts through the same commitment and nullifier and names no one, so no label sorts people into kinds and no application learns who its users are |
-| Consensus | closed the same way: distinctness without identity — a part in a window is a nullifier, quorum counts nullifiers, presence is carried inside a commitment and proven, and one nullifier under two contradicting pledges of one window is proof of an equivocation, so a sanction keeps its evidence |
+| Consensus | closed the same way: distinctness without identity — a part in a window is a nullifier, quorum counts nullifiers, presence is carried inside a commitment and proven, and one nullifier under two closings of one height is proof of an equivocation, so a sanction keeps its evidence |
 
 A violation is an automatic mainnet blocker in any of them.
 
@@ -717,7 +708,7 @@ cannot use it have already been excluded.
 
 ## What the set does not yet fix
 
-Five things are open. They are named here, at the front, so that a reader learns them from the
+Six things are open. They are named here, at the front, so that a reader learns them from the
 first document rather than by exhausting the last, and each carries what closing it requires
 rather than a promise that it will be closed.
 
@@ -727,6 +718,7 @@ rather than a promise that it will be closed.
 | **the Library as a document of its own** — the plane that keeps a body alive is stated inside Network today, and it graduates into a document of the set only when the quantities it stands on are frozen: the domain of the points of a root and their count, the domain the key of an offer is derived under, the domain of the nullifier of an offer, and the layout of a deposit | Network, in the plane that keeps a body; Canon, in the registry and the layouts | those four quantities entered in Canon and the period their points rotate by named among the ones Canon already holds — the shape of the ask is not among them, since the ask of a slot stands already and is taken as it is |
 | **what carries the history across the retirement of a proof scheme** — a device anchored before a retirement cannot verify the certificates of windows proven under the retired scheme, so a scheme that fails lets a forged past stand behind an old anchor | Consensus, in the certificate of a window and the join | a rule that an anchor stands at or after the window a retirement takes effect in, with the retention bound making an older anchor stale by construction, or a stated argument that the walk alone suffices, with the assumption it rests on named |
 | **the constraint set of the two circuits** — every value it consumes is frozen, the statements it must assert are stated, the format of its description is fixed and the verifier that consumes it is frozen check by check; the artifact itself is machine-checkable and not writable in prose | Canon, in its own section, with the circuits that need it in Consensus and in Value | the artifact published, its hash entered as `air_hash` in the Genesis Decree, and the Genesis State Hash recomputed by the procedure Canon states — one line and one recomputation |
+| **one decision for a window whose machines left its rounds holding different things** — a machine closes a window on the final beacon it reconciled and applies the frames standing at the points of each round as it leaves that round, so two honest machines may close one window on two final beacons carrying two pairs, or apply two sets of frames, and take two names for one window; the window after parts its cement between the names, and where neither reaches the quorum of that window both halves wait on a name the other half never attests. The set orders the rounds and the versions of a round, and never votes a second time on the predecessor of a window | Consensus, "The pulse and the close of a window", "Two tickets clearing one window" and "The way back"; Canon, "The roots of state" | an agreement on the predecessor of a window that every honest machine reaches from what it holds — a second vote with a lock in the manner of Tendermint, or an agreement over a common coin in the manner of Algorand — stated with its safety under the quorum and its liveness once delivery is bounded, and the partition and rejoin test that shows it at a population the quorum asks less than all of |
 | **which of two frames spending one note stands first, before the window carrying them closes** — the race is visible in one echo, since the notice of a spend stands at a point derived from the nullifier it names and two frames spending one note meet there; what the point does not do is decide, because the identifier of a frame is drawn by its own author and a second frame is brought below a first in a couple of drawings, so a reader that sees a race waits for the canonical order of the window | Value, in settlement and in the notice of a spend | a rule separating two notices at the point itself by a quantity neither author chooses after seeing the other, or a stated argument that the wait is what the protocol offers and the claim is the whole of the fast path |
 
 Two things follow from the entry of the constraint set and are named here rather than discovered
@@ -824,16 +816,13 @@ insufficient and a structural one is required.
 network — it is a new network with a new genesis, and honest machines reject such proposals as
 an unknown protocol rather than as a fork. The layer covers: the global invariants in force
 and their operational requirements; the monetary constitution — one second, one coin: every
-machine living in a window is credited one coin for every second of that window, and a window is
-its seconds by count — the day of 86 400 seconds divided into `segment_windows` windows — so the
-credit of a window is `window_credit` = 86 400 / `segment_windows` coins, read off the cement and
-the Decree and never off a clock: a second is counted and never measured, and the lived length of
-a window's seconds is its window's; the credit is fixed at Genesis and no later act may change it,
-supply growing strictly monotonically by the credit times the count of the living of every
-window, no halving driven by the protocol, no premiums, no protocol-level burning; the emission
-constitution — the credit of a window alike to each of its living machines, nothing divided and
-so no remainder to carry or to appropriate, no emission lottery, no personal reward to the runner; the
-draw constitution — an unweighted ticket against
+living machine holds a right to the seconds of each window it lived in, a second being a count of
+rounds Genesis fixes and no later act may change, so that nothing — no machine, no crowd, no
+service a person runs — mints faster than one coin a second; the issuance of a window is the count
+of its living times that worth, supply never decreasing, no halving driven by the protocol, no
+premiums, no protocol-level burning; the emission constitution — the same right for every living
+machine, no emission lottery, no personal reward to the runner; the draw constitution — an
+unweighted ticket against
 the threshold orders the runners on duty, and the draw does not touch minting; absolute
 privacy of the financial layer; perfect fungibility; transport indistinguishability; the absence
 of a graph — no edge, no persistent identifier of a person, no address; the
