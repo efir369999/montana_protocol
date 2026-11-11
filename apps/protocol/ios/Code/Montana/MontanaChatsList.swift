@@ -2120,7 +2120,7 @@ struct ChatRow: View {
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.primary)
                         .lineLimit(1)
-                    if model.montana { MTMontanaCrownMark(height: 18) }
+                    if model.montana { MTMontanaSealMark(height: 18) }
                     if MTGroup.isKey(model.ref) { MTRoomRowMark(chat: model.ref) }   // a group's living room (07.10)
                     CallInlineHandset(side: .red, peer: model.ref)
                     if model.muted {

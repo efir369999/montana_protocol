@@ -8,7 +8,6 @@ enum MTEdition {
     static let vpn: MTVPNDoor? = MTVPNAppDoor()
     static let chess: MTChessDoor? = MTChessAppDoor()
     static let wall: MTWallDoor? = MTWallAppDoor()
-    static let messenger: MTMessengerDoor? = nil
     static let youtube: MTYouTubeDoor? = MTYouTubeAppDoor()
     static let mesh: MTMeshDoor? = MTMeshAppDoor()
     /// NO ROW OF ONE'S OWN NODE (the author's word 16428, 04.11.2026: «the item YOUR NODE -- delete it too»): Settings draw none and the

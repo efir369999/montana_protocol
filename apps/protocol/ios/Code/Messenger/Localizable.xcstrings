@@ -13424,38 +13424,6 @@
         }
       }
     },
-    "You were added to the group": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вас добавили в группу"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您已被加入群组"
-          }
-        }
-      }
-    },
-    "You were added to the channel": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Вас добавили в канал"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您已被加入频道"
-          }
-        }
-      }
-    },
     "Leave channel": {
       "localizations": {
         "ru": {
@@ -13598,54 +13566,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "通话人数已满"
-          }
-        }
-      }
-    },
-    "Add to Call": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить в звонок"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加到通话"
-          }
-        }
-      }
-    },
-    "Group Call": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Групповой звонок"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "群组通话"
-          }
-        }
-      }
-    },
-    "Up to %lld people on a call, you included. Everyone chosen is invited into the call.": {
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "До %lld человек в звонке, включая вас. Каждый выбранный получит приглашение в звонок."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "每次通话最多 %lld 人（包括您）。每位被选中的人都会收到通话邀请。"
           }
         }
       }
