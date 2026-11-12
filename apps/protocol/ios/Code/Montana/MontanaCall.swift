@@ -3394,33 +3394,6 @@ final class MontanaCall: NSObject {
             MontanaTrace.mark("call_gone", "rx state=\(state) epoch=\(String(ep.prefix(8)))")
             if endReason == "-" { endReason = "peer-gone" }
             endCall(silent: true)
-        case "call-room":
-            // THE PEER GREW THIS CALL INTO A ROOM (MTGroupRoom.grow, the author's words 17.10.2026 20:22 UTC: «add to the current call
-            // more people, up to 13 on a call»): the word names the group and the room. This phone ends the call of two in silence --
-            // the peer ends it too -- and comes into the room by itself the moment the group's words bring it (MTGroupRoom.moveIn),
-            // with its camera as it stood. An older build passes the word by and hears the call end; the room's invitation is its way.
-            guard from == peer, state == "connected" || state == "reconnecting", let word = reason else { return }
-            if let held = peerDevice, !held.isEmpty, device != held { return }   // only the device that is the call speaks for it
-            // The peer's answer to my move (MTGroupRoom.grow): it comes in -- the call of two ends here now.
-            if word.hasPrefix(Self.roomInHead) { roomAnswered(String(word.dropFirst(Self.roomInHead.count))); return }
-            let camera = isVideo ? !CallUIModel.shared.cameraOff : false
-            // THE ROOM RODE WITH THE WORD (grow): the group and the room stand here at once, and my room key goes back on this road
-            // before the call of two ends, so the owner's pair with me stands without the group's road.
-            let lines = word.split(separator: "\n", maxSplits: 1).map(String.init)
-            let back = lines.count == 2 ? MTGroupRoom.shared.takeInline(lines[0], lines[1], from: from) : nil
-            guard MTGroupRoom.shared.moveIn(lines.first ?? word, from: from, video: camera) else {
-                MontanaTrace.mark("call_room", "rx unreadable -- the call stays")
-                return
-            }
-            if let back {
-                var w = CallSignalOut(ctrl: "call-room")
-                w.reason = Self.roomInHead + back
-                w.targetDevice = peerDevice
-                sendSignal?(from, w)
-            }
-            MontanaTrace.mark("call_room", "rx -- the call moves into a room inline=\(back == nil ? 0 : 1)")
-            if endReason == "-" { endReason = "moved-to-room"; endDoor = "rule:moved-to-room" }
-            endCall(silent: true)
         case "call-end":
             if let pk = parked, from == pk.peer {
                 tlog("the parked call's peer hung up")
@@ -3728,41 +3701,6 @@ final class MontanaCall: NSObject {
 
     /// The person this phone talks with now: the peer of a connected call with no second line parked, nil otherwise.
     var talkingWith: String? { state == "connected" ? (parked == nil ? peer : nil) : nil }
-
-    /// THE CALL GROWS INTO A ROOM (MTGroupRoom.grow, the author's words 17.10.2026 20:22 UTC: «add to the current call more people
-    /// from the user's contacts, up to 13 on a call»): the peer is told on the call's own road which room of which group the call
-    /// moves into -- a word an older build passes by -- and the call of two ends by that rule. The room is the one owner of a call
-    /// of more than two; the word rides before the end on the same road, in its order.
-    /// THE CALL STANDS UNTIL THE PEER SAYS IT COMES (the author's word 18.10.2026 10:3x UTC: «adding must not interrupt the call»):
-    /// `carrying` -- the group's invitation and the room's open (MTGroupRoom.grow) ride after the word on a line of their own, which an
-    /// older build cannot read and so passes the move by as before; the peer's answer (its room key and moment, «in») ends the call of
-    /// two here by the rule and hands the answer on. A peer that says nothing in four seconds is an older build: the call ends then.
-    func moveIntoRoom(_ word: String, carrying inline: String?, answered: @escaping (String?) -> Void) -> Bool {
-        guard Thread.isMainThread, let p = talkingWith, roomAnswer == nil else { return false }
-        var w = CallSignalOut(ctrl: "call-room")
-        w.reason = inline.map { x in word + "\n" + x } ?? word
-        w.targetDevice = peerDevice
-        sendSignal?(p, w)
-        MontanaTrace.mark("call_room", "tx -- the call moves into a room inline=\(inline == nil ? 0 : 1)")
-        roomAnswer = answered
-        let ask = UUID()
-        roomAsk = ask
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in if self?.roomAsk == ask { self?.roomAnswered(nil) } }
-        return true
-    }
-    /// The move the four seconds belong to: a later move's wait is never cut by an earlier one's.
-    private var roomAsk: UUID?
-    /// The answer a grown call waits for (moveIntoRoom); taken once.
-    private var roomAnswer: ((String?) -> Void)?
-    /// The head of the peer's answer to a move: «in», then its room key and moment.
-    static let roomInHead = "in\n"
-    private func roomAnswered(_ reply: String?) {
-        guard let done = roomAnswer else { return }
-        roomAnswer = nil
-        MontanaTrace.mark("call_room", reply == nil ? "no answer -- the call of two ends by the rule" : "answered -- the peer comes in")
-        endByRule("moved-to-room")
-        done(reply)
-    }
 
     /// A RULE'S END NAMES THE RULE (23.09). A refused description, an offer that never came, a
     /// connection that did not build went through the hand's road and the summary said «cancelled»
@@ -7917,21 +7855,6 @@ struct CallOverlayView: View {
     // peer's) keeps its own face, and there the pill carries End.
     private var videoBranch: Bool { model.video || MontanaCall.shared.isVideo }
     private var chromeVisible: Bool { model.chromeVisible }
-    /// THE CALL'S ADD MARK (the author's words 17.10.2026 20:22 UTC: «add to the current call more people from the user's contacts, up
-    /// to 13 on a call», «from the call's page»): a connected call of two with no second line parked grows into a room.
-    /// MESSENGER'S CALL STAYS A CALL OF TWO (the author's word 19240, 11.11.2026): no add mark, no sheet, no room held for it.
-    #if !MONTANA_MESSENGER
-    @State private var adding = false
-    @State private var adds: [Chat] = []
-    private var canAdd: Bool { model.state == "connected" ? !model.hasParked : false }
-    /// The people chosen are handed over once the sheet is gone: the call's window it stood in goes with the call of two.
-    private func addChosen() {
-        let people = adds
-        adds = []
-        guard !people.isEmpty, let store = ChatStore.live else { return }
-        MTGroupRoom.shared.grow(adding: people, store: store)
-    }
-    #endif
     @Environment(\.verticalSizeClass) private var vClass
     private var landscape: Bool { vClass == .compact }
     /// The ground is one view (MTCallGround): the voice call, the sharer's own screen and the cover over
@@ -7958,14 +7881,6 @@ struct CallOverlayView: View {
             else { MTCallLive(model: model) { _ in fullScreen } }
         }
         // Whether the screen's owner is drawn again is said too (MTCallLive): the next frozen screen names its holder.
-        // WHOM TO ADD TO THE CALL: the contacts this phone writes with, a tick each, the room's measure kept (MTCallAddSheet)
-        #if !MONTANA_MESSENGER
-        .sheet(isPresented: $adding, onDismiss: addChosen) {
-            if let store = ChatStore.live, let peer = model.peer {
-                MTCallAddSheet(peer: peer) { adds = $0 }.environmentObject(store)
-            }
-        }
-        #endif
         .modifier(MTCallSaid(event: "call_root", kv: "state=\(model.state) ring=\(model.peerRinging ? 1 : 0) lit=\(model.route.lit ? 1 : 0)"))
         // THE CAMERA REFUSAL IS SAID TO THE FACE (the author's word 20.09): the system alert with
         // the system road to Settings (UIApplication.openSettingsURLString). iOS restarts the app
@@ -8221,16 +8136,6 @@ struct CallOverlayView: View {
                     } else {
                         Spacer()
                     }
-                    // ADD TO THE CALL (the author's words 17.10.2026 20:22 UTC): the platform's own person-plus glyph on the marks' glass,
-                    // no word, the 44 points of the platform's control that fires at the first lifting (MontanaCallMark)
-                    #if !MONTANA_MESSENGER
-                    if canAdd {
-                        MontanaCallMark(glyph: "person.badge.plus", label: "Add to Call") { adding = true }
-                    } else if videoBranch {
-                        // No add mark (the call is not connected, or a second line is parked): its room is held.
-                        Color.clear.frame(width: montanaTouchTarget, height: montanaTouchTarget)
-                    }
-                    #endif
                     if model.video {
                         MontanaCallMark(glyph: "camera.rotate", label: "Camera") { MontanaCall.shared.switchCamera() }
                     } else if videoBranch {

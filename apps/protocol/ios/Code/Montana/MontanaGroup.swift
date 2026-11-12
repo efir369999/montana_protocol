@@ -2133,7 +2133,7 @@ final class MTGroup {
     private func take(_ w: MTGroupWord, from pipe: String, copy: String, store: ChatStore) -> Verdict {
         guard ready() else { return .wait }   // the copy knocks again once the store opens
         switch w.t {
-        case "inv": return invited(w, by: pipe, store: store)
+        case "inv": return invited(w, by: pipe, copy: copy, store: store)
         case "say": return heard(w, from: pipe, copy: copy, store: store)
         case "sig": return answered(w, from: pipe, store: store)
         case "bye": return parted(w, from: pipe, store: store)
@@ -2289,7 +2289,7 @@ final class MTGroup {
     /// AN INVITATION: the group stands on this phone, owned by the pipe the word came by. A second invitation of the same owner
     /// renews the title and the count; another pipe naming a group this phone already holds is refused.
     @MainActor
-    private func invited(_ w: MTGroupWord, by pipe: String, store: ChatStore) -> Verdict {
+    private func invited(_ w: MTGroupWord, by pipe: String, copy: String, store: ChatStore) -> Verdict {
         let owner = MTSamePair.root(pipe)
         let title = Self.clean(w.ti ?? "", Self.titleLimit)
         guard let kind = MTGroupKind(rawValue: w.k ?? ""), !title.isEmpty,
@@ -2335,6 +2335,13 @@ final class MTGroup {
             if renamed { lay(MTGroupEvent(e: "named", g: g.id, a: actor, t: title), store: store) }
             if newFace, hadFace, !back { lay(MTGroupEvent(e: "face", g: g.id, a: actor), store: store) }
             return .held
+        }
+        // A RESTORE'S CATCH-UP IS THE PAST (865 a, iPad 11.11: the box handed the restored person an old invitation of a group call
+        // never on T1, and a chat was born): an invitation sent before this person came in on this phone births no group -- the
+        // groups the person held come back with the archive (groups.held); an invitation sent later is born as before.
+        if MontanaSeed.before(ChatStore.birthMs(fromMid: copy)) {
+            MontanaTrace.mark("group_refused", "invitation older than this person's coming in")
+            return .refused
         }
         var g = MTGroupState(id: w.g, kind: kind, title: title, about: Self.clean(w.ds ?? "", Self.aboutLimit), owner: owner, me: seat,
                              members: [], count: count, names: ownerName.isEmpty ? [:] : [Self.ownerSeat: ownerName],
@@ -2398,6 +2405,7 @@ final class MTGroup {
         stand(g, face: nil, store: store)
         let born = MontanaDeliveryEngine.letterMoment(mid: sid, sentAt: nil)
         let quote = (w.qt ?? "").isEmpty ? nil : w.qt
+        let past = MontanaSeed.before(ChatStore.birthMs(fromMid: sid))   // a restore's catch-up (865 a): silent here and on its way on
         let row = Message(text: words, isFromMe: false, time: hhmm(at: born), replyText: quote, deliveryStatus: .delivered,
                           msgId: sid, senderRef: Self.speaker(g.id, seat), createdAt: born,
                           replyToId: store.localId(forMid: w.qm, chat: key))
@@ -2412,7 +2420,7 @@ final class MTGroup {
             return .held
         }
         #endif
-        if landed, w.sl != 1, w.hs != 1 {   // a channel's silent post, and a group's past handed to one just added (G.4), show no banner
+        if landed, w.sl != 1, w.hs != 1, !past {   // a channel's silent post, and a group's past handed to one just added (G.4), show no banner
             // The banner a running app owes its person: the group's title over who wrote and what (a channel speaks as itself).
             let shown = MontanaNotify.body(for: words) ?? String(localized: "New message", bundle: MTLanguage.bundle)
             let who = g.kind == .group ? speakerName(Self.speaker(g.id, seat)) : ""
@@ -2423,6 +2431,7 @@ final class MTGroup {
             var on = MTGroupWord(t: "say", g: g.id, k: g.kind.rawValue, ti: g.title, n: name.isEmpty ? nil : name, id: id, s: seat,
                                  tx: words, qt: quote, qm: w.qm)
             on.sf = w.sf   // the speaker's own face goes on with their letter, unchanged
+            if past { on.hs = 1 }   // the past carried on rings nobody (865 a, iPad 11.11: T2 and T3 rang after the restore)
             spread(on, in: g, except: seat, own: false)
         }
         return .held
@@ -2601,6 +2610,7 @@ final class MTGroup {
                                  copy: copy)
         if g.mine {
             var on = MTGroupWord(t: "room", g: g.id, k: g.kind.rawValue, ti: g.title, n: w.n, id: id, s: seat, tx: words)
+            if MontanaSeed.before(ChatStore.birthMs(fromMid: id)) { on.hs = 1 }   // a restore's catch-up rings nobody (865 a)
             if let ts = w.ts, ts.count <= 32 {
                 // a targeted word: to the seats it names alone -- ringing there if it is an invitation (a word naming no ring is one)
                 let ring = w.rg == 1 || w.rg == nil

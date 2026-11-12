@@ -968,6 +968,16 @@ final class E2E {
         E2E.clockSaidAt = Date()
         appPresence(open: true, again: true)
     }
+    /// THE BOOK GREW UNDER A GREETING ALREADY SAID (12.11.2026, OZ 1 p.2.5, the author's word 20224: «the faces of the people come
+    /// back at once with the restore»). The archive stood the correspondences up after the greeting had left (iPad 11.11: app-front
+    /// at 23:39:00 to one, pipes_restored at 23:39:10), so the newcomers were neither greeted nor asked for their faces (faceTail)
+    /// until each chat was opened. The greeting is said again to the grown book, the ask riding it, while the application stands
+    /// before the person; nobody greeted yet -- the greeting still to come reads the grown book itself.
+    func peersGrew() {
+        guard E2E.appSaid == true, UIApplication.shared.applicationState != .background else { return }   // SILENT-OK: the greeting to come reads the grown book
+        MontanaTrace.mark("presence_grew", "the book grew under a greeting -- said again")
+        appPresence(open: true, again: true)
+    }
     /// THE APP'S WORD IS SAID ONCE PER STATE (24.09). The application comes back «active» without leaving (the notification
     /// shade, a system sheet, Face ID), and a state already said is not said again to every correspondent.
     /// A farewell is owed only to those greeted in THIS life: a run woken in the background has greeted nobody (29 of the

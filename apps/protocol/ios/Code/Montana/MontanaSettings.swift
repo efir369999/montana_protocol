@@ -2193,6 +2193,19 @@ extension MontanaSeed {
 
     static func forgetKeys() { MontanaLocalVault.setEncrypted(keysKey, Data()) }
 
+    /// THE MOMENT THIS PERSON CAME IN ON THIS PHONE (decision 865 = a, the author's word 20222: a restore's catch-up is the past).
+    /// A word born before it -- a group's letter, a room's word, an invitation -- is what this phone catches up on after the 24
+    /// words, never news: carried on, it rings nobody. Written by `enter` when a person is born or opened here, never by a lift (a
+    /// lifted seat brings its own moment back, SeedScope.seatKeys) and never by a copy (the past would be judged by another phone's
+    /// moment). Nil: the person came in before builds knew the moment, and nothing is judged by it.
+    static let enteredKey = "mt.seed.entered"
+    static var entered: Double? { let t = UserDefaults.standard.double(forKey: enteredKey); return 0 < t ? t : nil }
+    /// Whether a word born at `born` (ChatStore.birthMs) is older than this person's coming in on this phone.
+    static func before(_ born: Double?) -> Bool {
+        guard let b = born, let e = entered else { return false }
+        return b < e
+    }
+
 
     @discardableResult
     static func open(_ acc: MontanaSeedKeys.Keys) -> Bool {
@@ -2232,6 +2245,7 @@ extension MontanaSeed {
         }
         guard open(acc) else { return false }
         if let b = twin { SeedScope.change(to: b) }
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: enteredKey)   // the past ends here (865 a)
         MTSeats.born()
         return true
     }
@@ -2449,7 +2463,7 @@ struct MontanaOnboardingView: View {
             #endif
             if !recoverError.isEmpty { Text(LocalizedStringKey(recoverError)).foregroundColor(.red).font(.caption).multilineTextAlignment(.center) }
             Button {
-                let words = recoverInput.lowercased().split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "," }).map(String.init)
+                let words = recoverInput.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == "," }).map(String.init)   // tab, U+00A0 and CR LF part words too (critic 5.1 K1)
                 if words.count != 24 { recoverError = "Exactly 24 words required (entered \(words.count))"; return }
                 recoverError = ""; recovering = true
                 let phrase = words.joined(separator: " ")

@@ -351,6 +351,12 @@ enum MTKeepDerive {
         /// and four more by 11:00Z on 18.10, every one refused. A renewal or a light copy begun is one tried: the next waits the day.
         var triedAt: Double? = nil
         var lightTriedAt: Double? = nil
+        /// THE PROFILE THE LIGHT COPY CARRIES (decision 866 a; OZ 1 p.2-3, the author's word 19993): the tags of one's own face and name
+        /// when the copy was gathered. A copy laid at birth carried «Demo» without a face for a day: «Demo Akk» and the face never reached it.
+        var lightFace: String? = nil
+        var lightName: String? = nil
+        /// THE PEOPLE THE LIGHT COPY CARRIES (decision 866 a): one digest of the correspondents' names and faces and of the groups.
+        var lightPeople: String? = nil
     }
     private static let ownerKey = "mt.keep.owner"  // NOT-UI: sealed under the device key; the person's own (SeedScope.dataKeys)
     @Published private(set) var owner = Owner()
@@ -388,6 +394,21 @@ enum MTKeepDerive {
         NotificationCenter.default.addObserver(forName: UIDevice.batteryStateDidChangeNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in MTKeeping.shared.tickSoon() }
         }
+        // One's own name or face changed (decision 866 a): the rhythm looks again in a minute, once for any number of changes.
+        _ = peopleWatch
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in MTKeeping.shared.profileSoon() }
+        }
+    }
+    private var profilePending = false
+    func profileSoon() {
+        guard !profilePending else { return }
+        profilePending = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in self?.profilePending = false; self?.tick() }
+    }
+    /// The people are not in UserDefaults: while the app lives, the rhythm looks at them every ten minutes (decision 866 a).
+    private lazy var peopleWatch: Timer = Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { _ in
+        Task { @MainActor in MTKeeping.shared.tick() }
     }
     /// What the vault holds, read again: at launch, and after a copy laid this person's state of keeping.
     func reread() {
@@ -487,7 +508,14 @@ enum MTKeepDerive {
     func tick() {
         guard Self.mine, Self.told, Self.agrees, MontanaSeed.hasSeed else { return }
         let now = Date().timeIntervalSince1970
-        if !lighting, now - max(owner.lightAt ?? 0, owner.lightTriedAt ?? 0) >= 86_400 { layLight() }
+        let tags = Self.profileTags()
+        let moved = owner.lightFace != tags.face || owner.lightName != tags.name
+        let since = now - max(owner.lightAt ?? 0, owner.lightTriedAt ?? 0)
+        let people = Self.peopleTag()
+        let met = owner.lightPeople != people
+        if !lighting, since >= 86_400 || (moved && since >= 60) || (met && since >= 600) {
+            layLight(tags, people: people)   // one's own name or face: a minute; the people and the groups: ten minutes
+        }
         guard !renewing else { return }
         if let g = owner.asking {
             if owner.yes.count >= MTKeepRing.most || (!owner.yes.isEmpty && now - owner.askedAt >= 600) { return renew(g) }
@@ -621,7 +649,7 @@ enum MTKeepDerive {
     /// correspondence -- sealed as every copy is, laid on the nodes and named by one letter in the pipe of light, once a day while
     /// the copy is kept. The pieces live a week there and the letter in the box as long, so a phone lost today is opened by the
     /// words alone tomorrow.
-    private func layLight() {
+    private func layLight(_ tags: (face: String, name: String), people: String) {
         guard !lighting else { return }
         lighting = true
         owner.lightTriedAt = Date().timeIntervalSince1970; saveOwner()
@@ -637,12 +665,25 @@ enum MTKeepDerive {
                     me.lighting = false
                     MontanaTrace.mark("keep_light", "refused " + String(describing: e))
                 case .success(let made):
-                    Task { await me.nameLight(made, g: g) }
+                    Task { await me.nameLight(made, g: g, tags: tags, people: people) }
                 }
             }
         }
     }
-    private func nameLight(_ made: MontanaBackup.Made, g: UInt64) async {
+    /// One's own face and name as their tags -- the very tags a correspondent's word compares (E2E.heardHeld).
+    static func profileTags() -> (face: String, name: String) {
+        (MontanaDeliveryEngine.Announced.wireTag(E2E.myAvatarData()), MontanaDeliveryEngine.Announced.nameWireTag(E2E.myDisplayName()))
+    }
+    /// The correspondents' names and faces (MTNameBook, the mirrors of ChatStore) and the groups (MTGroup) as one digest:
+    /// it moves when a person is met, a group is born, or someone shows a new name or face.
+    static func peopleTag() -> String {
+        let names = MTNameBook.declared.sorted { $0.key < $1.key }.map { $0.key + "=" + $0.value }
+        let faces = MTNameBook.published.sorted { $0.key < $1.key }.map { $0.key + "=" + $0.value }
+        let groups = MTGroup.shared.groups.keys.sorted()
+        let all = (names + [""] + faces + [""] + groups).joined(separator: "\n")
+        return SHA256.hash(data: Data(all.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+    private func nameLight(_ made: MontanaBackup.Made, g: UInt64, tags: (face: String, name: String), people: String) async {
         defer { MontanaBackup.discard(made); lighting = false }
         guard let master = MontanaSeed.root, let secret = MTKeepDerive.lightSecret(master),
               let digest = MontanaHomeNode.digest(of: made.url), var road = await Self.lay(made.url) else {
@@ -653,7 +694,7 @@ enum MTKeepDerive {
         // The sender of the pipe of light is named «light», never this person's own reference: a phone opening the same words reads
         // the box under that reference, and a letter of its own name the node would keep from it.
         guard await Self.knock(secret, road, sender: Self.lightName) else { return MontanaTrace.mark("keep_light", "no door boxed the road") }
-        owner.lightGen = g; owner.lightAt = Date().timeIntervalSince1970; saveOwner()
+        owner.lightGen = g; owner.lightAt = Date().timeIntervalSince1970; owner.lightFace = tags.face; owner.lightName = tags.name; owner.lightPeople = people; saveOwner()
         MontanaTrace.mark("keep_light", "named g=\(g) bytes=\(made.tally.bytes) chats=\(made.tally.chats)")
     }
     nonisolated static let lightName = "light"   // NOT-UI: the name the pipe of light is heard and sent under

@@ -2556,6 +2556,7 @@ class ChatStore: ObservableObject {
         MontanaWakePush.fetchBoxKick()
         MontanaCard.reuploadRdv()
         E2E.shared.remirrorChats()
+        E2E.shared.peersGrew()   // the grown book is greeted and asked for its faces at once (OZ 1 p.2.5)
         MontanaDeliveryEngine.shared.drainAll()
         MontanaTrace.mark("pipes_restored", "pipes=\(MTPipeBook.count)")
     }
@@ -7192,6 +7193,7 @@ enum SeedScope {
         "peerFaceOwned",   // the digests of the faces the correspondents themselves sent (ChatStore.faceOwned, 04.10): this person's
         "faceHealCards",   // the card link last read for each correspondent's face (ChatStore.healFacesFromCards, 18.10): this person's
         MontanaArchive.forgottenKey,   // the erased conversations' folders whose marks are gone (MontanaArchive.deleteChatFolder, 18.10)
+        MontanaSeed.enteredKey,   // the moment this person came in on this phone (865 a): this phone's, never a copy's
         "mt.account.keys", "mt.twin.ref", "mt.node.identity", "mt.node.kem", "pipeSecrets",
         "pipeKept",   // what each pipe keeps of its secret for good (MTPipeKept, 22.10): the secrets' own, gone with them
         "pipeFloorGuard",   // the clock guard of this book's first floor, M, H and Hc (MTPipeBook, decision 188, 25.10): the book's own
