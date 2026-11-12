@@ -2,6 +2,17 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2379) - 2026-11-12
+
+Source commit `310cfb4b4b54`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2379.md).
+
+- On an iPad, which has no earpiece, a call no longer shows a Speaker button that could not be turned off: the sound always plays through the iPad's own speaker, and with headphones or Bluetooth the Audio button and its menu appear as on the iPhone.
+- Please check: on the iPad make a call and a group call -- there is no Speaker button, the row of buttons closes up; connect headphones -- the Audio button appears.
+
+**Security and anonymity**
+
+- No network or protocol change: MontanaAudioRoute.hasEarpiece is the one place that knows whether the device has an earpiece; MontanaAudioRoute.Face.shown hides the loudspeaker switch where there is nothing to switch (decision 861 = a, the author's word 20038).
+
 ## 1.0 (2378) - 2026-11-12
 
 Source commit `f1778d7fa2c1`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2378.md).

@@ -79,7 +79,7 @@ class SnapshotTests(unittest.TestCase):
             inventory(self.root, 'HEAD')
 
     def test_invalid_hash_fails(self):
-        self.write_releases([self.rows[0].replace(self.git('rev-parse', 'HEAD:' + FOLDERS[0]), 'wrong')] + self.rows[1:])
+        self.write_releases([self.rows[0].replace(self.git('rev-parse', 'HEAD:core'), 'wrong')] + self.rows[1:])
         self.commit()
         with self.assertRaisesRegex(ValueError, 'malformed folder tree'):
             inventory(self.root, 'HEAD')

@@ -67,7 +67,7 @@ A successful Rust probe means the described limitation/control was reproduced. T
 them fail and requires reviewing their interpretation. The first test distinguishes successful
 authentication from length hiding; the second shows that padding buckets have different widths;
 the last two distinguish reusable queue identifiers from consumed fetch nonces. They execute the
-real `protocol/Code` libraries without modifying any published core/application tree.
+real `core/Code` libraries without modifying any published core/application tree.
 
 The traffic demo is synthetic and deliberately easy to correlate. It checks the instrument,
 not Montana's network. No traffic is captured, no server is started, and no real user data is used.
@@ -77,8 +77,8 @@ counts, tiny overlaps and missing candidates. See [LAB.md](LAB.md) before interp
 For the complete existing core baseline, follow the repository's build road:
 
 ```sh
-(cd protocol/Montana-Protocol && cargo test --workspace --release --locked)
-(cd protocol/Code && cargo test --workspace --release --locked)
+(cd core/Montana-Core && cargo test --workspace --release --locked)
+(cd core/Code && cargo test --workspace --release --locked)
 ```
 
 Loopback sockets must be allowed. The reference suite's OpenSSL differential test needs an

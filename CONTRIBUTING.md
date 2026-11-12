@@ -15,7 +15,7 @@ thirteen protocol closure requirements, each with its open criteria. A finding t
 report is wrong, is the most valuable contribution there is.
 
 Before you start, build the tree and run its tests as the [README](README.md#build-from-source) describes: the core's
-`cargo test --workspace --release` in `protocol/Montana-Protocol` and in `protocol/Code`, then the applications.
+`cargo test --workspace --release` in `core/Montana-Core` and in `core/Code`, then the applications.
 
 How This Repository Is Made
 ---------------------------
@@ -35,7 +35,7 @@ Rules Every Change Keeps
 - **Post-quantum only.** Montana's own security rests on ML-DSA (FIPS 204), ML-KEM (FIPS 203) and SHA-256. A classical
   primitive appears only where an external standard demands it to be admitted at all (TLS, WebRTC), and is never counted as
   Montana's protection.
-- **The specification is the source of truth.** The normative specification is in [`protocol/docs`](protocol/docs); the core
+- **The specification is the source of truth.** The normative specification is in [`core/docs`](core/docs); the core
   implements it byte for byte. A change of behaviour in the core comes with the change of the specification that asks for it.
 - **Deterministic consensus.** Integer arithmetic only, explicit little-endian layout, ordered maps, no floating point, and no
   clock other than the TimeChain's in consensus state. Each formula carries test vectors, and a vector on a degenerate input

@@ -19,7 +19,7 @@ except the two full baseline workspaces indicated below.
 | `rustup run 1.92.0 cargo fmt --manifest-path doc/external-audit/probes/Cargo.toml -- --check` | Exit 0 | Harness formatting |
 | `git diff --check` | Exit 0 | Patch whitespace |
 
-All registry dependencies in the harness lockfile were also compared with `protocol/Code/Cargo.lock`
+All registry dependencies in the harness lockfile were also compared with `core/Code/Cargo.lock`
 by `(name, version, source, checksum)`: no dependency version or checksum changed. The lock was
 seeded from the existing client lock because fresh offline resolution refused the yanked
 transitive `spin 0.9.8`. The locked build above succeeded without replacing that dependency.
@@ -43,8 +43,8 @@ No statistical significance, production attack success or security acceptance is
 The following commands were started on the unchanged published source trees:
 
 ```sh
-(cd protocol/Montana-Protocol && cargo test --workspace --release --locked --offline)
-(cd protocol/Code && cargo test --workspace --release --locked --offline)
+(cd core/Montana-Core && cargo test --workspace --release --locked --offline)
+(cd core/Code && cargo test --workspace --release --locked --offline)
 ```
 
 The initial reference-core run stopped with six `montana-node` unit-test failures at
@@ -61,10 +61,10 @@ public `main` `f2c2b6fdcce50e4fe27e2a2ebbf22368f627e4a1`, folder tree `4ce3d6705
 
 | Workspace | Test targets completed | Passed | Failed | Ignored | Exit |
 |---|---|---|---|---|---|
-| `protocol/Code` | 117 | 1422 | 0 | 1 | 0 |
-| `protocol/Montana-Protocol` | 80 | 601 | 0 | 1 | 101 |
+| `core/Code` | 117 | 1422 | 0 | 1 | 0 |
+| `core/Montana-Core` | 80 | 601 | 0 | 1 | 101 |
 
-The exit 101 of `protocol/Montana-Protocol` comes from two integration targets that did not finish:
+The exit 101 of `core/Montana-Core` comes from two integration targets that did not finish:
 `montana-node --test two_hosts_live_a_window` and `montana-node --test three_machines_live_a_window`.
 Both were stopped by SIGTERM; for `two_hosts_live_a_window` the operator's log records about twenty minutes
 elapsed with its CPU time no longer growing (waiting on a futex). Neither reported a failed assertion. Every other target of both workspaces completed
