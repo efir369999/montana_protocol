@@ -1,4 +1,4 @@
-//! The core's C ABI, as core/Code/crates/mt-bindings/src/ffi_c.rs declares it (ABI_VERSION 1) -- the same doors
+//! The core's C ABI, as protocol/Code/crates/mt-bindings/src/ffi_c.rs declares it (ABI_VERSION 1) -- the same doors
 //! iOS calls. Only the doors this app uses are named here; a test checks the ABI version the DLL answers with.
 
 use std::ffi::c_void;

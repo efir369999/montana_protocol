@@ -1,5 +1,5 @@
-﻿# THE PROTOCOL CORE FOR WINDOWS (iOS: core/Montana-Core/tools/build-for-a-telephone.sh): the boundary crate mt-boundary of
-# core/Montana-Core, unchanged, built by app/protocol-core into montana_core.dll with the core's own toolchain (1.92.0) and two
+﻿# THE PROTOCOL CORE FOR WINDOWS (iOS: protocol/Montana-Protocol/tools/build-for-a-telephone.sh): the boundary crate mt-boundary of
+# protocol/Montana-Protocol, unchanged, built by app/protocol-core into montana_core.dll with the core's own toolchain (1.92.0) and two
 # build tasks at a time (the core's own bound), then laid beside the program in target\release, where the installer takes it.
 # usage: tools\protocol-core.ps1
 $ErrorActionPreference = "Stop"

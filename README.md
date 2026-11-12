@@ -12,7 +12,7 @@ the source of the protocol core and of the two MT Protocol applications, laid ou
 **Protocol closure is open: 5 of 13 acceptance criteria are closed** -- items 1 to 4: the window proof and its
 verifier, closing only a verified canonical Proposal, redemption bound to authorized issuance, and admission witnesses
 bound to one state; and item 7: the earlier core's lottery removed ([status](Audit/Protocol-13/README.md), written from
-`core/Montana-Core/PROTOCOL-13.json`). Items 5, 6 and 8 to 13 are open: continuity after a partition, authenticated
+`protocol/Montana-Protocol/PROTOCOL-13.json`). Items 5, 6 and 8 to 13 are open: continuity after a partition, authenticated
 first joining, node anonymity and a run of the network on many hosts are among what the published snapshot does not
 establish.
 Read the source-pinned [reports in Audit](Audit/README.md) before treating historical readiness
@@ -22,7 +22,7 @@ statements or passing primitive tests as evidence of these properties.
 
 | Path | What it is |
 |---|---|
-| [`core/`](core/) | The protocol core: the normative specification (`core/docs`), its reference implementation (`core/Montana-Core`) and the client core the applications link (`core/Code`), in Rust. See [`core/README.md`](core/README.md) |
+| [`protocol/`](protocol/) | The protocol core: the normative specification (`protocol/docs`), its reference implementation (`protocol/Montana-Protocol`) and the client core the applications link (`protocol/Code`), in Rust. See [`protocol/README.md`](protocol/README.md) |
 | [`apps/protocol/ios/`](apps/protocol/ios/) | MT Protocol for iPhone, iPad and Mac (Swift). From build 2180 it carries the VPN client that was published separately as MT VPN |
 | [`apps/protocol/android/`](apps/protocol/android/) | MT Protocol for Android (Kotlin, with a Rust JNI library over the client core) |
 | [`AUDIT.md`](AUDIT.md) | The audit package: scope, builds, vectors, the catalogue of open findings, what can and cannot be verified from this repository |
@@ -99,27 +99,27 @@ in [`AUDIT.md`](AUDIT.md); the open findings behind the last column are catalogu
 
 | Layer | What the code does | Where | Open |
 |---|---|---|---|
-| Identity | The twenty-four words give a seed; ML-DSA-65 (FIPS 204) and ML-KEM-768 (FIPS 203) keys derive from it in the core | `core/Code/crates/mt-mnemonic`, `mt-bindings` | |
+| Identity | The twenty-four words give a seed; ML-DSA-65 (FIPS 204) and ML-KEM-768 (FIPS 203) keys derive from it in the core | `protocol/Code/crates/mt-mnemonic`, `mt-bindings` | |
 | First contact | One ML-KEM-768 encapsulation to the key of the correspondent's card gives the conversation secret | iOS `MontanaFirstContact.swift`; Android `Meeting.kt` and `MontanaCard.kt` over `nativeMlkemEncaps`, `nativeMlkemDecaps`, `nativeFirstSecret` | F-10 |
 | Letter content | ChaCha20-Poly1305 (the core's `mt_e2e_seal_blob`) under SHA-256("mt-pipe-key" ‖ 0 ‖ conversation secret ‖ minute). The key does not ratchet: whoever later obtains the conversation secret from a device opens every past letter of that conversation | iOS `MTPipe.swift`, `MTNodeWire.swift`; Android `Pipes.kt` | F-3 |
 | Delivery | A letter is deposited under a tag derived from the conversation secret and the minute; it travels directly between two devices that reach each other, otherwise through Montana nodes, which hold the sealed body and not its key | iOS `MTPipe.swift`, `MontanaDirect.swift`; Android `Pipes.kt`, `Channel.kt` | F-4, F-14 |
-| Channel to a node or a phone | A post-quantum handshake (ML-KEM-768 and ML-DSA-65) seals every frame with ChaCha20-Poly1305. The far side's key is read from the connection and not checked against a known key, and both sides sign with an identity drawn for that one handshake: the handshake encrypts but does not authenticate the far side. Inside TLS (port 443) the host certificate authenticates the name, classically | `core/Code/crates/mt-noise-pq/src/lib.rs`; iOS `MontanaDirect.swift`; Android `Channel.kt` | F-1 |
+| Channel to a node or a phone | A post-quantum handshake (ML-KEM-768 and ML-DSA-65) seals every frame with ChaCha20-Poly1305. The far side's key is read from the connection and not checked against a known key, and both sides sign with an identity drawn for that one handshake: the handshake encrypts but does not authenticate the far side. Inside TLS (port 443) the host certificate authenticates the name, classically | `protocol/Code/crates/mt-noise-pq/src/lib.rs`; iOS `MontanaDirect.swift`; Android `Channel.kt` | F-1 |
 | Calls | DTLS-SRTP only, a classical key exchange. A frame layer (SFrame, AES-GCM under a key from a seed carried in a sealed letter) is written in the iOS code and switched off; Android has none | iOS `MontanaCall.swift`; Android `CallLine.kt`, `Calls.kt` | F-6 |
 | VPN (iOS) | A client of Xray-core with a packet tunnel. Its protocols are classical; it carries traffic and is not a protection of Montana | iOS `scripts/xray-ios`, `Code/PacketTunnel` | |
 
-The core carries three implementations of ML-DSA-65 and ML-KEM-768 (libcrux in `core/Montana-Core`, OpenSSL 3.5 in
-`core/Code`, RustCrypto for the web target and as a test oracle); see [`AUDIT.md`](AUDIT.md), F-7.
+The core carries three implementations of ML-DSA-65 and ML-KEM-768 (libcrux in `protocol/Montana-Protocol`, OpenSSL 3.5 in
+`protocol/Code`, RustCrypto for the web target and as a test oracle); see [`AUDIT.md`](AUDIT.md), F-7.
 
 ## Build from source
 
 Every command is run from the root of this repository unless it says otherwise. What a build of the published tree yields,
 and what it does not prove, is in [`AUDIT.md`](AUDIT.md).
 
-**Core.** Each workspace pins Rust 1.92.0 in its `rust-toolchain.toml`; `core/Code` builds OpenSSL 3.5.5 from source and needs
+**Core.** Each workspace pins Rust 1.92.0 in its `rust-toolchain.toml`; `protocol/Code` builds OpenSSL 3.5.5 from source and needs
 a C compiler and Perl.
 
 ```
-cd core/Montana-Core
+cd protocol/Montana-Protocol
 cargo test --workspace --release
 cd ../Code
 cargo test --workspace --release
@@ -131,8 +131,8 @@ engine. The deployment target is iOS 17.2. The core is built for devices only, s
 with your own team, or with signing off to check that the source compiles. In `apps/protocol/ios`:
 
 ```
-MONTANA_CORE_SRC="${PWD}/../../../core/Code/crates/mt-bindings" bash scripts/build-core.sh
-MONTANA_PROTOCOL_CORE="${PWD}/../../../core/Montana-Core" bash scripts/build-protocol-core.sh
+MONTANA_CORE_SRC="${PWD}/../../../protocol/Code/crates/mt-bindings" bash scripts/build-core.sh
+MONTANA_PROTOCOL_CORE="${PWD}/../../../protocol/Montana-Protocol" bash scripts/build-protocol-core.sh
 bash fetch-webrtc.sh
 bash scripts/xray-ios/build-xray-xcframework.sh
 bash scripts/hev-ios/build-hev-xcframework.sh
@@ -148,7 +148,7 @@ earlier build has no VPN and needs the first three steps and `xcodebuild` only.
 `python3 scripts/build.py --check` compiles the resources and the Kotlin. The full build (`python3 scripts/build.py`) also
 builds the JNI library from the core, and it expects the core as a git checkout of one exact commit in a folder named
 `Montana Protocol` beside the Android tree (`scripts/toolchain.json`, `protocol`; `scripts/build.py`, `core`). That commit is
-not the commit of `core/` in this repository, so the APK's native library cannot be rebuilt from this repository as it stands:
+not the commit of `protocol/` in this repository, so the APK's native library cannot be rebuilt from this repository as it stands:
 see [`AUDIT.md`](AUDIT.md), F-12.
 
 ## Diagnostics

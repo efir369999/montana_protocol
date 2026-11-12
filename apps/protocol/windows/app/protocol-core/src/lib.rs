@@ -1,4 +1,4 @@
-//! THE PROTOCOL CORE ON WINDOWS (iOS MontanaCore.xcframework, core/Montana-Core/tools/build-for-a-telephone.sh): the boundary
+//! THE PROTOCOL CORE ON WINDOWS (iOS MontanaCore.xcframework, protocol/Montana-Protocol/tools/build-for-a-telephone.sh): the boundary
 //! crate mt-boundary as it stands in the core, linked whole into one library. Nothing is written here but the list that keeps
 //! every door of montana_core.h in the library: each door is the core's own function, exported under its own name.
 

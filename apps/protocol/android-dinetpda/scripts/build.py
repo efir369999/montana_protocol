@@ -93,7 +93,7 @@ def core(p, abis):
     if not os.path.isdir(p.protocol):
         raise SystemExit("the core's tree is not beside this tree: %s, pinned %s (scripts/toolchain.json)"
                          % (p.protocol, pin["tree"]))
-    # the core is a folder of this repository (core/ at its root): its committed git tree must be the pinned one and its files
+    # the core is a folder of this repository (protocol/ at its root): its committed git tree must be the pinned one and its files
     # the committed ones; file modes are left out of the comparison, a checkout on Windows keeps none
     top = git(["rev-parse", "--show-toplevel"], p.protocol)
     folder = os.path.relpath(p.protocol, top).replace(os.sep, "/")

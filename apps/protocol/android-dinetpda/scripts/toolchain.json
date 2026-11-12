@@ -1,5 +1,5 @@
 {
-  "why": "One toolchain for every computer that builds Montana for Android: scripts/setup.py installs exactly this, scripts/build.py builds with exactly this. The core's Rust compiler is the core's own pin (core/Code/rust-toolchain.toml), not repeated here.",
+  "why": "One toolchain for every computer that builds Montana for Android: scripts/setup.py installs exactly this, scripts/build.py builds with exactly this. The core's Rust compiler is the core's own pin (protocol/Code/rust-toolchain.toml), not repeated here.",
   "jdk": {
     "release": "jdk-17.0.20.1+1",
     "macos-aarch64": {
@@ -62,9 +62,9 @@
     "why": "Xray-core itself is pinned by native/montana-xray/go.mod and go.sum (xray-core v1.260327.0, byte for byte iOS 2235's); gomobile is the golang.org/x/mobile those files name"
   },
   "protocol": {
-    "dir": "../../../core",
+    "dir": "../../../protocol",
     "tree": "6aeb359d095b2f670559a320275a713bbd9fbf8e",
-    "why": "the core/ at the root of github.com/efir369999/montana_messenger (this folder is apps/messenger/android-dinetpda), pinned by its git tree: the tree RELEASES.md names for core (source commit cb4283c9d221, pull request #58, 26.10.2026); before it, from 97433815677a, this app was built and tested against the tree 4ce3d6705224 (source commit 3848245e308b); upstream's own Android build pins instead its private commit ae36d1f927a7 in a folder 'Montana Protocol', which no one outside the project can fetch"
+    "why": "the protocol/ at the root of github.com/efir369999/montana_messenger (this folder is apps/messenger/android-dinetpda), pinned by its git tree: the tree RELEASES.md names for core (source commit cb4283c9d221, pull request #58, 26.10.2026); before it, from 97433815677a, this app was built and tested against the tree 4ce3d6705224 (source commit 3848245e308b); upstream's own Android build pins instead its private commit ae36d1f927a7 in a folder 'Montana Protocol', which no one outside the project can fetch"
   },
   "hosts": {
     "macos-aarch64": {

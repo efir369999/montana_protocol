@@ -8,9 +8,9 @@
   ],
   "kind": "committed-source-inventory-not-security-attestation",
   "lock_sha256": {
-    "Audit/Protocol-13/source/Montana-Core/Cargo.lock": "c2172061170bbb95e09e283ca21df240fdbd238a3ba3c25c0ddcd8b97604957c",
-    "core/Code/Cargo.lock": "ade54abaf0bdfe1f44feabe23ff757bd1b247fc48001cd00a46bec47612602b8",
-    "core/Montana-Core/Cargo.lock": "4fa9f477fc240ae1033906d960611d6aaae4ae390b8ab91a9bc1c8ec77ef0726"
+    "Audit/Protocol-13/source/Montana-Protocol/Cargo.lock": "c2172061170bbb95e09e283ca21df240fdbd238a3ba3c25c0ddcd8b97604957c",
+    "protocol/Code/Cargo.lock": "ade54abaf0bdfe1f44feabe23ff757bd1b247fc48001cd00a46bec47612602b8",
+    "protocol/Montana-Protocol/Cargo.lock": "4fa9f477fc240ae1033906d960611d6aaae4ae390b8ab91a9bc1c8ec77ef0726"
   },
   "protocol_audit_source_tree": "e1d19ff6650d0046bdf9b80813e0aaf2fcd3fcad",
   "public_commit": "e558daace1ef32283167867cfa2cf8db883d48fe",

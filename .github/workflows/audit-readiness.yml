@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'doc/external-audit/**'
-      - 'core/**'
+      - 'protocol/**'
       - 'RELEASES.md'
       - 'Audit/Protocol-13/source/**'
       - '.github/workflows/audit-readiness.yml'

@@ -13,7 +13,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 /**
- * THE SYSTEM BACKUP CARRIES NO WORDS (core/docs/Montana Identity.md:343, conformance item 17: the words stay out of backups
+ * THE SYSTEM BACKUP CARRIES NO WORDS (protocol/docs/Montana Identity.md:343, conformance item 17: the words stay out of backups
  * and out of every path that leaves the device; iOS MontanaAppleID: the account carries no seed). No file of the app is
  * copied (AndroidManifest.xml: fullBackupContent=false, every domain excluded), and this agent writes no record, reads
  * none and offers none: an identity opens by its 24 words alone.

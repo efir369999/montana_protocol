@@ -9,6 +9,6 @@ publish = false
 [workspace]
 
 [dev-dependencies]
-mt-overlay = { path = "../../../core/Code/crates/mt-overlay" }
-mt-messenger-e2e = { path = "../../../core/Code/crates/mt-messenger-e2e" }
-mt-crypto = { path = "../../../core/Code/crates/mt-crypto" }
+mt-overlay = { path = "../../../protocol/Code/crates/mt-overlay" }
+mt-messenger-e2e = { path = "../../../protocol/Code/crates/mt-messenger-e2e" }
+mt-crypto = { path = "../../../protocol/Code/crates/mt-crypto" }

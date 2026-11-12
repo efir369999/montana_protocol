@@ -12,7 +12,7 @@ In scope:
 - anything that lets a third party read, alter or forge a letter, a call or a transfer record;
 - anything that reveals who talks to whom, or when, to someone other than the two parties;
 - anything that lets one device impersonate another identity;
-- anything that makes the core's implementation differ from the specification set in `core/docs`.
+- anything that makes the core's implementation differ from the specification set in `protocol/docs`.
 
 Not a finding on its own:
 

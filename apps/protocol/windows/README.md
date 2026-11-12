@@ -9,8 +9,8 @@ A port of Montana for iPhone (`apps/messenger/ios`, the reference app) to Window
 program: Rust underneath, the interface in React. The goal is a copy of the iOS app as exact as Windows allows, speaking the
 same wire with iPhones, Android phones and other Windows computers.
 
-The core is not reimplemented. `mt_bindings.dll` is built from `core/Code` (crate `mt-bindings`, the C ABI iOS links as
-`MontanaBindings.xcframework`) and `montana_core.dll` from `core/Montana-Core` (crate `mt-boundary`, unchanged, the boundary
+The core is not reimplemented. `mt_bindings.dll` is built from `protocol/Code` (crate `mt-bindings`, the C ABI iOS links as
+`MontanaBindings.xcframework`) and `montana_core.dll` from `protocol/Montana-Protocol` (crate `mt-boundary`, unchanged, the boundary
 iOS links as `MontanaCore.xcframework`); both are called through their C ABI. The 24 words and the keys stay inside the core
 and the Rust side and never reach the web view.
 
@@ -23,13 +23,13 @@ its assets — is the work of its own authors; this port follows it and claims n
 |---|---|---|
 | `app/src-tauri/src/` | the Windows side in Rust, 61 files: identity, pipes and letters, the twin mirror, archive and copies, groups, channels, calls' signalling, coins and the wallet, music, the VPN wall's server book, the home node, Windows Hello, notifications | 35 129 |
 | `app/src/` | the interface (React 19 + Vite 8), drawn after the iOS screens | 20 738 |
-| `app/protocol-core/` | `montana_core.dll`: the boundary crate `core/Montana-Core/crates/mt-boundary`, unchanged, as one Windows library | 64 |
+| `app/protocol-core/` | `montana_core.dll`: the boundary crate `protocol/Montana-Protocol/crates/mt-boundary`, unchanged, as one Windows library | 64 |
 | `app/src-tauri/node/` | the home node the app installs on a machine one owns: iOS's `Code/Node` (deviation 12) | 1 250 |
 | `app/tools/` | 98 UI scenes (PowerShell + UI Automation) that drive two or more real windows with test identities, a manual check of Windows Hello, their helpers, the runner `all.ps1` and the protocol core's build script; `chess-check.mjs`; `pagekeys.mjs`, which fails two pages of one kind that can take one place without keys of their own; `clocknode.py`, an isolated node on a clock of its own; the generators `glyphs.py` and `ui_atlas.py` | 9 768 |
 
 This tree is the developer's local work at its commit `aacbf76` (26.10.2026 02:51 UTC), copied in as files; that history is not
 published. Edits made for this repository, as for PR #13: the path of the core in `app/protocol-core/Cargo.toml`
-(`../../../../../core/...`), LF line endings in `app/src/glyphs.js` and `app/tools/shot.ps1`, and a wider `app/.gitignore`,
+(`../../../../../protocol/...`), LF line endings in `app/src/glyphs.js` and `app/tools/shot.ps1`, and a wider `app/.gitignore`,
 which also keeps out `*.words` and `*.mtbak`, the files of an identity's 24 words and of its copy (#40). Every other file of
 `app/` is byte for byte the local one. The program code — Rust and the interface — is that of local commit `abdabb2`;
 `aacbf76` after it changes one scene (`tools/deeds.ps1`). Since this tree was first published (local `da7c109`) it has taken
@@ -136,7 +136,7 @@ after it), Windows 11 Pro 10.0.26200, in `app/src-tauri/` with `CARGO_TARGET_DIR
 | `cargo clippy --release --all-targets -- -D warnings` | 0 | no warning |
 | `npx tauri build` (in `app/`) | 0 | the program and its NSIS installer `Montana_0.1.0_x64-setup.exe`, 19.94 MiB (23:16 UTC) |
 
-The runs were made in the developer's repository, whose `core/` is tree 17ea6d0e: the `core/` this tree was first published
+The runs were made in the developer's repository, whose `protocol/` is tree 17ea6d0e: the `protocol/` this tree was first published
 against (4ce3d670) with the portability commit 291869b applied.
 
 **The UI scenes**, the final full run on a fresh root, 26.10.2026: `tools\all.ps1`, 75 scenes, **73 passed**.
@@ -154,7 +154,7 @@ against (4ce3d670) with the portability commit 291869b applied.
 68; the six failures were faults of the scenes or of the environment, fixed in the scenes since.
 
 The 19 ignored unit tests need the live network or a second window; the scenes run those paths instead. The core, built with the
-portability change of `dinetpda/core-windows-portability` (see Build), passed `cargo test --release --workspace` in `core/Code` on
+portability change of `dinetpda/core-windows-portability` (see Build), passed `cargo test --release --workspace` in `protocol/Code` on
 19.10.2026: 1 421 passed, 0 failed, 1 ignored upstream (DEV-012). No constant-time measurement (dudect or other) has been made for
 this port and none is claimed.
 
@@ -171,7 +171,7 @@ $env:RUSTUP_TOOLCHAIN = "1.92.0-x86_64-pc-windows-msvc"
 $env:CARGO_TARGET_DIR = "$repo\apps\messenger\windows\target"
 
 # 1. the core's C ABI, mt_bindings.dll. On MSVC the core needs the portability change of three files offered on branch
-#    dinetpda/core-windows-portability (commit 291869b); apply it in your own clone only -- this folder never changes core/.
+#    dinetpda/core-windows-portability (commit 291869b); apply it in your own clone only -- this folder never changes protocol/.
 git fetch origin dinetpda/core-windows-portability
 git cherry-pick --no-commit 291869b
 $env:OPENSSL_SRC_PERL = "C:\Strawberry\perl\bin\perl.exe"   # wherever perl.exe is
@@ -225,7 +225,7 @@ Read from the machine these checks ran on, 25.10.2026:
 |---|---|
 | Windows | 11 Pro 10.0.26200 |
 | Visual Studio Build Tools 2022 | 17.14.28, MSVC 14.44.35207, Windows SDK 10.0.26100.0 |
-| Rust | 1.92.0 (ded5c06cf 2025-12-08), `x86_64-pc-windows-msvc`, cargo 1.92.0 — the version `core/Code/rust-toolchain.toml` pins |
+| Rust | 1.92.0 (ded5c06cf 2025-12-08), `x86_64-pc-windows-msvc`, cargo 1.92.0 — the version `protocol/Code/rust-toolchain.toml` pins |
 | Node, npm | 24.13.0, 11.6.2 |
 | Tauri (crate and CLI), React, Vite, @vitejs/plugin-react | 2.12.1, 19.3.0, 8.3.2, 6.1.2 (pinned in `app/package.json` and `app/src-tauri/Cargo.toml`) |
 | WebView2 Runtime | 155.0.4283.62 |
@@ -239,8 +239,8 @@ another commit is named.
 
 1. **The pipe secret walks by the UTC day, not by the window.** Canon walks it one step per window of the chain from the window
    of the pipe's first letter: «The secret a tag stands on walks with the window» (`Audit/Protocol-13/source/docs/Montana
-   Canon.md` 1338-1344, the invariant at 1359; `core/docs/Montana Canon.md` 1345-1351 and 1366 on the PR #11 line, commit
-   f0ba296). Montana App on that line names the day walk of today's iOS client a temporary exception (`core/docs/Montana App.md`
+   Canon.md` 1338-1344, the invariant at 1359; `protocol/docs/Montana Canon.md` 1345-1351 and 1366 on the PR #11 line, commit
+   f0ba296). Montana App on that line names the day walk of today's iOS client a temporary exception (`protocol/docs/Montana App.md`
    97, and item 8 at 195, commit f0ba296; not yet in `main`). The exception names the iOS client only, so for this port the day
    walk is a departure. The port walks as iOS 2305-2308 does: one step per UTC day from day 20754 (28.10.2026 UTC) for every
    pipe, at most 36 600 steps (iOS `Montana/MTPipeKey.swift` 42-50, 65; `app/src-tauri/src/wire.rs` 89-118). The test
@@ -255,7 +255,7 @@ another commit is named.
    whether letters through the box still meet has not been checked.
 3. **No fingerprint verification.** iOS compares a correspondent's key out of band and shows «Not verified» on the person's page
    until then (`Montana/MontanaPeerInfoScreen.swift` 349-350, `Montana/MontanaScreens.swift` 165, 202); this port has neither the
-   comparison nor the mark, which `core/docs/Montana App.md` 91 requires ("A handshake not yet bound to a key by an out-of-band
+   comparison nor the mark, which `protocol/docs/Montana App.md` 91 requires ("A handshake not yet bound to a key by an out-of-band
    comparison is shown as unverified").
 4. **No MTSamePair.** iOS folds the two pipes of one pair into one conversation (`Montana/MontanaChatStore.swift` 7519,
    `Montana/ContentView.swift` 4003); this port has no counterpart, so one person can stand in two rows.
@@ -349,7 +349,7 @@ from them — the state, the checks, the deviations — is in this README. They 
 
 ## License
 
-The core is dual-licensed MIT OR Apache-2.0 (`core/Code/LICENSE-MIT`, `core/Code/LICENSE-APACHE`). This port is offered to the
+The core is dual-licensed MIT OR Apache-2.0 (`protocol/Code/LICENSE-MIT`, `protocol/Code/LICENSE-APACHE`). This port is offered to the
 Montana project on the same terms as the repository it is part of. Third-party crates and npm packages keep their own licenses
 (see `app/src-tauri/Cargo.lock`, `app/protocol-core/Cargo.lock`, `app/package-lock.json`). Every picture in `app/src/assets` and
 the app icon are Montana's own iOS or Android assets from this repository, used for the same app; no Apple system artwork is

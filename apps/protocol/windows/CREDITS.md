@@ -1,8 +1,8 @@
 # Credits
 
 Montana and its iOS original (`apps/messenger/ios` of this repository) belong to their original authors. Their authorship,
-the existing licences and every earlier notice stand as they are — among them `core/Code/LICENSE-APACHE`,
-`core/Code/LICENSE-MIT` and the notices of `core/`.
+the existing licences and every earlier notice stand as they are — among them `protocol/Code/LICENSE-APACHE`,
+`protocol/Code/LICENSE-MIT` and the notices of `protocol/`.
 
 ## Montana for Windows
 

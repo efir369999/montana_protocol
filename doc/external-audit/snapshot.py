@@ -8,12 +8,12 @@ import re
 import subprocess
 import sys
 
-FOLDERS = ('core', 'apps/messenger/ios', 'apps/messenger/android')
+FOLDERS = ('protocol', 'apps/messenger/ios', 'apps/messenger/android')
 AUDIT_SOURCE = 'Audit/Protocol-13/source'
 LOCKS = (
-    'core/Montana-Core/Cargo.lock',
-    'core/Code/Cargo.lock',
-    AUDIT_SOURCE + '/Montana-Core/Cargo.lock',
+    'protocol/Montana-Protocol/Cargo.lock',
+    'protocol/Code/Cargo.lock',
+    AUDIT_SOURCE + '/Montana-Protocol/Cargo.lock',
 )
 
 

@@ -1,5 +1,5 @@
 //! THE PROTOCOL CORE (iOS MTWalletCore, MTNetworkNode; MontanaCore.xcframework): the reference implementation of the protocol,
-//! core/Montana-Core, its boundary crate mt-boundary built unchanged into montana_core.dll (app/protocol-core) and read through
+//! protocol/Montana-Protocol, its boundary crate mt-boundary built unchanged into montana_core.dll (app/protocol-core) and read through
 //! its C doors, as a telephone reads it. EVERY SERVER AND PHONE OF OURS IS A NODE (the author's word 06.10.2026 17:2x MSK): this
 //! machine opens its own machine of the core -- born once, its secret drawn here and never carried to another computer -- and
 //! reaches the machines of the Global TimeChain's genesis by the post-quantum handshake of the set. The person is not opened in

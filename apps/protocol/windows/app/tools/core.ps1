@@ -1,5 +1,5 @@
 ﻿# THE PROTOCOL CORE, LIVE (iOS MTNetworkNode, MTWalletCore; after tools\ab.ps1 with the same -Root): A opens the TimeChain page;
-# the node of the core (montana_core.dll, core/Montana-Core unchanged) is opened once in A's folder «Core» and every machine of the
+# the node of the core (montana_core.dll, protocol/Montana-Protocol unchanged) is opened once in A's folder «Core» and every machine of the
 # genesis is reached by the lines iOS 2251 carries; the observer's rows say how many answered and what the core says of the
 # wallet -- the person is not opened in the core, so «Ядро ещё не открыло ваш кошелёк.», as on the telephone. A post's TimeChain
 # page says the same under «Участие».

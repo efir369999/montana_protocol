@@ -59,12 +59,12 @@ DECREE = f"""pub const DECREE: &[Entry] = &[
 VERSION = '| What | Where it lives | Value |\n|---|---|---|\n| Canon, the set this tree reproduces | the header | 9.5.0 |\n'
 
 FIXTURE = {
-    'core/docs/Montana Canon.md': canon(),
-    'core/Montana-Core/crates/mt-genesis/src/lib.rs': DECREE,
-    'core/Montana-Core/VERSION.md': VERSION,
+    'protocol/docs/Montana Canon.md': canon(),
+    'protocol/Montana-Protocol/crates/mt-genesis/src/lib.rs': DECREE,
+    'protocol/Montana-Protocol/VERSION.md': VERSION,
     'Audit/Protocol-13/source/docs/Montana Canon.md': canon(),
-    'Audit/Protocol-13/source/Montana-Core/crates/mt-genesis/src/lib.rs': DECREE,
-    'Audit/Protocol-13/source/Montana-Core/VERSION.md': VERSION,
+    'Audit/Protocol-13/source/Montana-Protocol/crates/mt-genesis/src/lib.rs': DECREE,
+    'Audit/Protocol-13/source/Montana-Protocol/VERSION.md': VERSION,
     'Audit/Protocol-13/12-SOURCE-AND-CLAIMS.md':
         f'Historical closure prose is not current end-to-end proof.\n\n'
         f'The current candidate Genesis is\n`{GENESIS}`.\n',
@@ -179,7 +179,7 @@ class ReconcileTests(unittest.TestCase):
 
     def test_three_genesis_values_are_all_named(self):
         # Rejects a report that stops at the first pair of differing values.
-        self.write('core/docs/Montana Canon.md', canon(genesis='0e' * 32))
+        self.write('protocol/docs/Montana Canon.md', canon(genesis='0e' * 32))
         self.write('Audit/Protocol-13/12-SOURCE-AND-CLAIMS.md',
                    FIXTURE['Audit/Protocol-13/12-SOURCE-AND-CLAIMS.md'].replace(GENESIS, 'ee' * 32))
         self.commit()
@@ -198,12 +198,12 @@ class ReconcileTests(unittest.TestCase):
 
     def test_working_tree_edits_are_not_read(self):
         # Rejects a reader of the checkout rather than of the committed revision.
-        self.write('core/docs/Montana Canon.md', canon(version='9.6.0'))
+        self.write('protocol/docs/Montana Canon.md', canon(version='9.6.0'))
         self.assertEqual(report(self.root, 'HEAD')[0], 0)
 
     def test_values_outside_the_compared_documents_are_ignored(self):
         # Rejects a reader that treats a dated log, such as AUDIT.md, as a current statement.
-        self.write('core/Montana-Core/AUDIT.md', 'Canon 5.0.1 / Core 0.21.1 carries the revised AIR.\n')
+        self.write('protocol/Montana-Protocol/AUDIT.md', 'Canon 5.0.1 / Core 0.21.1 carries the revised AIR.\n')
         self.commit()
         self.assertEqual(report(self.root, 'HEAD')[0], 0)
 

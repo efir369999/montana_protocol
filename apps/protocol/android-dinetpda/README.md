@@ -7,7 +7,7 @@ use an emulator or a test device, with test identities only.
 This folder holds DinetPDA's Android app for Montana. It is the phone side of the checks of Montana for Windows
 (`apps/messenger/windows`). Those checks need one identity, one set of 24 words, on several devices, and the wire as the
 iOS reference (`apps/messenger/ios`) speaks it. The project's own Android app is `apps/messenger/android`, staged by the
-project's build road. This branch does not touch that folder, and it does not touch `core/`.
+project's build road. This branch does not touch that folder, and it does not touch `protocol/`.
 
 The two Android trees are published side by side so that they can be compared. The project's Android developer is free
 to read anything here and take what helps. No APK of this folder is published. Only emulators have run it: no physical
@@ -110,7 +110,7 @@ was run for it is under [Tests](#tests).
 | The 24 words and their keys (PBKDF2 2^20, HKDF roles, ML-DSA-65, ML-KEM-768, all in the core) | works | 2026-10-17: the core's crates passed 455 tests, and JNI matched the iOS C ABI in 20 of 20. On the emulator, 24 words of the Montana wordlist came out with `seed write: words=24 stored=true` |
 | Restore from the 24 words | works | 2026-10-17: the words of A on a second emulator gave the same identity. Its call sign matched the one the core predicts from the words (`tools/identity-ref`, `tools/callsign_of.py`). 2026-10-20: Windows, opened with an Android test identity's words, took that identity's name and conversations from the light copy Android had laid |
 | The words at rest | works | 2026-10-17: Android Keystore AES-256-GCM (`Identity.kt`). The words screen is under FLAG_SECURE, so a screenshot of it is empty |
-| The words kept out of the system backup (`core/docs/Montana Identity.md:343`) | prototype | Built for this publication, not run. No record of the words is written to the system backup or read from it, and a record an earlier build wrote is withdrawn at the next backup; see [The words and the system backup](#the-words-and-the-system-backup) |
+| The words kept out of the system backup (`protocol/docs/Montana Identity.md:343`) | prototype | Built for this publication, not run. No record of the words is written to the system backup or read from it, and a record an earlier build wrote is withdrawn at the next backup; see [The words and the system backup](#the-words-and-the-system-backup) |
 | Several identities on one phone (iOS MontanaSeats) | missing | |
 | Safety number (`mt-safety`) | prototype | |
 
@@ -237,7 +237,7 @@ there. The Rust version is the core's own pin.
 | NDK | 27.2.12479018 |
 | Kotlin | 2.0.21 |
 | WebRTC | `io.github.webrtc-sdk:android` 144.7559.15, pinned by SHA-256 |
-| Rust | 1.92.0 (`core/Code/rust-toolchain.toml`), targets `aarch64-linux-android` and `x86_64-linux-android` |
+| Rust | 1.92.0 (`protocol/Code/rust-toolchain.toml`), targets `aarch64-linux-android` and `x86_64-linux-android` |
 | cargo-ndk | 4.1.2 |
 | Go, gomobile | Go 1.26.8; gomobile `v0.0.0-20260803200217-62cee1672c8e` |
 | hev-socks5-tunnel | 2.18.0 (commit `d9dca26c7ad0`) |
@@ -249,7 +249,7 @@ platform-tools 37.0.1. The vector tools ran under Python 3.14.2 on Windows.
 
 ### Get the source
 
-The build checks the core's files against the tree that `core/` has in git, so line endings must not be converted:
+The build checks the core's files against the tree that `protocol/` has in git, so line endings must not be converted:
 
 ```
 git clone -c core.autocrlf=false https://github.com/efir369999/montana_messenger.git
@@ -292,7 +292,7 @@ powershell -File tools\build.ps1 test-core
 
 Inside WSL the same commands are `bash tools/wsl-build.sh <command>`.
 
-- **The build copy.** `tools/wsl-build.sh` copies the repository's git data, `core/` and this folder to `~/montana-build`
+- **The build copy.** `tools/wsl-build.sh` copies the repository's git data, `protocol/` and this folder to `~/montana-build`
   (or `MONTANA_BUILD_DIR`) and builds there. OpenSSL's build breaks on paths with spaces, and `/mnt/c` is slow.
 - **What comes back.** The APK returns as `out/Montana-<commit>[-dirty]-<abis>.apk` with its `.sha256`, and the log of
   every run goes to `out/logs/`.
@@ -410,14 +410,14 @@ The APK was not installed or started for this publication.
 
 ## Deviations from the specification and from iOS
 
-### From the specification (`core/docs`)
+### From the specification (`protocol/docs`)
 
 1. **No release, no published hash.** `Montana App.md:133` (conformance item 7) asks for a reproducible build and the
    hash of every release. No release of this app is published. The APK's content is fixed per commit (`scripts/build.py`
    fixes the zip times and modes), but the signature is the builder's own debug key, so APKs from two builders differ in
    their signature.
 2. **Where the messenger's wire is defined.** The boxes, pipes, twin mirror and Coins v3 are defined by the iOS source and
-   `Audit/App/COIN-TX-V3.md`, not by `core/docs`. The deviations below are therefore named against iOS.
+   `Audit/App/COIN-TX-V3.md`, not by `protocol/docs`. The deviations below are therefore named against iOS.
 
 ### The words and the system backup
 
@@ -457,7 +457,7 @@ Not run: no backup or restore was made on an emulator with this build (`adb shel
    Keychain. The background work is a foreground service rather than APNs, PushKit and the Notification Service
    Extension.
 6. **Holes in the archive's log (D27).** A hard power-off can leave holes of zeros in the archive's log, and this app reads
-   across them. The core's own reader (`core/Code/crates/mt-messenger-e2e/src/archive.rs:345-364`) has no such step. That
+   across them. The core's own reader (`protocol/Code/crates/mt-messenger-e2e/src/archive.rs:345-364`) has no such step. That
    is a recommendation for the core: the core is not changed here.
 7. **Cleartext to one address.** Cleartext HTTP is allowed to 10.0.2.2 only (`res/xml/network_security_config.xml`). It
    serves a check's own node, and only when a file that the emulator's root lays in the app's own folder names that node
@@ -472,7 +472,7 @@ Not run: no backup or restore was made on an emulator with this build (`adb shel
    - on Android 13 and later the local network is excluded with `excludeRoute`.
 9. **Calls.** An incoming call is shown as a full-screen notification. There is no ConnectionService, the counterpart of
    iOS CallKit. iOS 2307 and 2308 are not ported.
-10. **The native library.** `libmontana.so` is built from this repository's `core/` (tree `6aeb359d095b` since 2026-10-26;
+10. **The native library.** `libmontana.so` is built from this repository's `protocol/` (tree `6aeb359d095b` since 2026-10-26;
     `4ce3d6705224` before). The project's
     Android build pins instead the private core commit `ae36d1f927a7` (`apps/messenger/android/native/montana-jni/Cargo.toml`
     names `../../../Montana Protocol`). The library is therefore not byte-identical to the one in the project's APK of
@@ -543,7 +543,7 @@ The backup frames are sealed with ChaCha20-Poly1305, as on iOS (`.mtbak` v2).
 - `setup.py` downloads WebRTC and pins it by SHA-256. Only WebRTC's classes and its arm64 library go into the APK.
 - Xray-core is bound with gomobile and Go.
 - `Lzfse.kt` follows the lzfse 1.0 reference step for step (Apple Inc., BSD-3-Clause).
-- The core (`core/`) is MIT OR Apache-2.0.
+- The core (`protocol/`) is MIT OR Apache-2.0.
 - The repository names no licence for `apps/messenger/android`, from which this folder grew. The right to redistribute
   the application code rests with the project's author.
 
@@ -551,7 +551,7 @@ The backup frames are sealed with ChaCha20-Poly1305, as on iOS (`.mtbak` v2).
 
 | What | Why |
 |---|---|
-| The local repository's `core/` | This folder builds from `main`'s `core/` (tree `6aeb359d095b`, pinned in `scripts/toolchain.json`), and a platform branch does not change `core/` |
+| The local repository's `protocol/` | This folder builds from `main`'s `protocol/` (tree `6aeb359d095b`, pinned in `scripts/toolchain.json`), and a platform branch does not change `protocol/` |
 | The local repository's `docs/` (13 files) | Internal working notes (journal, parity table, test programme, coin notes, the iOS watch's state and reports). Their facts are in this README |
 | The local repository's own `README.md` and `UPSTREAM.md` | Replaced by this README; the provenance is above |
 | `tools/ios-watch/` and `.github/workflows/ios-watch.yml` | The watcher reads this repository from outside it, and it keeps its state in the internal notes that are not published. GitHub runs no workflow from a subfolder, and at the root this one would open issues and push to `main` |

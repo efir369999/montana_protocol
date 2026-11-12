@@ -429,7 +429,7 @@ mod tests {
 }
 
 /// CANON 8.1.0 AND 9.5.0, «A tag and the labels of its steps» and the walked rows of «The vectors of the messages» (Montana
-/// Canon.md 3212-3247 and 2352-2374 in Audit/Protocol-13/source/docs at main d5c6448; 3247-3282 and 2383-2405 in core/docs at
+/// Canon.md 3212-3247 and 2352-2374 in Audit/Protocol-13/source/docs at main d5c6448; 3247-3282 and 2383-2405 in protocol/docs at
 /// PR #11 e6cfb3ee -- one text; the line numbers below are 8.1.0's), fed to this port's own functions: Protocol-13 item 12
 /// (#23), Registry NET-24. Where a function of the port takes the set's input, the set's output is asserted. Where none does,
 /// the divergence is asserted as it stands and not bent: the set walks the secret one step per TimeChain window from the window

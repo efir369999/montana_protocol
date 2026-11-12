@@ -9,6 +9,6 @@ description = "The person's own reference (twin ref) from 24 words, by the core 
 [workspace]
 
 [dependencies]
-# the core is core/ at the root of this repository, five folders up
-mt-mnemonic = { path = "../../../../../core/Code/crates/mt-mnemonic" }
+# the core is protocol/ at the root of this repository, five folders up
+mt-mnemonic = { path = "../../../../../protocol/Code/crates/mt-mnemonic" }
 sha2 = "0.10"

@@ -42,7 +42,7 @@ windows-collections = "=0.3.2"
 # the web view's own permission requests answered by the app for its own page (microphone, camera): Tauri's version
 webview2-com = "=0.39.1"
 windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_DataExchange", "Win32_System_Memory", "Win32_Globalization", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_Networking_WinHttp", "Win32_System_SystemInformation", "Win32_System_LibraryLoader"] }
-# The protocol core (core/Montana-Core, its boundary mt-boundary unchanged) is montana_core.dll beside the program, built by
+# The protocol core (protocol/Montana-Protocol, its boundary mt-boundary unchanged) is montana_core.dll beside the program, built by
 # app/protocol-core and loaded at run time: a build without it says the core is unavailable, as an iOS simulator does.
 # The core is not a Rust dependency here: it is built in its own workspace, with its own pinned versions, into
 # mt_bindings.dll, and called through its C ABI -- the doors iOS (MontanaBindings.xcframework) and Android (JNI) use.

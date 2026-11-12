@@ -19,9 +19,9 @@ In scope:
 
 | Folder | What it is |
 |---|---|
-| `core/docs` | The normative specification set (Constitution, Canon, Consensus, Value, Identity, Network, App, Registry) |
-| `core/Montana-Core` | The reference implementation of the set (Rust workspace): primitives, encodings, trees, derivations, the wire, the pulse, the proof, a node and a terminal wallet |
-| `core/Code` | The client core the applications link (Rust workspace): keys from the words, signatures and key encapsulation, the post-quantum handshake, sealed letters, names, delivery, and an earlier consensus line |
+| `protocol/docs` | The normative specification set (Constitution, Canon, Consensus, Value, Identity, Network, App, Registry) |
+| `protocol/Montana-Protocol` | The reference implementation of the set (Rust workspace): primitives, encodings, trees, derivations, the wire, the pulse, the proof, a node and a terminal wallet |
+| `protocol/Code` | The client core the applications link (Rust workspace): keys from the words, signatures and key encapsulation, the post-quantum handshake, sealed letters, names, delivery, and an earlier consensus line |
 | `apps/messenger/ios` | Montana for iPhone, iPad and Mac (Swift), with its notification, share and packet-tunnel extensions |
 | `apps/messenger/android` | Montana for Android (Kotlin) and its JNI library `native/montana-jni` over the client core |
 
@@ -65,36 +65,36 @@ Cannot be verified:
 - That a published binary was built from a published tree. No reproducible build of the applications is published and no
   comparison of a rebuilt binary with a released one has been made. The iOS IPA is an App Store export, signed for
   distribution. The Android build aims at one APK per commit (`apps/messenger/android/scripts/build.py`, lines 171 and
-  204-206), but its native library is built from a core commit that is not the commit of `core/` (F-12).
-- That `core/` is the core the binaries link. It is not, byte for byte: `core/` is an English translation of the project's
+  204-206), but its native library is built from a core commit that is not the commit of `protocol/` (F-12).
+- That `protocol/` is the core the binaries link. It is not, byte for byte: `protocol/` is an English translation of the project's
   core line in which comments, documents and the text of messages were translated, and the applications link builds of
   other commits of that line (F-12).
 - The private history. The source commits named in `RELEASES.md` point into private repositories; the folders carry no
   history and the commit messages are not published. The history is kept private because it carries signing material and
   identifiers of the project's accounts, the addresses of the project's machines and the names of people, in files and in
   commit messages; each snapshot is stripped of these before it is published. The consequence is the one stated by a critic of
-  this repository: the history of review cannot be checked here. `core/Montana-Core/AUDIT.md` (lines 1790-1797) places the
+  this repository: the history of review cannot be checked here. `protocol/Montana-Protocol/AUDIT.md` (lines 1790-1797) places the
   reasons of one stage in commit messages that are not published, and the earlier external reviews of the core are held in
   the private history.
 - What the nodes do. The clients' side of every exchange with a node is in this repository; the node's side is not (F-4).
 
 ## 4. How to build each part
 
-Core (each workspace pins its Rust compiler in `rust-toolchain.toml`; `core/Code` builds OpenSSL from source and needs a C
+Core (each workspace pins its Rust compiler in `rust-toolchain.toml`; `protocol/Code` builds OpenSSL from source and needs a C
 compiler and Perl):
 
 ```
-cargo test --workspace --release --manifest-path core/Montana-Core/Cargo.toml
-cargo test --workspace --release --manifest-path core/Code/Cargo.toml
+cargo test --workspace --release --manifest-path protocol/Montana-Protocol/Cargo.toml
+cargo test --workspace --release --manifest-path protocol/Code/Cargo.toml
 ```
 
-Two tests depend on the machine: the differential test of `core/Montana-Core/crates/mt-suite/tests/differential.rs` compares
+Two tests depend on the machine: the differential test of `protocol/Montana-Protocol/crates/mt-suite/tests/differential.rs` compares
 with the `openssl` command of the machine and fails when that command does not carry ML-DSA-65 and ML-KEM-768 (OpenSSL 3.5 or
 later); the proof of a window takes about nineteen minutes in the debug profile on the project's machine
-(`core/Montana-Core/AUDIT.md`, line 1763), less in release.
+(`protocol/Montana-Protocol/AUDIT.md`, line 1763), less in release.
 
 Montana for iPhone, iPad and Mac, and Montana for Android: the steps are in [`README.md`](README.md), section Build from
-source. The iOS steps build the two core frameworks from `core/`, fetch the call engine, build the two VPN engines and compile
+source. The iOS steps build the two core frameworks from `protocol/`, fetch the call engine, build the two VPN engines and compile
 the project with signing off. On Android, `python3 scripts/build.py --check` compiles resources and Kotlin from this
 repository alone; the full build needs the core at the commit pinned in `scripts/toolchain.json` (F-12).
 
@@ -102,14 +102,14 @@ repository alone; the full build needs the core at the commit pinned in `scripts
 
 | What | Where |
 |---|---|
-| Frozen vectors of the set (hash layer, trees, derivations) | `core/docs/Montana Canon.md`; compared on every build by `core/Montana-Core/crates/mt-conformance` |
-| NIST ACVP vectors, reference implementation | `core/Montana-Core/crates/mt-suite/tests/fixtures/` (`mldsa65_acvp.txt`, `mlkem768_acvp.txt`, `chacha20poly1305_rfc8439.txt`) |
-| NIST ACVP vectors, client core | `core/Code/crates/mt-crypto-native/tests/fixtures/nist_acvp/`, `tests/nist_acvp_kat.rs` |
-| Second implementation of the primitives | `core/Montana-Core/crates/mt-suite/tests/differential.rs` (against the `openssl` command); `core/Code/crates/mt-bindings/tests/wasm_backend_kat.rs` (OpenSSL against RustCrypto) |
-| Protocol vectors of the client core | `core/Code/crates/mt-noise-pq/tests/kat.rs`; `mt-mnemonic/tests/keygen_vectors.rs`, `test_vectors.rs`; `mt-names/tests/vectors.rs` with `fixtures/name_vectors.json`; `mt-net/tests/test_vectors.rs`; `mt-bindings/tests/kat_cross_client.rs`, `kat_overlay.rs` |
-| Conformance of the client core | the machine-readable contract in `core/Code/conformance/`, `core/Code/crates/mt-conformance`, `core/Code/docs/CONFORMANCE.md` |
+| Frozen vectors of the set (hash layer, trees, derivations) | `protocol/docs/Montana Canon.md`; compared on every build by `protocol/Montana-Protocol/crates/mt-conformance` |
+| NIST ACVP vectors, reference implementation | `protocol/Montana-Protocol/crates/mt-suite/tests/fixtures/` (`mldsa65_acvp.txt`, `mlkem768_acvp.txt`, `chacha20poly1305_rfc8439.txt`) |
+| NIST ACVP vectors, client core | `protocol/Code/crates/mt-crypto-native/tests/fixtures/nist_acvp/`, `tests/nist_acvp_kat.rs` |
+| Second implementation of the primitives | `protocol/Montana-Protocol/crates/mt-suite/tests/differential.rs` (against the `openssl` command); `protocol/Code/crates/mt-bindings/tests/wasm_backend_kat.rs` (OpenSSL against RustCrypto) |
+| Protocol vectors of the client core | `protocol/Code/crates/mt-noise-pq/tests/kat.rs`; `mt-mnemonic/tests/keygen_vectors.rs`, `test_vectors.rs`; `mt-names/tests/vectors.rs` with `fixtures/name_vectors.json`; `mt-net/tests/test_vectors.rs`; `mt-bindings/tests/kat_cross_client.rs`, `kat_overlay.rs` |
+| Conformance of the client core | the machine-readable contract in `protocol/Code/conformance/`, `protocol/Code/crates/mt-conformance`, `protocol/Code/docs/CONFORMANCE.md` |
 | Application tests | iOS `Code/MontanaTests/MontanaTests.swift`; Android `native/montana-jni/src/lib.rs` (each JNI door against the iOS door of `mt-bindings`) |
-| Earlier audit documents | `core/Montana-Core/AUDIT.md`, `core/Code/AUDIT.md`, `core/Code/docs/audit-checklist.md`, `core/Code/docs/SPEC_DEVIATIONS.md`, `core/Code/docs/security-cards.md`, `apps/messenger/ios/docs/call-security-card.md` |
+| Earlier audit documents | `protocol/Montana-Protocol/AUDIT.md`, `protocol/Code/AUDIT.md`, `protocol/Code/docs/audit-checklist.md`, `protocol/Code/docs/SPEC_DEVIATIONS.md`, `protocol/Code/docs/security-cards.md`, `apps/messenger/ios/docs/call-security-card.md` |
 
 ## 6. Open findings
 
@@ -117,9 +117,9 @@ Each finding names where it is, what it is, why it matters and its state. None i
 
 ### F-1. The channel handshake sends identities in the clear and, as the applications use it, authenticates neither side
 
-Where: `core/Code/crates/mt-noise-pq/src/xx_handshake.rs`, `responder_send_msg2` lines 205-209 (the responder's ML-DSA-65
-key, line 208) and `initiator_send_msg3` lines 315-318 (the initiator's key, line 317); `core/Code/crates/mt-noise-pq/src/lib.rs`,
-lines 364-366 and 290-291 (the same in the variant the applications use); `core/Code/crates/mt-bindings/src/ffi_noise.rs`,
+Where: `protocol/Code/crates/mt-noise-pq/src/xx_handshake.rs`, `responder_send_msg2` lines 205-209 (the responder's ML-DSA-65
+key, line 208) and `initiator_send_msg3` lines 315-318 (the initiator's key, line 317); `protocol/Code/crates/mt-noise-pq/src/lib.rs`,
+lines 364-366 and 290-291 (the same in the variant the applications use); `protocol/Code/crates/mt-bindings/src/ffi_noise.rs`,
 `node_id_from_seed` lines 22-26; iOS `Code/Montana/MontanaDirect.swift`, `initiatorHandshake` lines 975-986 and
 `acceptInbound` line 1614; Android `Channel.kt`, `dial` lines 202-205 and `respond` lines 232-235.
 
@@ -138,7 +138,7 @@ State: open. Encrypting the identities and pinning the keys of the nodes change 
 
 ### F-2. The asynchronous key agreement of the library stands on encapsulations alone and cannot check a signed prekey
 
-Where: `core/Code/crates/mt-messenger-e2e/src/handshake.rs`, `RecipientBundle` lines 37-43, `build_handshake` lines 104-105
+Where: `protocol/Code/crates/mt-messenger-e2e/src/handshake.rs`, `RecipientBundle` lines 37-43, `build_handshake` lines 104-105
 and 140, the initiator's account key at line 145.
 
 What: the root of a session is derived from the encapsulations to the recipient's keys (`ss_id`, `ss_spk`, `ss_opk`) and the
@@ -147,13 +147,13 @@ The bundle type carries no signature over the signed prekey, so the library cann
 account key travels in the handshake bytes.
 
 Why it matters: the set calls a secret derived from one side's material alone a defect
-(`core/docs/Montana Network.md`, line 54), and without a verifiable signature over the prekey whoever serves bundles can
+(`protocol/docs/Montana Network.md`, line 54), and without a verifiable signature over the prekey whoever serves bundles can
 substitute one.
 
 Reachability: neither application calls these functions. iOS has no caller of `mt_e2e_build_handshake` or
 `mt_e2e_process_handshake` (the wrappers left in `Code/Montana/MontanaPQ.swift` are the session's encrypt and decrypt, and
 those have no caller either). The Android library does not link `mt-bindings` (`native/montana-jni/Cargo.toml`, lines 12-15
-and 30-31), and `MtBindings.kt` declares no handshake door. The web target exposes them (`core/Code/crates/mt-bindings/src/ffi_wasm.rs`).
+and 30-31), and `MtBindings.kt` declares no handshake door. The web target exposes them (`protocol/Code/crates/mt-bindings/src/ffi_wasm.rs`).
 
 State: open, in the library.
 
@@ -164,7 +164,7 @@ Where: iOS `Code/Montana/MTPipe.swift`, `windowSeconds` and `window` lines 31-38
 
 What: a letter body is sealed with ChaCha20-Poly1305 (the core's `mt_e2e_seal_blob`) under SHA-256("mt-pipe-key" ‖ 0 ‖
 conversation secret ‖ minute), the minute read from the device's clock. The conversation secret is set at first contact and
-the code read does not replace it. The core's KEM ratchet (`core/Code/crates/mt-messenger-e2e/src/session.rs`, lines
+the code read does not replace it. The core's KEM ratchet (`protocol/Code/crates/mt-messenger-e2e/src/session.rs`, lines
 296-343) is wrapped in `MontanaPQ.swift` (lines 55-65) and called by neither application.
 
 Why it matters: there is no forward secrecy and no recovery after a compromise. Whoever obtains a conversation secret from a
@@ -186,7 +186,7 @@ chain's head. Readers verify the signature before they credit a record (line 315
 blocks the owner's next transfer, which no longer stands on the head.
 
 State: the signature part is closed on both transfer nodes since 2026-10-11 20:5x UTC: the service verifies the ML-DSA-65
-signature of every record with the core's own verifier (the `mt_verify` function of `core/Code/crates/mt-bindings`, the
+signature of every record with the core's own verifier (the `mt_verify` function of `protocol/Code/crates/mt-bindings`, the
 function the phone links), after a self-test of that verifier at start, refuses a record whose signature does not verify
 (400), takes no record at all when the verifier is absent (503), and never makes an unverified record a head; the phone in
 turn builds only on a head it has read back and verified as a record of its own key (from build 2192). Open: the source of the
@@ -194,14 +194,14 @@ node services is still not in this repository.
 
 ### F-5. One machine holds the quorum weight of the earlier consensus line
 
-Where: `core/Code/docs/SPEC_DEVIATIONS.md`, DEV-012, lines 220-245; line 680; line 679.
+Where: `protocol/Code/docs/SPEC_DEVIATIONS.md`, DEV-012, lines 220-245; line 680; line 679.
 
 What: the weight of a confirmation is the confirmer's `chain_length` (line 225). The register's operational note records
 that one machine holds `chain_length = 25 766` and each of the others at most 1, so that machine's confirmation alone meets
 the 67 % quorum (line 243). The register is inconsistent about DEV-012: partially closed at line 230, closed at line 680. The
 same line of implementation selects a fallback proposer by elapsed wall-clock time (DEV-023, line 679, 120 seconds), while the
-set replaces a stalled runner without a timeout, "because a timeout is a clock" (`core/docs/Montana Consensus.md`, lines
-453-454); where `core/Code` and `core/docs` differ, the set governs.
+set replaces a stalled runner without a timeout, "because a timeout is a clock" (`protocol/docs/Montana Consensus.md`, lines
+453-454); where `protocol/Code` and `protocol/docs` differ, the set governs.
 
 Why it matters: while the weight is so concentrated, the property that no majority can rewrite the chain reduces to the
 honesty of the operator of that machine. No later figure in this repository replaces the note of line 243.
@@ -226,24 +226,24 @@ State: open. Enabling the frame layer is a change of live call behaviour, accept
 
 ### F-7. Three implementations of ML-DSA-65 and ML-KEM-768, two of them before version 1.0
 
-Where: `core/Montana-Core/Cargo.toml`, lines 32-33 (`libcrux-ml-dsa`, `libcrux-ml-kem`); `core/Code/crates/mt-crypto-native/Cargo.toml`,
-line 18 (OpenSSL through `openssl-src`); `core/Code/crates/mt-bindings/Cargo.toml`, lines 35-39 and 53-54, and
-`core/Code/crates/mt-messenger-e2e/Cargo.toml`, lines 21-23 (RustCrypto `ml-dsa` and `ml-kem`, for the web target and as a test
+Where: `protocol/Montana-Protocol/Cargo.toml`, lines 32-33 (`libcrux-ml-dsa`, `libcrux-ml-kem`); `protocol/Code/crates/mt-crypto-native/Cargo.toml`,
+line 18 (OpenSSL through `openssl-src`); `protocol/Code/crates/mt-bindings/Cargo.toml`, lines 35-39 and 53-54, and
+`protocol/Code/crates/mt-messenger-e2e/Cargo.toml`, lines 21-23 (RustCrypto `ml-dsa` and `ml-kem`, for the web target and as a test
 oracle).
 
-What: the applications link OpenSSL through `core/Code`; iOS also links a framework of `core/Montana-Core` (libcrux). Each
+What: the applications link OpenSSL through `protocol/Code`; iOS also links a framework of `protocol/Montana-Protocol` (libcrux). Each
 implementation passes the NIST vectors, and two differential tests compare libcrux with the `openssl` command and OpenSSL with
 RustCrypto (section 5). No vector compares the protocol computations (seed to keys, handshakes,
 domain separators) across the two workspaces, which implement different generations of the specification
-(`core/Code/VERSION.md`). The libcrux and RustCrypto crates are pinned below version 1.0, and
-`core/Code/docs/audit-checklist.md` (line 71) states that no pre-1.0 dependency stands in the consensus path; that holds for
-`core/Code`, not for `core/Montana-Core`.
+(`protocol/Code/VERSION.md`). The libcrux and RustCrypto crates are pinned below version 1.0, and
+`protocol/Code/docs/audit-checklist.md` (line 71) states that no pre-1.0 dependency stands in the consensus path; that holds for
+`protocol/Code`, not for `protocol/Montana-Protocol`.
 
 State: open.
 
 ### F-8. The value layer of the set is not reachable end to end
 
-Where: `core/Montana-Core/AUDIT.md`, lines 96-105, 236-241, 243-249 and 1763.
+Where: `protocol/Montana-Protocol/AUDIT.md`, lines 96-105, 236-241, 243-249 and 1763.
 
 What: a wallet of the reference implementation answers `this wallet holds no note to pay from`: the first value of the
 network cannot be created, because a right is redeemed inside a frame and a frame needs notes only a redeemed right creates.
@@ -296,13 +296,13 @@ State: open.
 ### F-12. A binary's core is not recorded against this repository
 
 Where: Android `scripts/toolchain.json`, lines 42-45, and `scripts/build.py`, `core`, lines 84-93; iOS `scripts/build-core.sh`
-and `scripts/build-protocol-core.sh`, line 6 of each; `core/`.
+and `scripts/build-protocol-core.sh`, line 6 of each; `protocol/`.
 
 What: the Android build builds its native library only from a git checkout of the core at commit `ae36d1f927a7`, beside the
 Android tree, and refuses any other commit or an uncommitted change. That commit is five commits before the source commit of
-`core/` (`3848245e308b`): two commits of code, the translation, the bridge the phones link and a formatting commit. The iOS build
+`protocol/` (`3848245e308b`): two commits of code, the translation, the bridge the phones link and a formatting commit. The iOS build
 takes its two core frameworks from a path outside the tree and keeps them out of git; nothing in the iOS tree records the
-commit they were built from. `core/` itself is the English translation of the core line: comments, documents and the text of
+commit they were built from. `protocol/` itself is the English translation of the core line: comments, documents and the text of
 messages differ from the line the binaries were built from.
 
 Why it matters: an auditor reads a core that is close to, and not exactly, the core inside the released binaries, and cannot
@@ -312,8 +312,8 @@ State: open.
 
 ### F-13. Panicking calls in library code
 
-Where: `core/Code/crates/mt-messenger-e2e/src/handshake.rs`, lines 224, 226 and 253 (`unwrap` after a length check);
-`core/Code/crates/mt-messenger-e2e/src/ratchet.rs`, line 55 (`expect`).
+Where: `protocol/Code/crates/mt-messenger-e2e/src/handshake.rs`, lines 224, 226 and 253 (`unwrap` after a length check);
+`protocol/Code/crates/mt-messenger-e2e/src/ratchet.rs`, line 55 (`expect`).
 
 What: the project's code rules exclude `unwrap` and `expect` from library code; these sites are guarded by the lengths
 checked before them, and a panic there aborts the calling process.
@@ -322,8 +322,8 @@ State: open, low.
 
 ### F-14. Letters and frames are not cells of one width
 
-Where: the set, `core/docs/Montana Network.md`, line 157 ("Everything on the wire is a cell of one size and one type");
-`core/Code/crates/mt-messenger-e2e/src/media.rs`, `seal_blob` lines 40-48 (no padding; `pad_len`, lines 28-38, is applied
+Where: the set, `protocol/docs/Montana Network.md`, line 157 ("Everything on the wire is a cell of one size and one type");
+`protocol/Code/crates/mt-messenger-e2e/src/media.rs`, `seal_blob` lines 40-48 (no padding; `pad_len`, lines 28-38, is applied
 by callers to media only, iOS `Code/Montana/MontanaMediaKit.swift`, line 162); iOS `Code/Montana/MTPipe.swift`, `sealBody`
 lines 70-72, and `Code/Montana/MontanaDirect.swift`, `seal` lines 1929-1934; Android `Pipes.kt`, `seal` lines 78-80, and
 `Channel.kt`, `NetMsg` and `OverlayFrame` lines 64-99.
@@ -340,7 +340,7 @@ State: open.
 
 Two different things carry the word coin, and an audit must keep them apart.
 
-The value layer of the set. `core/docs/Montana Value.md` specifies shielded notes, nullifiers and proofs; `core/Montana-Core`
+The value layer of the set. `protocol/docs/Montana Value.md` specifies shielded notes, nullifiers and proofs; `protocol/Montana-Protocol`
 implements them in part and cannot yet create the first value (F-8). No deployed application holds such a note.
 
 The coins of time of the applications, version 2. Montana for iOS keeps, for each seed, a book of coins on the device; coins

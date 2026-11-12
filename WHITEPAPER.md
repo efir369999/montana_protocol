@@ -1,6 +1,6 @@
 # Montana: a post-quantum protocol and its messenger
 
-*Whitepaper of Montana. The protocol is defined by the normative set in [`core/docs`](core/docs); where this paper and the
+*Whitepaper of Montana. The protocol is defined by the normative set in [`protocol/docs`](protocol/docs); where this paper and the
 set differ, the set governs. Section references in square brackets point into that set; where the code of this repository
 does not yet do what the set says, the paper names the finding of [`AUDIT.md`](AUDIT.md) that records it.*
 
@@ -60,7 +60,7 @@ derived from position]. Every spend has one fixed shape; an unused position carr
 one input is indistinguishable from a payment of two [Constitution, I-2; Value, The shape of a frame]. Emission creates a right rather than a note, and
 a right is redeemed inside a payment that nothing distinguishes from any other [Constitution, I-2 (4); Value, Extinguishing
 a right]. The one disclosure primitive is a proof of a single payment, produced by its owner [Constitution, I-2 (3);
-Value, Disclosure]. The value layer is specified and partly implemented in `core/Montana-Core`; it cannot yet create the
+Value, Disclosure]. The value layer is specified and partly implemented in `protocol/Montana-Protocol`; it cannot yet create the
 first value, and no deployed application holds a note (AUDIT.md, F-8). Historical in part (marked 2026-10-27 UTC): "cannot yet create the first value" no longer describes `main`, where a right becomes a note and is paid away (AUDIT.md, F-8).
 
 ## 4. Identity
@@ -105,8 +105,8 @@ an application]. The set requires a client to state to a person what it does wit
 ## 7. Montana
 
 Montana for iPhone, iPad and Mac (`apps/messenger/ios`) and for Android (`apps/messenger/android`) opens or creates a person
-from 24 words. The iOS application links the client core (`core/Code`) through its C interface and a framework of
-`core/Montana-Core`; the Android application links the crates of the client core through its own JNI library. What the
+from 24 words. The iOS application links the client core (`protocol/Code`) through its C interface and a framework of
+`protocol/Montana-Protocol`; the Android application links the crates of the client core through its own JNI library. What the
 applications implement today:
 
 | Part | What the code does | Open |
@@ -130,33 +130,33 @@ through the associated domain; it holds nothing about a person.
 
 | Purpose | Primitive | Standard | Where |
 |---|---|---|---|
-| Signatures | ML-DSA-65 | FIPS 204 [2] | `libcrux-ml-dsa` in `core/Montana-Core`; OpenSSL 3.5 built from source in `core/Code`; RustCrypto `ml-dsa` for the web target and tests (AUDIT.md, F-7) |
-| Key encapsulation | ML-KEM-768 | FIPS 203 [1] | `libcrux-ml-kem` in `core/Montana-Core`; OpenSSL 3.5 in `core/Code`; RustCrypto `ml-kem` for the web target and tests |
+| Signatures | ML-DSA-65 | FIPS 204 [2] | `libcrux-ml-dsa` in `protocol/Montana-Protocol`; OpenSSL 3.5 built from source in `protocol/Code`; RustCrypto `ml-dsa` for the web target and tests (AUDIT.md, F-7) |
+| Key encapsulation | ML-KEM-768 | FIPS 203 [1] | `libcrux-ml-kem` in `protocol/Montana-Protocol`; OpenSSL 3.5 in `protocol/Code`; RustCrypto `ml-kem` for the web target and tests |
 | Hashing | SHA-256, SHA-3 | FIPS 180-4 [3], FIPS 202 [4] | RustCrypto `sha2`, `sha3` |
 | Authenticated encryption | ChaCha20-Poly1305 | RFC 8439 [5] | RustCrypto `chacha20poly1305` |
-| Transport of the client core | Three-message patterns after Noise [6] with ML-KEM-768 and ML-DSA-65: XX between machines, an XK-like variant in the applications | | `core/Code/crates/mt-noise-pq` (AUDIT.md, F-1) |
+| Transport of the client core | Three-message patterns after Noise [6] with ML-KEM-768 and ML-DSA-65: XX between machines, an XK-like variant in the applications | | `protocol/Code/crates/mt-noise-pq` (AUDIT.md, F-1) |
 | Call media | DTLS-SRTP, classical | RFC 5764 [8] | WebRTC (AUDIT.md, F-6) |
 | Symmetric sealing in the applications | ChaCha20-Poly1305, AES-GCM, HKDF-SHA-256, HMAC-SHA-256 | | CryptoKit on iOS, `javax.crypto` on Android (AUDIT.md, F-9) |
 
-`core/Montana-Core` is the reference implementation of the set: its build parses every value of the Genesis Decree, every
+`protocol/Montana-Protocol` is the reference implementation of the set: its build parses every value of the Genesis Decree, every
 domain separator and the frozen vectors of the hash primitive and the trees out of the documents and fails on any
-divergence ([`core/Montana-Core/README.md`](core/Montana-Core/README.md)). `core/Code` is the client core the
+divergence ([`protocol/Montana-Protocol/README.md`](protocol/Montana-Protocol/README.md)). `protocol/Code` is the client core the
 applications link; it carries the NIST known-answer tests of its primitives and records in its `VERSION.md` the
-specification generation it was written against. Where `core/Code` and the set differ, the set governs.
+specification generation it was written against. Where `protocol/Code` and the set differ, the set governs.
 
 **What is open.** The set names one open item at its front: the constraint set of the two circuits, which it binds by hash,
 with the statements the circuits must assert, the format of their description and the verifier fixed in Canon
-([`core/docs/README.md`](core/docs/README.md)). What the green build does not hold is listed, with what closes each item,
-in [`core/Montana-Core/AUDIT.md`](core/Montana-Core/AUDIT.md) and [`core/Code/docs/SPEC_DEVIATIONS.md`](core/Code/docs/SPEC_DEVIATIONS.md);
+([`protocol/docs/README.md`](protocol/docs/README.md)). What the green build does not hold is listed, with what closes each item,
+in [`protocol/Montana-Protocol/AUDIT.md`](protocol/Montana-Protocol/AUDIT.md) and [`protocol/Code/docs/SPEC_DEVIATIONS.md`](protocol/Code/docs/SPEC_DEVIATIONS.md);
 what the applications and the client core do not yet do of the set is catalogued in [`AUDIT.md`](AUDIT.md).
 
 ## 9. Reviewing
 
 The frozen vectors in Canon are the first thing to run against: an implementation that reproduces them has the hash layer
-right [core/docs/README.md]. Each document of the set closes with a conformance set listing what an independent
+right [protocol/docs/README.md]. Each document of the set closes with a conformance set listing what an independent
 implementation must reproduce to be the same network [Constitution, The document set]. The applications are built from
 their folders in this repository. The binaries released beside the source are the export uploaded to the App Store; the
-Android package is served by the site and carried by no GitHub release (RELEASES.md, Binaries); no reproducible build is published, and the core inside a binary is not recorded against `core/`, so the
+Android package is served by the site and carried by no GitHub release (RELEASES.md, Binaries); no reproducible build is published, and the core inside a binary is not recorded against `protocol/`, so the
 correspondence of a binary with its tree is not established (AUDIT.md, section 3 and F-12). [`AUDIT.md`](AUDIT.md) is the
 entry point of a review: scope, the trees under audit, builds, vectors and the open findings.
 

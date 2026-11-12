@@ -10,10 +10,10 @@ from pathlib import Path
 import re
 import subprocess
 
-SPEC = ('core/docs/', 'Audit/Protocol-13/source/docs/')
-CODE = ('core/Montana-Core/', 'Audit/Protocol-13/source/Montana-Core/')
+SPEC = ('protocol/docs/', 'Audit/Protocol-13/source/docs/')
+CODE = ('protocol/Montana-Protocol/', 'Audit/Protocol-13/source/Montana-Protocol/')
 VERSIONS = tuple(folder + 'VERSION.md' for folder in CODE)
-PROSE = ('README.md', 'core/README.md', 'Audit/README.md')
+PROSE = ('README.md', 'protocol/README.md', 'Audit/README.md')
 PROSE_DIR = 'Audit/Protocol-13/'
 REQUIRED = ('canon_version', 'air_hash', 'published_parameters', 'genesis_state_hash')
 HISTORICAL = re.compile(r'\bhistorical\b', re.I)

@@ -13,8 +13,8 @@
 #
 # The checkout is the source of truth (on Windows it is seen here under /mnt/c). The build runs in a copy on the Linux
 # filesystem, MONTANA_BUILD_DIR or ~/montana-build: OpenSSL's build breaks on paths with spaces, and /mnt/c is slow.
-# The copy holds what the build reads: the repository's git data (the build checks core/ against its committed tree),
-# core/ and this folder. The checkout is therefore a plain clone, its .git a folder (a git worktree's .git is a file that
+# The copy holds what the build reads: the repository's git data (the build checks protocol/ against its committed tree),
+# protocol/ and this folder. The checkout is therefore a plain clone, its .git a folder (a git worktree's .git is a file that
 # names a path of the host). The APK and the log of every run come back to out/ in this folder.
 set -euo pipefail
 
@@ -31,8 +31,8 @@ case "$cmd" in
   setup|test-core|test-jni|check|apk|identity-ref) ;;
   *) sed -n '3,12p' "$0"; exit 2 ;;
 esac
-if [ ! -d "$SRC/.git" ] || [ ! -f "$SRC/core/Code/rust-toolchain.toml" ]; then
-  echo "no plain clone with core/ three folders above $HERE (a git worktree is not copied)"; exit 2
+if [ ! -d "$SRC/.git" ] || [ ! -f "$SRC/protocol/Code/rust-toolchain.toml" ]; then
+  echo "no plain clone with protocol/ three folders above $HERE (a git worktree is not copied)"; exit 2
 fi
 
 mkdir -p "$OUT/logs"
@@ -40,7 +40,7 @@ log="$OUT/logs/$cmd-$(date +%Y%m%d-%H%M%S).log"
 exec > >(tee "$log") 2>&1
 echo "== $cmd $* | $(date -Is) | $SRC ($APP) -> $DST"
 
-# The copy: the git data, core/ and this folder, without their build outputs, which stay in the copy between runs (cargo's
+# The copy: the git data, protocol/ and this folder, without their build outputs, which stay in the copy between runs (cargo's
 # incremental state). The rest of the repository is not copied.
 mkdir -p "$DST"
 rsync -a --delete \
@@ -48,9 +48,9 @@ rsync -a --delete \
   --exclude "/$APP/build/" \
   --exclude "/$APP/native/montana-jni/target/" \
   --exclude "/$APP/tools/identity-ref/target/" \
-  --exclude '/core/Code/target/' \
+  --exclude '/protocol/Code/target/' \
   --include '/.git/***' \
-  --include '/core/***' \
+  --include '/protocol/***' \
   --include '/apps/' \
   --include '/apps/messenger/' \
   --include "/$APP/***" \
@@ -64,7 +64,7 @@ echo "tree: $(git -C "$DST" log -1 --format='%h %s')$dirty"
 export RUSTUP_HOME="$TOOLS/rustup" CARGO_HOME="$TOOLS/cargo"
 export PATH="$CARGO_HOME/bin:$PATH"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-8}"
-channel="$(sed -n 's/^channel *= *"\(.*\)"/\1/p' "$DST/core/Code/rust-toolchain.toml")"
+channel="$(sed -n 's/^channel *= *"\(.*\)"/\1/p' "$DST/protocol/Code/rust-toolchain.toml")"
 
 case "$cmd" in
   setup)
@@ -72,7 +72,7 @@ case "$cmd" in
     python3 scripts/setup.py "$@"
     ;;
   test-core)
-    cd "$DST/core/Code"
+    cd "$DST/protocol/Code"
     cargo +"$channel" test --release \
       -p mt-mnemonic -p mt-crypto -p mt-crypto-native -p mt-codec \
       -p mt-noise-pq -p mt-names -p mt-messenger-e2e -p mt-bindings "$@"
