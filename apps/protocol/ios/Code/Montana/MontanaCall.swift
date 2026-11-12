@@ -1515,15 +1515,11 @@ final class MontanaCall: NSObject {
     /// watches blackness. The system holds the screen itself; no counter of ours is needed. On a
     /// call without video the screen lives as usual: the phone is at an ear, nothing to hold.
     /// The value is re-evaluated on every change of the video flag -- an offer may declare a call
-    /// a video call after it has already begun.
+    /// a video call after it has already begun. The screen has one door (MontanaScreenAwake, OZ 1 p.5,
+    /// constitution 15): a video call holds it by its name, and its end lets go of that name alone --
+    /// a voice tape or a group's room that holds the screen too is never put out by it.
     private func applyScreenHold() {
-        let want = isVideo && state != "idle"
-        DispatchQueue.main.async {
-            if UIApplication.shared.isIdleTimerDisabled != want {
-                UIApplication.shared.isIdleTimerDisabled = want
-                MontanaTrace.mark("screen_hold", want ? "on" : "off")
-            }
-        }
+        if isVideo && state != "idle" { MontanaScreenAwake.hold("video-call") } else { MontanaScreenAwake.release("video-call") }
     }
 
     private func beginBackgroundHold() {
@@ -1574,7 +1570,7 @@ final class MontanaCall: NSObject {
     private func endBackgroundHold() {
         setupBeat?.cancel(); setupBeat = nil
         DispatchQueue.main.async {
-            UIApplication.shared.isIdleTimerDisabled = false   // the call ended -- the screen lives by its own timeout again
+            MontanaScreenAwake.release("video-call")   // the call ended -- its hold on the screen goes, the others' stay
             if self.bgTask != .invalid {
                 UIApplication.shared.endBackgroundTask(self.bgTask); self.bgTask = .invalid
             }

@@ -819,6 +819,9 @@ final class MTGroupRoom: NSObject, CXProviderDelegate {
         r.keys = s.keys.filter { $0.key != g.me }
         live = r
         Self.setLive(true)
+        // A GROUP'S CALL HOLDS THE SCREEN AS A CALL OF TWO DOES (the author's word 20455 p.5: «on a video call inside a group the
+        // screen must not go dark, as on a standard video call»): by its name, through the one door, until leave lets it go.
+        MontanaScreenAwake.hold("room")
         MontanaWakePush.openRoomLane(Self.roomLaneName(r.id), secret: Self.roomLaneKey(r.key))
         present(r, "in")
         let f = MontanaCall.shared.factory
@@ -871,6 +874,7 @@ final class MTGroupRoom: NSObject, CXProviderDelegate {
         MTCallAudioOwner.shared.release(r.uuid)
         live = nil
         Self.setLive(false)
+        MontanaScreenAwake.release("room")
         MontanaWakePush.closeRoomLane(Self.roomLaneName(r.id))
         let streamEnds = r.kind == .live && r.owner == r.me
         // THE FAREWELL LEAVES BEFORE ITS CONNECTION CLOSES (11.11.2026, OZ 1 p.8: T2 held a seat that had left): a close in the same

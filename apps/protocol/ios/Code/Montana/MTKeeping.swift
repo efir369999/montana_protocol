@@ -357,6 +357,9 @@ enum MTKeepDerive {
         var lightName: String? = nil
         /// THE PEOPLE THE LIGHT COPY CARRIES (decision 866 a): one digest of the correspondents' names and faces and of the groups.
         var lightPeople: String? = nil
+        /// THE CARD'S SHAPE THE LIGHT COPY WAS LAID IN (OZ 1 p.3.5): a build whose card first carries the values' moments lays its
+        /// light copy anew at once, so a device given an older value meets this one's moment and keeps the later.
+        var lightEngine: Int? = nil
     }
     private static let ownerKey = "mt.keep.owner"  // NOT-UI: sealed under the device key; the person's own (SeedScope.dataKeys)
     @Published private(set) var owner = Owner()
@@ -509,7 +512,7 @@ enum MTKeepDerive {
         guard Self.mine, Self.told, Self.agrees, MontanaSeed.hasSeed else { return }
         let now = Date().timeIntervalSince1970
         let tags = Self.profileTags()
-        let moved = owner.lightFace != tags.face || owner.lightName != tags.name
+        let moved = owner.lightFace != tags.face || owner.lightName != tags.name || owner.lightEngine != MontanaBackup.cardEngine
         let since = now - max(owner.lightAt ?? 0, owner.lightTriedAt ?? 0)
         let people = Self.peopleTag()
         let met = owner.lightPeople != people
@@ -694,7 +697,7 @@ enum MTKeepDerive {
         // The sender of the pipe of light is named «light», never this person's own reference: a phone opening the same words reads
         // the box under that reference, and a letter of its own name the node would keep from it.
         guard await Self.knock(secret, road, sender: Self.lightName) else { return MontanaTrace.mark("keep_light", "no door boxed the road") }
-        owner.lightGen = g; owner.lightAt = Date().timeIntervalSince1970; owner.lightFace = tags.face; owner.lightName = tags.name; owner.lightPeople = people; saveOwner()
+        owner.lightGen = g; owner.lightAt = Date().timeIntervalSince1970; owner.lightFace = tags.face; owner.lightName = tags.name; owner.lightPeople = people; owner.lightEngine = MontanaBackup.cardEngine; saveOwner()
         MontanaTrace.mark("keep_light", "named g=\(g) bytes=\(made.tally.bytes) chats=\(made.tally.chats)")
     }
     nonisolated static let lightName = "light"   // NOT-UI: the name the pipe of light is heard and sent under
@@ -733,10 +736,11 @@ enum MTKeepDerive {
             }
             taking = .laying(0)
             let r: Result<MontanaBackup.Tally, MontanaBackup.Refusal> = await withCheckedContinuation { c in
-                MontanaBackup.restore(from: url, progress: { f in Task { @MainActor in MTKeeping.shared.taking = .laying(f) } }) { c.resume(returning: $0) }
+                MontanaBackup.restore(from: url, ofMany: true, progress: { f in Task { @MainActor in MTKeeping.shared.taking = .laying(f) } }) { c.resume(returning: $0) }
             }
             reread()
-            MontanaTrace.mark("keep_light", "laid=\(String(describing: r)) devices=\(roads.count)")
+            let own = (road["v"] as? String) == MontanaArchive.writerTagHex()   // this device's own copy, or another's
+            MontanaTrace.mark("keep_light", "laid=\(String(describing: r)) devices=\(roads.count) own=\(own) a=\(road["a"] as? String ?? "")")
             guard case .success = r else { continue }
             laid += 1
             if laid == 1 { let letIn = onLight; onLight = nil; letIn?() }
@@ -1087,7 +1091,7 @@ enum MTKeepDerive {
                 }
                 taking = .laying(0)
                 let r: Result<MontanaBackup.Tally, MontanaBackup.Refusal> = await withCheckedContinuation { c in
-                    MontanaBackup.restore(from: out, progress: { f in Task { @MainActor in MTKeeping.shared.taking = .laying(f) } }) { c.resume(returning: $0) }
+                    MontanaBackup.restore(from: out, ofMany: true, progress: { f in Task { @MainActor in MTKeeping.shared.taking = .laying(f) } }) { c.resume(returning: $0) }
                 }
                 try? FileManager.default.removeItem(at: out)
                 reread()   // the copy laid this person's state of keeping too

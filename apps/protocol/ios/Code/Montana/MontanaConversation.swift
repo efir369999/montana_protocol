@@ -2009,7 +2009,7 @@ struct ChatConversationView: View {
     /// THE FACE IS THE DOOR TO THE CHAT'S SETTINGS (the author's words 03.10 18:30 and 04.10 00:25 UTC: «the interlocutor's avatar at
     /// the top of the chat as a button into the chat's settings, as it was»): the whole bubble, the face in it, is the one button.
     private var chatTitleDoor: some View {
-        NavigationLink(destination: MontanaPeerInfoScreen(chat: chat, onSave: onChatUpdate)) {
+        NavigationLink(destination: chatTitlePage) {
             chatTitleBubble.contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -2022,6 +2022,15 @@ struct ChatConversationView: View {
             Button {
                 UIPasteboard.general.string = store.title(for: chat)
             } label: { Label("Copy name", systemImage: "doc.on.doc") }
+        }
+    }
+
+    /// The page the face opens: the Montana room's is a channel's page (the author's word 20455 p.3), every other chat's its settings.
+    @ViewBuilder private var chatTitlePage: some View {
+        if ChatStore.isMontanaRoom(chat.name) {
+            MTMontanaRoomPage(chat: chat)
+        } else {
+            MontanaPeerInfoScreen(chat: chat, onSave: onChatUpdate)
         }
     }
 
@@ -4993,6 +5002,43 @@ struct MTMontanaSealMark: View {
             .foregroundStyle(Color.white, Color(red: 84 / 255, green: 160 / 255, blue: 248 / 255))
             .font(.system(size: height))
             .accessibilityHidden(true)
+    }
+}
+
+/// THE MONTANA ROOM IS A CHANNEL (the author's word 20455 p.3, 12.11.2026: «the Montana updates channel must be dressed exactly as a
+/// channel, so a tap on it shows the current description and the link to the site, for Messenger and the Protocol»): the room's face,
+/// its name with the seal, «channel», the edition's own description and its own site -- each read from its one owner (MTEdition.intro,
+/// MTEdition.site), so the Messenger says montana.one and the Protocol montana.xxx, and nothing here keeps a copy of either.
+struct MTMontanaRoomPage: View {
+    @EnvironmentObject private var store: ChatStore
+    let chat: Chat
+    var body: some View {
+        List {
+            Section {
+                VStack(spacing: 8) {
+                    MTChatAvatar(chat: chat, size: 96)
+                    HStack(spacing: 6) {
+                        Text(MontanaAvatar.spokenName(store.title(for: chat))).font(.title2).bold().lineLimit(1)
+                        MTMontanaSealMark(height: 20)
+                    }
+                    Text("channel").font(.subheadline).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+            }
+            Section("Description") {
+                Text(MTEdition.intro).foregroundColor(.primary)
+            }.listRowBackground(MTGlassRowPlate())
+            if let site = URL(string: MTEdition.site) {
+                Section("Website") {
+                    Link(destination: site) {
+                        Label { Text(verbatim: MTEdition.site) } icon: { Image(systemName: "globe") }   // USER-DATA: an address
+                    }
+                }.listRowBackground(MTGlassRowPlate()).foregroundColor(Color.accentColor)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

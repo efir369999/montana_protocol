@@ -93,8 +93,9 @@ struct MTGroupState: Codable, Equatable {
     /// THE LINK ASKS THE OWNER FIRST (the checklist's G.8, the reference's «Request Admin Approval»): who opens it waits in the
     /// requests until the owner adds or dismisses them. The owner's phone alone keeps both; nothing of it rides the wire.
     var approval: Bool? = nil
-    /// CHAT HISTORY FOR NEW MEMBERS (the checklist's G.4, the reference's «Visible» / «Hidden»): true -- one added reads the group's
-    /// newest words, as everyone was carried them; absent -- hidden, the reference's default. The owner's choice, never on the wire.
+    /// CHAT HISTORY FOR NEW MEMBERS (the checklist's G.4, «Visible» / «Hidden»): true -- one added reads the group's
+    /// newest words, as everyone was carried them; absent -- hidden. A group is born with it visible (the author's word 20455 p.2,
+    /// MTGroup.create); the owner may hide it. The owner's choice, never on the wire.
     var history: Bool? = nil
     var requests: [MTGroupRequest]? = nil
     /// THE CHANNEL SIGNS ITS POSTS (the reference's «Sign Messages»): the owner's choice, carried to every subscriber in its invitation
@@ -592,8 +593,9 @@ final class MTGroup {
             taken.insert(seat)
             members.append(MTGroupMember(seat: seat, pipe: p))
         }
-        let g = MTGroupState(id: id, kind: kind, title: name, about: Self.clean(about, Self.aboutLimit), owner: "", me: Self.ownerSeat,
+        var g = MTGroupState(id: id, kind: kind, title: name, about: Self.clean(about, Self.aboutLimit), owner: "", me: Self.ownerSeat,
                              members: members, count: members.count + 1, names: [:], at: Date().timeIntervalSince1970)
+        if kind == .group { g.history = true }   // A NEW GROUP SHOWS ITS PAST TO NEW MEMBERS (the author's word 20455 p.2)
         groups[id] = g
         saveGroups()
         let row = stand(g, face: face.isEmpty ? nil : saveChatAvatar(face), store: store)

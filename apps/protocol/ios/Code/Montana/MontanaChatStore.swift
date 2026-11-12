@@ -7209,6 +7209,7 @@ enum SeedScope {
         "faceHealCards",   // the card link last read for each correspondent's face (ChatStore.healFacesFromCards, 18.10): this person's
         MontanaArchive.forgottenKey,   // the erased conversations' folders whose marks are gone (MontanaArchive.deleteChatFolder, 18.10)
         MontanaSeed.enteredKey,   // the moment this person came in on this phone (865 a): this phone's, never a copy's
+        MontanaBackup.momentsKey,   // the moment each plain value was set here (MontanaBackup.moments, OZ 1 p.3.5): this phone's
         "mt.account.keys", "mt.twin.ref", "mt.node.identity", "mt.node.kem", "pipeSecrets",
         "pipeKept",   // what each pipe keeps of its secret for good (MTPipeKept, 22.10): the secrets' own, gone with them
         "pipeFloorGuard",   // the clock guard of this book's first floor, M, H and Hc (MTPipeBook, decision 188, 25.10): the book's own
