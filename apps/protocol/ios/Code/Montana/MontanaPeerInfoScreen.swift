@@ -434,9 +434,24 @@ struct MontanaPeerInfoScreen: View {
         let lines = MTGroupPage.lines(chat.name, store: store, remove: { seat in removingSeat = seat },
                                       open: { c in personPage = .person(c) },
                                       write: { c in dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { ui.openChat(c) } },
-                                      promote: { seat in adminSeat = seat })
+                                      promote: { seat in adminSeat = seat },
+                                      reach: { conv, now in reached(conv, write: now) })
         for line in lines { rows.append(MTInfoRow(id: "members." + line.seat, kind: .groupMember(line))) }
         return rows
+    }
+    /// A PERSON OF THE GROUP MET BY THE CARD THEY LAID (OZ 1 p.8): their page where the conversation already stands a row, a letter
+    /// to them at once when asked; a conversation with no row yet opens as the chat itself, as a met link opens.
+    private func reached(_ conv: String, write now: Bool) {
+        if let c = MTGroupPage.row(of: conv, store: store) {
+            if !now { personPage = .person(c); return }
+            dismiss()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { ui.openChat(c) }
+            return
+        }
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            NotificationCenter.default.post(name: .openChatRequest, object: nil, userInfo: ["address": conv])
+        }
     }
     /// A GROUP'S «MORE», AS THE REFERENCE'S MENU HAS IT: «Report» for one who does not own it, «Clear Messages», then the way out in
     /// red -- «Leave Group» for a member, «Delete Group» for its owner -- each asked first.

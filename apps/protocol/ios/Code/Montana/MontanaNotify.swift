@@ -413,7 +413,7 @@ enum MontanaNotify {
         center.getDeliveredNotifications { list in
             let ids = list.filter { n in
                 let c = n.request.content
-                if !conv.isEmpty, MontanaMissedCall.chat(of: c.userInfo) == conv || MTNoticeAlias.open(c.threadIdentifier) == conv { return true }
+                if MontanaMissedCall.speaks(c, of: conv) { return true }
                 guard !names.isEmpty else { return false }
                 if let m = c.userInfo["mid"] as? String, names.contains(m.hasPrefix("mid:") ? String(m.dropFirst(4)) : m) { return true }
                 let id = n.request.identifier

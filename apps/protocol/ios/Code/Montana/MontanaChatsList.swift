@@ -416,7 +416,7 @@ struct ChatsListView: View {
             // player and the gallery; a tap opens that one again. Both are pages under the bar (the music 23.09, the
             // gallery 25.09), one of them in the row at a time, and the puck goes under the glyph for either.
             barSlot(Self.mediaSlot) { ui.askMedia() } label: {
-                Image(systemName: ui.mediaIsMusic ? UIState.Glyph.music : UIState.Glyph.gallery)
+                Image(systemName: UIState.Glyph.of(ui.mediaPane))
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(MontanaOctagon.barGlyph)
             }
@@ -523,8 +523,8 @@ struct ChatsListView: View {
     /// The slot the pane stands under — the puck's home when the page is chosen elsewhere (the drawer, the logo).
     private static func slot(of pane: UIState.Pane) -> Int? {
         switch pane {
-        case .chats, .groups, .channels: return chatsSlot; case .contacts: return contactsSlot; case .calls: return callsSlot
-        case .gallery: return mediaSlot
+        case .chats: return chatsSlot; case .contacts: return contactsSlot; case .calls: return callsSlot
+        case .gallery, .groups, .channels: return mediaSlot   // the dynamic slot's pages (UIState.mediaPanes)
         case .p2p: return pane == UIState.globePane ? globeSlot : nil
         #if !MONTANA_MESSENGER
         case .music: return mediaSlot

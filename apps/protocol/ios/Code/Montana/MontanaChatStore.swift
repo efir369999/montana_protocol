@@ -1331,7 +1331,9 @@ class ChatStore: ObservableObject {
                 if queueMids.contains(bare) || MTGroup.shared.rides(bare, queued: queueMids) { continue }   // a group's row rides on its copies (MTGroup)
                 if let f = m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile,
                    uploadTasks[f] != nil || uploadProgress[f] != nil { continue }
-                guard m.createdAt > 0, m.createdAt < edge else { continue }
+                // THE GRACE IS COUNTED FROM THE RUNG, NOT FROM THE BIRTH (OZ 1 p.15.5): «retry» on a letter born 26.10 put it back
+                // on the clock at 12.11 21:43, and the birth was weeks behind the edge -- red again one second later.
+                guard m.statusMoment > 0, m.statusMoment < edge else { continue }
                 if putOut(chat, i, because: .nothingCarries) {
                     MontanaTrace.mark("queue_mirror", "clock with no engine behind it — red + resend mid=\(String(bare.prefix(8)))")
                 }
@@ -1565,9 +1567,10 @@ class ChatStore: ObservableObject {
     /// at the clock until the receipts came 78 and 85 seconds later. Every road now passes here and
     /// every refusal says what it saw.
     @MainActor
-    func markSentByNode(_ chat: String, mid: String, why: String = "node") {
+    func markSentByNode(_ chat: String, mid: String, why: String = "node", quiet: Bool = false) {
         if MTGroup.shared.copyHeld(mid, store: self) { return }   // the node holds a group's copy: the group's row moves (MTGroup)
         guard let i = messages[chat]?.firstIndex(where: { $0.isFromMe && $0.msgId == "mid:" + mid }) else {
+            if quiet { return }   // SILENT-OK: a service letter settled on the node has no row of mine; a group's copy answered above
             MontanaTrace.markFolded("node_sent", "refused (\(why)) mid=\(mid.prefix(8)) — no row of mine under this name in \(String(chat.prefix(10)))", window: 60, key: mid)
             return
         }
@@ -2361,17 +2364,21 @@ class ChatStore: ObservableObject {
     /// published face must have image bytes unique to its reference.  An unknown owner is never
     /// guessed from a shared folder or a previous seat's mirror.
     func avatarFor(ref: String) -> String? {
-        if MTGroup.isKey(ref) { return groupFace(ref) }   // a group's face is the group's own (MTGroupState.face, 17.10.2026)
+        if MTGroup.isKey(ref) {   // a group's face is the group's own (MTGroupState.face, 17.10.2026)
+            return groupFace(ref) { (self.storedChats().first { $0.id == ref } ?? self.storedArchived().first { $0.id == ref })?.photoURL }
+        }
         return MTNameBook.uniqueManualPhoto(ref) ?? publishedFace(ref)
     }
-    /// The face of a group by its key: its state's, else the one its row wore before the group owned it.
-    private func groupFace(_ key: String) -> String? {
-        let row = storedChats().first { $0.id == key } ?? storedArchived().first { $0.id == key }
-        return MTNameBook.avatarFile(for: key, local: MTGroup.shared.state(key)?.face ?? row?.photoURL)
+    /// THE FACE OF A GROUP, ONE ORDER (OZ 1 p.15.1, the author's word 20720: the channels' faces in the list were not right): its
+    /// state's, else the one its row wore before the group owned it. The list's row read them the other way round -- the row's
+    /// face first -- and a row laid back by a copy or a shelf, or one in the archive that stand() never renews, kept an old face
+    /// in the list while the group's page wore the new one. `worn` is read only when the group holds no face.
+    private func groupFace(_ key: String, worn: () -> String?) -> String? {
+        MTNameBook.avatarFile(for: key, local: MTGroup.shared.state(key)?.face ?? worn())
     }
     /// The chat form adds only the group exception; every person uses the one resolver above.
     func avatarFor(_ chat: Chat) -> String? {
-        if chat.isGroup { return MTNameBook.avatarFile(for: chat.convRef, local: chat.photoURL ?? MTGroup.shared.state(chat.convRef)?.face) }
+        if chat.isGroup { return groupFace(chat.convRef) { chat.photoURL } }
         return avatarFor(ref: chat.convRef)
     }
     /// THE VAULT'S LIGHT HALF — pins, order, the list's sets, names, faces, presence stamps, tombstones —
@@ -3232,6 +3239,7 @@ class ChatStore: ObservableObject {
         let wasUnread = messages[chat]?.contains(where: { m in !m.isFromMe && !m.isRead }) == true || unreadCounts[chat] != nil
         if wasUnread, let newest = messages[chat]?.filter({ m in !m.isFromMe }).map(\.createdAt).max(), 0 < newest {
             MontanaArchive.mirrorNote(.init(c: chat, m: UUID().uuidString, x: MontanaArchive.twinReadMark + String(Int64(newest * 1000)), o: 1))
+            MontanaArchive.tellTwinsRead(chat)   // and at once to the other devices' extensions: the chat's banners leave them (OZ 1 p.14.7)
         }
         // EVERY LETTER OF THEIRS HERE IS READ NOW (the author's word 23.09): the count is the letters that are not, so
         // a chat read stays read whatever lands elsewhere. Before the history has landed its letters are not all
@@ -7084,6 +7092,7 @@ enum SeedScope {
         "nseInbox", "nseInboxKey", "nseKnocked", "nseShownMids", "nseQuietIds", "nseRoomRang", "heldMids", "pendingShare", "missedCallSeeds",
         "callNoticeTokens", "mt.longblob.wait", "musicFolders",   // callNoticeTokens: the one-time names a call's notices wear for the system (MontanaMissedCall.noticeToken)
         "noticeAliases",   // the alias each conversation wears for the system on this phone (MTNoticeAlias, 12.10): this device's names, never a copy
+        MTTwinRead.secretKey,   // the seed pipe's secret mirrored for the extension's read word (MTTwinRead, OZ 1 p.14.7)
         "AppLanguage", "screen.key", "screen.diary",   // the screen broadcast's call key and its diary box: this device's, for one call
         "mt.seats",   // the book of the persons seated on this phone (MTSeats): a copy carries the person seated, never the shelf (29.09)
         "nseShelf"]   // the keys the extension opens the shelf's letters with (MTShelfPost, 07.10): this device's view of its shelf, never a copy
@@ -7219,6 +7228,7 @@ enum SeedScope {
         "mt.history.boxed", "mt.history.twinSeen",   // the history laid for this seed's other devices, and theirs filed here (11.10)
         "mt.group.mirrored.1",   // this device gave this person's groups to the seed's other devices (the twin mirror, 18.10)
         "mt.twin.asked",   // the rows this device asked of the seed's other devices (the twin's past, 18.10)
+        MontanaArchive.twinDevicesKey,   // the seed's other devices heard, and whether their extension takes a read word quietly (OZ 1 p.14.7)
         "mt.archive.face",   // the face of this person's archive at its last whole reading (link 14244)
         "mt.endpoint.book", "rdvPermUpOk", "rdvUpOk", "rdvPermUpAt", "rdvUpAt", "pendingInvite",
         MontanaDeliveryEngine.pendingKey, "orphanDelivered", "handoffTaken",
@@ -7250,7 +7260,7 @@ enum SeedScope {
         "namesCold", "photosCold", "photosManualCold", "orderCold", "readChatsCold", "pinnedCold", "forcedUnreadCold", "archivedCold",
         "blockedChats", "mutedChats", "chatListState", "chatListOverlay", "missedUnseen", "unreadCounts", "nseUnread",
         "nsePipeAlias", "nsePipeSecrets", "shareChats", "wakeMyAddr", "wakeMyAuthor", "wakeMyGlyph", "wakeMyName",
-        "nseInbox", "nseShownMids", "nseRoomRang", "heldMids", "missedCallSeeds", "callNoticeTokens", "mt.longblob.wait", "noticeAliases"]
+        "nseInbox", "nseShownMids", "nseRoomRang", "heldMids", "missedCallSeeds", "callNoticeTokens", "mt.longblob.wait", "noticeAliases", MTTwinRead.secretKey]
     /// THE PERSON'S FOLDERS: every folder a copy carries, each parked into the seat and lifted from it by one rename, and the
     /// person's folders a copy leaves on the phone: the person's coins (MTCoinPlace: the book, the chats' tally, the lane's tip
     /// -- T2 19.10.2026: out of this list two persons read one book, and the chain of the one seated minted the other's coins),

@@ -164,7 +164,7 @@ final class MTTurnDrag: ObservableObject {
     /// the feed») — the tab bar's tabs, moved up into the bar. One owner, read by the bar and the page.
     /// THE NETWORK IS DISBANDED INTO THREE APPLICATIONS (the author's word 29.09): the VPN under the globe, in the finger's row;
     /// the mesh and the P2P network are pages under the bar opened from the drawer.
-    enum Pane {
+    enum Pane: String {   // the name is the dynamic slot's memory (lastMedia)
         case chats, groups, channels, contacts, calls, p2p, gallery
         #if !MONTANA_MESSENGER
         case music       // the music page, the Protocol's alone (decision 793, 11.11.2026: Messenger plays a letter's audio file from its chat and carries no music page)
@@ -185,6 +185,19 @@ final class MTTurnDrag: ObservableObject {
         static let chats = "message"
         static let music = "play"
         static let gallery = "photo.on.rectangle.angled"
+        static let groups = "person.3"       // the groups' page, the bar's and the drawer's (the author's word 20720 p.2)
+        static let channels = "megaphone"    // the channels' page, the bar's and the drawer's (the author's word 20720 p.2)
+        /// The dynamic slot's glyph: the glyph of the page it stands for (UIState.mediaPane).
+        static func of(_ p: Pane) -> String {
+            switch p {
+            case .groups: return groups
+            case .channels: return channels
+            #if !MONTANA_MESSENGER
+            case .music: return music
+            #endif
+            default: return gallery
+            }
+        }
     }
     /// THE PAGES OVER THE TABS (the author's word 19.09: as native as the drawer and the chat): the
     /// settings and the profile are one open page at a time, risen over the tabs in the chat's own
@@ -232,28 +245,32 @@ final class MTTurnDrag: ObservableObject {
     var lastMedia: String = UserDefaults.standard.string(forKey: "lastMediaPane") ?? "music" {
         didSet { UserDefaults.standard.set(lastMedia, forKey: "lastMediaPane") }
     }
+    /// THE GROUPS AND THE CHANNELS STAND IN THE DYNAMIC SLOT TOO (the author's word 20720 p.2, 12.11.2026: «if I choose Groups or
+    /// Channels in the side panel, the time panel must show that very glyph, so it is clear where I am, and it takes the dynamic
+    /// one's place»): the slot's pages are the gallery, the groups and the channels (and the music in the Protocol); the chats keep
+    /// their own glyph.
+    #if MONTANA_MESSENGER
+    static let mediaPanes: [Pane] = [.gallery, .groups, .channels]   // no music page in Messenger (decision 793)
+    #else
+    static let mediaPanes: [Pane] = [.music, .gallery, .groups, .channels]
+    #endif
+    /// THE PAGE THE DYNAMIC GLYPH STANDS FOR, ONE ANSWER (the critic 24.09: the glyph is the standing page's while one of the slot's
+    /// pages stands): the standing page when it is the slot's, else the last opened of them.
+    var mediaPane: Pane {
+        if Self.mediaPanes.contains(pane) { return pane }
+        return Self.mediaPanes.first { $0.rawValue == lastMedia } ?? Self.mediaPanes[0]
+    }
+    /// A PAGE OF THE DYNAMIC SLOT IS CHOSEN, ONE DOOR (the drawer's row and the glyph's tap): the slot remembers it.
+    func ask(_ p: Pane) { lastMedia = p.rawValue; pane = p }
     /// THE MUSIC IS CHOSEN AS THE CALLS ARE (the author's word 23.09): the drawer's row and the dynamic glyph put the
     /// music page under the bar; its big page unfolds from the player's plate at the page's head.
     #if !MONTANA_MESSENGER
-    func askMusic() { lastMedia = "music"; pane = .music }
-    #endif
-    /// THE DYNAMIC GLYPH IS THE MUSIC'S WHILE THE MUSIC PAGE STANDS (the critic 24.09): the gallery opened over the music
-    /// page made the glyph the gallery's while the puck stood under it for the music, and the music's glyph was gone.
-    #if MONTANA_MESSENGER
-    var mediaIsMusic: Bool { false }   // no music page in Messenger (decision 793): the dynamic glyph is the gallery's alone
-    #else
-    var mediaIsMusic: Bool { pane == .music || (pane != .gallery && lastMedia != "gallery") }
+    func askMusic() { ask(.music) }
     #endif
     /// THE GALLERY IS A PAGE UNDER THE BAR TOO (the author's word 25.09): chosen as the music is, in the dynamic glyph's slot.
-    func askGallery() { lastMedia = "gallery"; pane = .gallery }
-    /// THE DYNAMIC GLYPH'S TAP: the page it stands for, opened again -- in Messenger the gallery alone (decision 793).
-    func askMedia() {
-        #if MONTANA_MESSENGER
-        askGallery()
-        #else
-        if mediaIsMusic { askMusic() } else { askGallery() }
-        #endif
-    }
+    func askGallery() { ask(.gallery) }
+    /// THE DYNAMIC GLYPH'S TAP: the page it stands for, opened again.
+    func askMedia() { ask(mediaPane) }
     /// THE TABS IN THE PANEL'S OWN ORDER (the author's word 24.09), left to right: the panes the puck stands under —
     /// the contacts, the calls, THE FEED under the logo between them and the chats (the author's word 25.09: «the feed page as
     /// whole as the chats, the calls and the contacts, turning sideways as they do»), the chats, the dynamic glyph's page --
@@ -261,9 +278,9 @@ final class MTTurnDrag: ObservableObject {
     /// (the author's word 25.09).
     var turnOrder: [Pane] {
         #if MONTANA_MESSENGER
-        return [.contacts, .calls, .chats, .gallery, Self.globePane]   // no music page in Messenger (decision 793)
+        return [.contacts, .calls, .chats, mediaPane, Self.globePane]   // the dynamic slot's page (mediaPane)
         #else
-        var row: [Pane] = [.contacts, .calls, .feed, .chats, mediaIsMusic ? .music : .gallery, Self.globePane]
+        var row: [Pane] = [.contacts, .calls, .feed, .chats, mediaPane, Self.globePane]
         if MTApps.wall == nil { row.removeAll { $0 == .feed } }   // the feed only where the wall stands (slice S4c2)
         return row
         #endif
@@ -1738,8 +1755,8 @@ struct MontanaSideDrawer: View {
             case .feed: if MTApps.wall != nil { ui.pane = .feed }
             #endif
             case .chats: ui.pane = .chats
-            case .groups: ui.pane = .groups
-            case .channels: ui.pane = .channels
+            case .groups: ui.ask(.groups)       // the groups' glyph takes the dynamic slot (the author's word 20720 p.2)
+            case .channels: ui.ask(.channels)
             case .gallery: ui.askGallery()
             #if !MONTANA_MESSENGER
             case .music: ui.askMusic()

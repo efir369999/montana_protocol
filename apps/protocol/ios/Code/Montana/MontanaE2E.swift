@@ -1528,6 +1528,7 @@ final class E2E {
     func broadcastName() {
         broadcastToPeers { sendNameIfNeeded(to: $0) }
         MontanaCard.refreshCards()   // the cards on the node wear the new name too (21.09)
+        Task { @MainActor in MTGroup.shared.giveCards() }   // and the card laid in each group (OZ 1 p.8)
     }
     private var lastProfilePush: [String: Date] = [:]
     // Peer reachable again: FORCE a fresh

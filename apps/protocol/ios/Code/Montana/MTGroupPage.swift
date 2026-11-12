@@ -33,7 +33,8 @@ enum MTGroupPage {
     /// dismisses administrators and takes anyone out; an administrator takes out a member who is none (MTGroup.kick asks the owner).
     @MainActor
     static func lines(_ key: String, store: ChatStore, remove: @escaping (String) -> Void, open: @escaping (Chat) -> Void,
-                      write: @escaping (Chat) -> Void, promote: @escaping (String) -> Void = { _ in }) -> [MTGroupMemberLine] {
+                      write: @escaping (Chat) -> Void, promote: @escaping (String) -> Void = { _ in },
+                      reach: @escaping (String, Bool) -> Void = { _, _ in }) -> [MTGroupMemberLine] {
         guard let g = MTGroup.shared.state(key) else { return [] }
         let owns = g.mine && g.left != true
         let iAdmin = !g.mine && g.left != true && MTGroup.adminCan(g, seat: g.me, .ban)   // «Ban Users» (G.6)
@@ -51,10 +52,26 @@ enum MTGroupPage {
             let ref = MTGroup.speaker(g.id, p.seat)
             let pipe = me ? nil : MTGroup.shared.speakerPipe(ref)
             let chat = pipe.flatMap { x in row(of: x, store: store) }
+            // A PERSON THIS PHONE HOLDS NO PIPE WITH, MET BY THE CARD THEY LAID (OZ 1 p.8, the author's decision 877 a): their page and
+            // a letter to them without being a contact; the one meeting road opens the conversation, or finds the one already open.
+            let met: ((Bool) -> Void)? = (me || chat != nil) ? nil : g.cards?[p.seat].map { (link: String) -> (Bool) -> Void in
+                { (now: Bool) in
+                    Task { @MainActor in
+                        guard case .opened(let conv) = await MontanaMeeting.meet(link) else {
+                            return MontanaTrace.mark("group_card", "met=0")
+                        }
+                        reach(conv, now)
+                    }
+                }
+            }
             let r = role(p.seat)
             let mayRemove = !me && (owns || (iAdmin && r == nil))
             var deeds: [MTMemberDeed] = []
-            if let chat { deeds.append(MTMemberDeed(id: "send", title: "Send Message", icon: "message") { write(chat) }) }
+            if let chat {
+                deeds.append(MTMemberDeed(id: "send", title: "Send Message", icon: "message") { write(chat) })
+            } else if let met {
+                deeds.append(MTMemberDeed(id: "send", title: "Send Message", icon: "message") { met(true) })
+            }
             if owns, !me, g.kind == .group {
                 // the admin's rights page, as the reference's «Promote» and «Edit Admin Rights» open it (G.6)
                 if r == .admin {
@@ -70,12 +87,12 @@ enum MTGroupPage {
             }
             let name = p.name.isEmpty ? MTGroup.memberWord : p.name
             return MTGroupMemberLine(seat: p.seat, name: name, me: me,
-                                     face: pipe.flatMap { x in store.avatarFor(ref: x) }, tint: MTSpeakerFace.tint(ref),
+                                     face: me ? nil : MTGroup.shared.speakerFace(ref, store: store), tint: MTSpeakerFace.tint(ref),
                                      presence: me ? String(localized: "online", bundle: MTLanguage.bundle)
                                                   : pipe.flatMap { x in store.presenceWord(x)?.text },
                                      role: r, rank: MTGroup.shared.rank(key, seat: p.seat), deeds: deeds,
                                      remove: mayRemove ? { remove(p.seat) } : nil,
-                                     open: chat.map { c in { open(c) } })
+                                     open: chat.map { c in { open(c) } } ?? met.map { m in { m(false) } })
         }
     }
 }
@@ -94,7 +111,7 @@ struct MTGroupMemberLine {
     let deeds: [MTMemberDeed]
     /// The swipe's «Delete»: the person taken out of the group, asked first; nil where this phone may not.
     let remove: (() -> Void)?
-    /// The person's own page, where this phone holds their pipe.
+    /// The person's own page: where this phone holds their pipe, or met by the card they laid (OZ 1 p.8).
     let open: (() -> Void)?
 }
 

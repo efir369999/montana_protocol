@@ -1920,7 +1920,13 @@ final class MontanaDeliveryEngine {
             // receipt of the letter (markDelivered) and the peer's own presence word naming what it
             // holds (heardHeld); a postman writes nothing. The 09.09 storm cannot return: a face is
             // sent only when the peer says it holds another, and never twice a minute.
+            let chat = a[i].chat
             a.remove(at: i); save(a)
+            // A LETTER SETTLED ON THE NODE HAS LEFT THIS DEVICE (OZ 1 p.15.5; T1 12.11.2026 21:43:45 UTC, chapter 28 of the
+            // book's group): a group's silent copy -- the past, a silent post -- went out of the queue here with no word to its
+            // row; the copy stayed unheld and out of the queue, and the orphan sweep painted the row red one second after «retry»
+            // (18 copies silent_done, node_ack 0). The one owner of «left this device» hears it, quietly: a service letter has no row.
+            Task { @MainActor in self.store?.markSentByNode(chat, mid: mid, why: "settled on the node", quiet: true) }
             // Service letters settle in volleys (a drain hands over dozens at once): the first
             // says the fact, the rest are a number.
             MontanaTrace.markFolded("silent_done", "node took it — dequeued", window: 30)

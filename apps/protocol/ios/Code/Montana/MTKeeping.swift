@@ -902,10 +902,15 @@ enum MTKeepDerive {
     /// (the keeper registers its slots' pipes, MontanaWakePush.registerRound); loud, the keeper's phone shows one banner with
     /// the owner's name (the notification extension), for a keeper whose app the system does not wake.
     nonisolated static func knock(_ secret: Data, _ o: [String: Any], silent: Bool = true, sender: String? = nil) async -> Bool {
-        guard let twin = sender ?? MontanaSeed.twin, let d = try? JSONSerialization.data(withJSONObject: o),
-              let s = String(data: d, encoding: .utf8) else { return false }
+        guard let d = try? JSONSerialization.data(withJSONObject: o), let s = String(data: d, encoding: .utf8) else { return false }
+        return await knockText(secret, keepMark + s, silent: silent, sender: sender)
+    }
+    /// One word of this person's own in a pipe, its text as given (a keeping word above; the seed's read word, MTTwinRead): the
+    /// one place here that seals such a letter's head.
+    nonisolated static func knockText(_ secret: Data, _ text: String, silent: Bool = true, sender: String? = nil) async -> Bool {
+        guard let twin = sender ?? MontanaSeed.twin else { return false }
         let mid = UUID().uuidString
-        guard let plain = MTNodeWire.padEnvelope(MTNodeWire.letterHead(mid: mid, text: keepMark + s, name: "", glyph: "")) else { return false }
+        guard let plain = MTNodeWire.padEnvelope(MTNodeWire.letterHead(mid: mid, text: text, name: "", glyph: "")) else { return false }
         let k = await MTNodeWire.knockLetter(secret: MTPipeKey(secret), twinRef: twin, mid: mid, plain: plain,
                                              doors: MontanaWakePush.oneDoorPerNode(MontanaWakePush.orderedBases(for: "box")), silent: silent)
         return k.boxed
