@@ -1,0 +1,7 @@
+// THE BUILD'S NUMBER AND VERSION -- ONE OWNER (constitution article 15; the author's word 19159, 11.11.2026: «the build's
+// number in one place»). The project reads this file through Code/Names.xcconfig, the base configuration of both project
+// configurations; no target states either line, and tools/owners.json (mt-owners-check) refuses a second copy. The delivery gate
+// (mt-delivery-guard.py version), the cleaner (mt-clean-builds.py) and the council read the number here. A Protocol road N needs
+// CURRENT_PROJECT_VERSION = N here, committed; another edition's road gives its own number to xcodebuild on the command line.
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 2378
