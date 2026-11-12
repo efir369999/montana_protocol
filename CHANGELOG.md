@@ -2,6 +2,23 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2384) - 2026-11-12
+
+Source commit `f99f2b96506d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2384.md).
+
+- Restoring an account from the 24 words: the name you typed (for example «Demo Akk») is no longer replaced by an older one another device of the same words was given -- each setting carries the moment it was set, and the later one stands.
+- New groups show their chat history to new members by default; the owner can still hide it.
+- The Montana updates channel looks like a channel: a tap on it shows the current description and the link to the site.
+- Photos are viewed one at a time, with no strip of thumbnails below, and with Share and Save buttons.
+- The screen no longer goes dark during a group call, just as in a call of two.
+- Please check: restore the account from the 24 words on the iPad -- the full name from the iPhone stands on both devices, your photo and your contacts' photos are in place.
+- Please check: a new group with Chat History, a tap on the Montana channel's name, a photo in a chat, a group video call of a few minutes.
+
+**Security and anonymity**
+
+- Copy card: each plain value (string, number) now carries the moment it was set (tag t:moments; a per-person book mt.card.moments in SeedScope.seatKeys, never in a copy). A copy laid as one of many (MTKeeping light and full copies) keeps a value set here later; a copy restored by hand from a file or iCloud lays its values as before. Older builds skip the tag. No change to the wire format of letters.
+- The screen's idle timer has one owner (MontanaScreenAwake): a call of two and a group's room hold it by name, and the end of one no longer releases another's hold. Save writes into Photos through the existing road (MontanaSavedToPhotos). No change to the wire format.
+
 ## 1.0 (2383) - 2026-11-12
 
 Source commit `bb0ba72125ec`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2383.md).
