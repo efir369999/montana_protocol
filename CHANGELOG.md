@@ -2,6 +2,17 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2383) - 2026-11-12
+
+Source commit `bb0ba72125ec`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2383.md).
+
+- Restoring an account from the 24 words: a letter your contact gave back before the restore copy arrived no longer stands twice in the chat -- the copy's own letter takes its place.
+- Please check: restore the account from the 24 words on the iPad while your contacts are online -- every letter of the conversation stands once; the name, your photo and your contacts' photos are in place.
+
+**Security and anonymity**
+
+- Restore: a row a correspondent gave back (mid given:) and the full copy's row of the same letter are known by one name, ChatStore.rowSig; the given row yields to the copy's row and its journal file is dropped (critic K3). No change to the wire format.
+
 ## 1.0 (2382) - 2026-11-12
 
 Source commit `a48939be104a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2382.md).
