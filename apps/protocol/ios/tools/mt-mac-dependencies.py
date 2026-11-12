@@ -11,7 +11,7 @@
 #   * the Xray engine is built here, -trimpath, by the Go toolchain and gomobile its go.mod names; WebRTC is the published binary
 #     whose SHA-256 fetch-webrtc.sh pins. Nothing is taken from a framework folder some other road left behind.
 # One road for both platforms (OZ 1, the phone after the Mac, 22.10.2026): the platform changes the Rust target, the SDK, the clang
-# triple, OpenSSL's configuration and the slice checked; the phone adds the protocol core (mt-boundary of Montana-Core, the same
+# triple, OpenSSL's configuration and the slice checked; the phone adds the protocol core (mt-boundary of the Protocol's folder, the same
 # committed commit) and the tunnel's stack (hev-socks5-tunnel at its pinned commit), which the Mac product does not carry.
 import argparse
 import io
@@ -31,6 +31,10 @@ RUSTUP = shutil.which('rustup') or str(Path.home() / '.cargo/bin/rustup')
 DEPLOYMENT = '17.2'
 WORDS = 'Montana wordlist.txt'
 CORE_LINE = 'publish/core-english'
+# THE PROTOCOL'S FOLDER IS READ FROM THE COMMIT, NEVER TYPED (decision 859 = a, 12.11.2026: the private Montana-Core became
+# Montana-Protocol; constitution article 15): the one top folder of a commit that holds the boundary crate is the boundary's folder,
+# so a release of the old name (52ec1199, build 2378) and one of the new name rebuild by the same road.
+BOUNDARY_CRATE = 'crates/mt-boundary/Cargo.toml'
 # openssl-src has no Catalyst target by name («don't know how to configure OpenSSL for aarch64-apple-ios-macabi», 2273's Mac road):
 # the Mac is configured as macOS arm64 with the Catalyst triple; the phone takes the configuration OpenSSL itself names for a 64-bit
 # iPhone (ios-common: no shared objects, no async)
@@ -56,32 +60,47 @@ def native_slice(framework, variant):
     return None
 
 
+def one_folder(held, where):
+    if len(held) == 1:
+        return held[0]
+    raise SystemExit('the protocol core needs one folder with ' + BOUNDARY_CRATE + ' in ' + where + ', found: ' + (', '.join(held) or 'none'))
+
+
+def boundary_folder(repo, commit):
+    names = subprocess.check_output(['git', '-C', str(repo), 'ls-tree', '--name-only', commit], text=True).splitlines()
+    return one_folder([n for n in names if not subprocess.run(['git', '-C', str(repo), 'cat-file', '-e', commit + ':' + n + '/' + BOUNDARY_CRATE],
+                                                             capture_output=True).returncode], commit[:12])
+
+
 def core_source(home, boundary):
-    # A core named by the caller (a clone of montana_core: its core/Code) is used as it stands; otherwise the head of the core's
+    # A core named by the caller (a clone of montana_protocol: its protocol/Code) is used as it stands; otherwise the head of the core's
     # published line in the repository beside this one is archived, so an uncommitted change can never reach a release. The line, not
     # the checkout's HEAD: 2280's Mac frameworks named ae36d1f9 of a checkout on another branch, a commit montana_core does not stage
     # (stage.py pins the core to this line), and its release was refused (22.10.2026, Agent 240). The protocol core the phone carries
-    # (Montana-Core) comes from the same commit, or from beside the named core.
+    # comes from the same commit, or from beside the named core.
     named = os.environ.get('MONTANA_CORE_SRC')
     if named:
         code = Path(named).resolve()
-        other = Path(os.environ.get('MONTANA_BOUNDARY_SRC') or code.parent / 'Montana-Core').resolve()
-        return code, other if boundary else None, {'repo': 'given', 'path': str(code.name)}
+        other = os.environ.get('MONTANA_BOUNDARY_SRC')
+        if boundary and not other:
+            other = code.parent / one_folder(sorted(d.name for d in code.parent.iterdir() if (d / BOUNDARY_CRATE).is_file()), str(code.parent))
+        return code, Path(other).resolve() if boundary else None, {'repo': 'given', 'path': str(code.name)}
     common = Path(subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', '--path-format=absolute', '--git-common-dir'], text=True).strip())
     repo = common.parent.parent.parent / 'Montana-Protocol'
     commit = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', '--verify', CORE_LINE + '^{commit}'], text=True).strip()
     out = home / ('core-' + commit[:12])
     # The core reads its word list from beside Code/ (mt-mnemonic: include_str! of «../../../../Montana wordlist.txt»), and the public
     # core folder carries it there; measured 21.10.2026 18:37 UTC: an archive of Code/ alone could not compile mt-mnemonic.
-    folders = ['Code', WORDS] + (['Montana-Core'] if boundary else [])
+    folder = boundary_folder(repo, commit) if boundary else ''
+    folders = ['Code', WORDS] + ([folder] if boundary else [])
     if not all((out / f if f == WORDS else out / f / 'Cargo.toml').is_file() for f in folders):
         blob = subprocess.run(['git', '-C', str(repo), 'archive', '--format=tar', commit] + folders, capture_output=True, check=True).stdout
         with tarfile.open(fileobj=io.BytesIO(blob)) as tar:
             tar.extractall(out, filter='tar')
     stamp = {'repo': 'Montana-Protocol', 'commit': commit}
-    for folder, key in [('Code', 'tree'), ('Montana-Core', 'boundary_tree')][:2 if boundary else 1]:
-        stamp[key] = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', commit + ':' + folder], text=True).strip()
-    return out / 'Code', out / 'Montana-Core' if boundary else None, dict(stamp, **{'clean': 'yes'})
+    for name, key in [('Code', 'tree'), (folder, 'boundary_tree')][:2 if boundary else 1]:
+        stamp[key] = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', commit + ':' + name], text=True).strip()
+    return out / 'Code', out / folder if boundary else None, dict(stamp, **{'clean': 'yes'})
 
 
 def openssl(core, home, jobs, env, p):

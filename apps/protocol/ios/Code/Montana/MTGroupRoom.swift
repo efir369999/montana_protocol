@@ -2144,15 +2144,18 @@ struct MTRoomScreen: View {
     }
     /// Who may bring more people in: anyone in a chat, the owner alone in a stream.
     private var canInvite: Bool { m.kind == .call || m.amOwner }
+    /// The loudspeaker's switch stands only where there is somewhere to switch: not with a device outside (its menu), not on a
+    /// device without an earpiece (decision 861 = a, MontanaAudioRoute.hasEarpiece).
+    private var speakerSwitch: Bool { callUI.route.shown && !callUI.route.menu }
     /// The reference's lit control: blue while my microphone is off, green while it is on.
     private var shine: Color { m.muted ? Self.blue : Self.green }
 
     /// The reference's top bar: its menu on the left, the room's name and how many are in, the cross that folds the room on the right.
     private var top: some View {
         HStack(spacing: 0) {
-            if !callUI.route.menu || canInvite || m.amOwner {
+            if speakerSwitch || canInvite || m.amOwner {
                 Menu {
-                    if !callUI.route.menu {
+                    if speakerSwitch {
                         Toggle(isOn: Binding(get: { callUI.route.lit }, set: { MTGroupRoom.shared.setSpeaker($0) })) {
                             Label("Speaker", systemImage: "speaker.wave.2.fill")
                         }
@@ -2281,8 +2284,11 @@ struct MTRoomScreen: View {
     /// screen, the way out -- 56 points each, as far apart as the width allows up to 33, the word under each in lower case.
     private var controls: some View {
         GeometryReader { geo in
-            let n: CGFloat = m.speaks ? 5 : 2
-            let gap = max(8, min(33, floor((geo.size.width - 32 - 56 * n) / (n - 1))))
+            // The first place is the camera's turn while it shows, else the sound's road -- none on a device without an
+            // earpiece and nothing outside (861 = a), and the row closes up.
+            let first = (m.speaks && m.camera && !m.screen) || callUI.route.shown
+            let n: CGFloat = (m.speaks ? 4 : 1) + (first ? 1 : 0)
+            let gap = max(8, min(33, floor((geo.size.width - 32 - 56 * n) / max(1, n - 1))))
             HStack(alignment: .top, spacing: gap) {
                 if m.speaks {
                     if m.camera, !m.screen {
@@ -2339,7 +2345,7 @@ struct MTRoomScreen: View {
                 word("Audio")
             }
             .frame(width: 56)
-        } else {
+        } else if callUI.route.shown {
             round56(callUI.route.icon, "Speaker", tint: lit ? shine : Self.rest) { MTGroupRoom.shared.setSpeaker(!lit) }
         }
     }

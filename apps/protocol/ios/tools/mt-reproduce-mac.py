@@ -27,8 +27,8 @@
 #   the selector stubs, and a function folded by deduplication -- gets them in either order (Agent 220: one link command four times,
 #   three different binaries): with deduplication off and the selector stubs branching to the one stub, no target holds two slots.
 #
-# Usage, from a clone of montana_core (apps/apple):
-#   python3 tools/mt-reproduce-mac.py --core ../../core/Code --compare MT-Protocol-1.0-N.dmg
+# Usage, from a clone of montana_protocol (apps/protocol/ios):
+#   python3 tools/mt-reproduce-mac.py --core ../../../protocol/Code --compare MT-Protocol-1.0-N.dmg
 # prints the reproducible digest of the rebuilt app and of the release, and every file that differs. Needs the Xcode, Rust and
 # Go versions the release names (Xcode 26.2 17C52, Rust 1.92.0 with aarch64-apple-ios-macabi, Go from go.mod).
 import argparse
@@ -314,7 +314,7 @@ def prepared(home, env, fresh, platform):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--platform', choices=sorted(PLATFORMS), default='mac')
-    parser.add_argument('--core', help='the core source (core/Code of montana_core); default: the committed core beside this tree')
+    parser.add_argument('--core', help='the core source (protocol/Code of montana_protocol); default: the committed core beside this tree')
     parser.add_argument('--home', help='the build folder (default: build-reproduce/ of this tree)')
     parser.add_argument('--compare', help='a published MT-Protocol DMG or ZIP (Mac) or Montana IPA (phone) to compare the rebuilt app with')
     parser.add_argument('--archive', help='archive here with the frameworks the build home names, then scrub (the release road)')

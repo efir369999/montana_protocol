@@ -6697,7 +6697,7 @@ final class CallUIModel: ObservableObject {
     @Published var video: Bool = false { didSet { armChromeFold("video") } }
     @Published var speaker: Bool = false
     @Published var audioExternal: Bool = false   // the sound stands in a headset, a speaker or a car (the route observer)
-    @Published var route = MontanaAudioRoute.Face(caption: "Speaker", icon: "speaker.wave.3.fill", lit: false, menu: false)   // the audio button's face
+    @Published var route = MontanaAudioRoute.Face.speaker(lit: false)   // the audio button's face
     /// THE CALL SCREEN IS FOLDED AND UNFOLDED THROUGH ONE DOOR THAT NAMES ITSELF (23.09: the diary saw the call screen
     /// born anew at 18:48:15 and 18:48:34 and could not say why). Every change is one line with the door that made it.
     @Published private(set) var minimized: Bool = false
@@ -8499,21 +8499,24 @@ struct CallOverlayView: View {
         }
         var body: some View {
             let f = model.route
-            let _ = MontanaTrace.markChanged("call_audio_control", "lit=\(f.lit ? 1 : 0) menu=\(f.menu ? 1 : 0)")
-            VStack(spacing: 8) {
-                ZStack {
-                    Image(systemName: f.icon).font(.system(size: side * 0.34, weight: .semibold))
-                        .foregroundColor(f.lit ? .black : MontanaOctagon.barGlyph)
-                        .montanaOctagonFace(square: true, bar: true, height: side, tint: f.lit ? .white : nil)
-                        // A plate is visual only. Its sibling below is the one and only control.
-                        .allowsHitTesting(false)
-                        .id(f.lit)
-                    routeControl(f, side: side)
+            let _ = MontanaTrace.markChanged("call_audio_control", "lit=\(f.lit ? 1 : 0) menu=\(f.menu ? 1 : 0) shown=\(f.shown ? 1 : 0)")
+            // No earpiece and nothing outside (861 = a): no button, and the row closes up around the rest.
+            if f.shown {
+                VStack(spacing: 8) {
+                    ZStack {
+                        Image(systemName: f.icon).font(.system(size: side * 0.34, weight: .semibold))
+                            .foregroundColor(f.lit ? .black : MontanaOctagon.barGlyph)
+                            .montanaOctagonFace(square: true, bar: true, height: side, tint: f.lit ? .white : nil)
+                            // A plate is visual only. Its sibling below is the one and only control.
+                            .allowsHitTesting(false)
+                            .id(f.lit)
+                        routeControl(f, side: side)
+                    }
+                    Text(LocalizedStringKey(f.caption))
+                        .font(.subheadline).foregroundColor(.white).lineLimit(1).minimumScaleFactor(0.7)
                 }
-                Text(LocalizedStringKey(f.caption))
-                    .font(.subheadline).foregroundColor(.white).lineLimit(1).minimumScaleFactor(0.7)
+                .frame(width: col)
             }
-            .frame(width: col)
         }
     }
     func gridBtn(_ caption: String, _ icon: String, active: Bool, tint: Color? = nil, activeGlyph: Color = .black,
@@ -8836,11 +8839,21 @@ enum MontanaAudioRoute {
     /// only when such a device is there: the input a headset, a car or Bluetooth brings, or the sound already standing
     /// outside the phone. The route detector's «multiple routes» is not asked: it counts AirPlay devices on the network
     /// that never carry a call, and the phone alone turned into a menu that held only the phone and the loudspeaker.
+    /// A DEVICE WITH NO EARPIECE HAS NO SWITCH (decision 861 = a, the author's word 20038: on the iPad the speaker «does not turn off»):
+    /// an iPad has no voice at the ear, the sound always stands in its own loudspeaker, and a «Speaker» lit forever moved nothing.
+    /// Without a device outside it there is nothing to choose, so no button stands; a headset or Bluetooth brings «Audio» and the
+    /// system's menu, as on the phone. The one place that knows whether this device has an earpiece.
+    static var hasEarpiece: Bool { UIDevice.current.userInterfaceIdiom == .phone }
     struct Face: Equatable {
         let caption: String   // a catalogue word: «Speaker» with the phone alone, «Audio» with a device
         let icon: String      // an SF Symbol: the loudspeaker with the phone alone, where the sound is with a device
         let lit: Bool
         let menu: Bool
+        let shown: Bool       // false: no device outside and no earpiece -- nowhere to switch, no button (861 = a)
+        /// The loudspeaker's switch of the phone alone; on a device without an earpiece it is not shown.
+        static func speaker(lit: Bool) -> Face {
+            Face(caption: "Speaker", icon: "speaker.wave.3.fill", lit: lit, menu: false, shown: MontanaAudioRoute.hasEarpiece)
+        }
     }
     static func face() -> Face {
         let s = AVAudioSession.sharedInstance()
@@ -8850,9 +8863,9 @@ enum MontanaAudioRoute {
         let choice = ext != nil || (s.availableInputs ?? []).contains { $0.portType != .builtInMic }
         if choice {
             let icon = ext.map { glyph($0) } ?? (onSpeaker ? "speaker.wave.3.fill" : "iphone")
-            return Face(caption: "Audio", icon: icon, lit: ext != nil || onSpeaker, menu: true)
+            return Face(caption: "Audio", icon: icon, lit: ext != nil || onSpeaker, menu: true, shown: true)
         }
-        return Face(caption: "Speaker", icon: "speaker.wave.3.fill", lit: onSpeaker, menu: false)
+        return .speaker(lit: onSpeaker)
     }
     private static func glyph(_ p: AVAudioSessionPortDescription) -> String {
         switch p.portType {
