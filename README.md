@@ -52,14 +52,14 @@ project's Android key and is served by the site, not by the GitHub releases: non
 <!-- download -->
 ### MT Protocol for Mac
 
-MT Protocol 1.0 (2381) for Mac, signed with a Developer ID and notarized by Apple.
+MT Protocol 1.0 (2382) for Mac, signed with a Developer ID and notarized by Apple.
 
 |   |   |
 | --- | --- |
-| Release | [`mac-v1.0-2381`](https://github.com/efir369999/montana_protocol/releases/tag/mac-v1.0-2381) |
-| File | [`MT-Protocol-1.0-2381.dmg`](https://github.com/efir369999/montana_protocol/releases/download/mac-v1.0-2381/MT-Protocol-1.0-2381.dmg), the same bytes as https://montana.xxx/download/mac/MT-Protocol.dmg |
-| SHA-256 | `5d3d25cb56934d6853a7c39a832fc8c8f12b990054a90636a07cde032091e3ad` |
-| Source | `apps/protocol/ios` at commit `739b3e6c3490` (folder tree `0768905f94614d5262a1dc056abcc1eceac4d3fe`), staged from commit `f4d52813684d` of the application's repository |
+| Release | [`mac-v1.0-2382`](https://github.com/efir369999/montana_protocol/releases/tag/mac-v1.0-2382) |
+| File | [`MT-Protocol-1.0-2382.dmg`](https://github.com/efir369999/montana_protocol/releases/download/mac-v1.0-2382/MT-Protocol-1.0-2382.dmg), the same bytes as https://montana.xxx/download/mac/MT-Protocol.dmg |
+| SHA-256 | `ad329351856815999059987a85fc9f7a4bacc5bdae6f1ca6d3d76dc29674254f` |
+| Source | `apps/protocol/ios` at commit `d68745bcd6a0` (folder tree `61e4ba103eb10af69756e121cefa713ddf696df1`), staged from commit `a48939be104a` of the application's repository |
 | Requires | A Mac with Apple silicon, macOS 14.2 or later |
 
 The Mac build carries no VPN: a packet tunnel distributed outside the Mac App Store must be a system extension, and a Mac
@@ -68,10 +68,10 @@ Catalyst application cannot activate one.
 #### Verify
 
 ```sh
-shasum -a 256 MT-Protocol-1.0-2381.dmg
-xcrun stapler validate MT-Protocol-1.0-2381.dmg
-spctl --assess --type open --context context:primary-signature --verbose=2 MT-Protocol-1.0-2381.dmg
-hdiutil attach -readonly MT-Protocol-1.0-2381.dmg
+shasum -a 256 MT-Protocol-1.0-2382.dmg
+xcrun stapler validate MT-Protocol-1.0-2382.dmg
+spctl --assess --type open --context context:primary-signature --verbose=2 MT-Protocol-1.0-2382.dmg
+hdiutil attach -readonly MT-Protocol-1.0-2382.dmg
 codesign --verify --deep --strict --verbose=2 "/Volumes/MT Protocol/MT Protocol.app"
 spctl --assess --type execute --verbose=2 "/Volumes/MT Protocol/MT Protocol.app"
 ```
@@ -83,10 +83,10 @@ The checksum must equal the one above, and Gatekeeper must answer `source=Notari
 Anyone can rebuild this app from this repository and compare it with the release, file for file, signatures left out:
 
 ```sh
-git clone --branch mac-v1.0-2381 https://github.com/efir369999/montana_protocol.git
+git clone --branch mac-v1.0-2382 https://github.com/efir369999/montana_protocol.git
 cd montana_protocol/apps/protocol/ios
-curl -LO https://github.com/efir369999/montana_protocol/releases/download/mac-v1.0-2381/MT-Protocol-1.0-2381.dmg
-python3 tools/mt-reproduce-mac.py --core ../../../protocol/Code --compare MT-Protocol-1.0-2381.dmg
+curl -LO https://github.com/efir369999/montana_protocol/releases/download/mac-v1.0-2382/MT-Protocol-1.0-2382.dmg
+python3 tools/mt-reproduce-mac.py --core ../../../protocol/Code --compare MT-Protocol-1.0-2382.dmg
 ```
 
 The two digests it prints must be equal, and it must answer `REPRODUCED byte for byte`. It needs Xcode 26.2 (17C52), Rust 1.92.0 with the `aarch64-apple-ios-macabi` target, and the Go that `go.mod` names.
