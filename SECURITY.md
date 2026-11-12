@@ -22,5 +22,5 @@ Not a finding on its own:
 <!-- current-build:start -->
 ## The current build
 
-The current build is 1.0 (2379), source commit `310cfb4b4b54`. What each build changes for the security and the anonymity of Montana is written in its entry in [`CHANGELOG.md`](CHANGELOG.md), under **Security and anonymity**, before the build is made.
+The current build is 1.0 (2380), source commit `31e6e4b73e2d`. What each build changes for the security and the anonymity of Montana is written in its entry in [`CHANGELOG.md`](CHANGELOG.md), under **Security and anonymity**, before the build is made.
 <!-- current-build:end -->
