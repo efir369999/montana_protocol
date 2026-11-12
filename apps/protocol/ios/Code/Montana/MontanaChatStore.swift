@@ -2514,12 +2514,23 @@ class ChatStore: ObservableObject {
             var base = merged[chat] ?? []
             var have = Set(base.map { $0.mid })
             let before = base.count
+            // A LETTER A CORRESPONDENT GAVE BACK STANDS IN FOR THE COPY'S OWN ROW UNTIL THE COPY COMES (OZ 1 p.5.5, the critic K3):
+            // the light copy asks the people first and the full copy lands later, so the same letter stood twice. The given row is
+            // known by the letter's one name (rowSig) and yields its place, and its journal file, to the copy's row.
+            var given: [String: String] = [:]
+            for m in base where m.mid.hasPrefix(MTRestoredMid.given) { given[ChatStore.rowSig(m.createdAt, m.isFromMe, m.text)] = m.mid }
+            var yielded = Set<String>()
             for r in rows where !buried(r.mid, in: chat) && have.insert(r.mid).inserted {
+                if let g = given.removeValue(forKey: ChatStore.rowSig(r.createdAt, r.isFromMe, r.text)) { yielded.insert(g) }
                 base.insert(r, at: base.firstIndex(where: { ChatStore.before(r, $0) }) ?? base.count)
             }
-            guard base.count != before else { continue }
+            if !yielded.isEmpty {
+                base.removeAll { yielded.contains($0.mid) }
+                for g in yielded { MTRowJournal.drop(chat, mid: g) }
+            }
+            guard base.count != before || !yielded.isEmpty else { continue }
             merged[chat] = base
-            added += base.count - before
+            added += base.count - before + yielded.count
             chats += 1
         }
         guard added > 0 else { MontanaTrace.mark("feed_restored", "rows=0 chats=\(feed.count)"); return }
@@ -2817,7 +2828,7 @@ class ChatStore: ObservableObject {
                         var seen = Set<String>(); var kept: [Message] = []; kept.reserveCapacity(arr.count)
                         for m in arr {
                             if m.msgId == nil {
-                                let sig = "\(Int(m.createdAt))|\(m.isFromMe ? 1 : 0)|\(m.text)"
+                                let sig = ChatStore.rowSig(m.createdAt, m.isFromMe, m.text)
                                 if seen.contains(sig) { droppedRows += 1; continue }
                                 seen.insert(sig)
                             }
@@ -3596,7 +3607,7 @@ class ChatStore: ObservableObject {
                 guard let key = rc.ref, let have = feedSigs[key], !have.isEmpty else { continue }
                 var seen = Set<String>(); var missing: [MontanaArchive.RestoredItem] = []
                 for it in rc.items {
-                    let sig = "\(Int(it.sentAt))|\(it.mine ? 1 : 0)|\(it.text)"
+                    let sig = ChatStore.rowSig(it.sentAt, it.mine, it.text)
                     guard seen.insert(sig).inserted, !have.contains(sig) else { continue }
                     missing.append(it)
                 }
@@ -3619,7 +3630,7 @@ class ChatStore: ObservableObject {
                 guard !occupied.contains(key) else { continue }
                 var seen = Set<String>(); var rows: [Message] = []; rows.reserveCapacity(rc.items.count)
                 for it in rc.items {
-                    let sig = "\(Int(it.sentAt))|\(it.mine ? 1 : 0)|\(it.text)"
+                    let sig = ChatStore.rowSig(it.sentAt, it.mine, it.text)
                     guard !seen.contains(sig) else { continue }
                     seen.insert(sig)
                     // An identity of its own, so any later merge knows this row; read — the count reads
@@ -4387,8 +4398,12 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     /// The archive's own name of a row — the second, the direction, the words — what a restore keys by.
     static func archiveSig(_ m: Message) -> String? {
         guard m.createdAt > 0, let t = archivedText(m), !t.isEmpty else { return nil }
-        return "\(Int(m.createdAt))|\(m.isFromMe ? 1 : 0)|\(t)"
+        return rowSig(m.createdAt, m.isFromMe, t)
     }
+    /// THE ONE NAME OF A LETTER BY ITS SECOND, ITS SIDE AND ITS WORDS (constitution 15; OZ 1 p.5.5): the archive's rows, the
+    /// feed's unnamed rows and the letters a correspondent gave back are known by it. The bytes are the archive's: an "arc:" name
+    /// hashes them (restoreFromArchive), so they never change.
+    static func rowSig(_ at: Double, _ mine: Bool, _ text: String) -> String { "\(Int(at))|\(mine ? 1 : 0)|\(text)" }
     func archiveRow(_ chat: String, _ m: Message) {
         guard archivable(chat), let text = Self.archivedText(m) else { return }
         let at = m.createdAt > 0 ? m.createdAt : Date().timeIntervalSince1970
@@ -7670,6 +7685,8 @@ enum MTRestoredMid {
     static let archive = "arc:"   // NOT-UI: a restored row's name on this phone, never on the wire
     static let given = "given:"   // NOT-UI: a given-back row's name on this phone, never on the wire
     static func holds(_ name: String) -> Bool { name.hasPrefix(archive) || name.hasPrefix(given) }
+    /// The wire name inside a given-back row's name -- the one unwrap MTKeeping, MTWalletCore and the restore read (OZ 1 p.5.5).
+    static func wire(_ name: String) -> String { name.hasPrefix(given) ? String(name.dropFirst(given.count)) : name }
 }
 
 /// THE HISTORY BY CONVERSATION (P-6, the law of 01.11.2026, link 13994: «work is in proportion to the change»). The whole

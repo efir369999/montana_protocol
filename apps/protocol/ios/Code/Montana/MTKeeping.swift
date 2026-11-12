@@ -1142,11 +1142,11 @@ extension ChatStore {
         var feed = messages[conv] ?? []
         // A letter both sides hold is known by its moment, its side and its words, as the archive's rows are: the other side
         // names it by its own identity, never by this one's.
-        let sig: (Message) -> String = { String(Int($0.createdAt)) + "@" + ($0.isFromMe ? "1" : "0") + "@" + $0.text }
+        let sig: (Message) -> String = { ChatStore.rowSig($0.createdAt, $0.isFromMe, $0.text) }
         let had = Set(feed.compactMap { $0.msgId }), seen = Set(feed.map(sig))
         // A GIVEN-BACK LETTER ASKS THE GRAVES OF ITS CONVERSATION (the critic R-6): its wire name -- inside the restored one -- and the
         // restored name itself, and the conversation's funeral; a letter erased here stays erased whoever gives it back.
-        let wire: (Message) -> String = { m in m.mid.hasPrefix(MTRestoredMid.given) ? String(m.mid.dropFirst(MTRestoredMid.given.count)) : m.mid }
+        let wire: (Message) -> String = { MTRestoredMid.wire($0.mid) }
         let add = ChatStore.allRead(rows.filter { m in
             !seen.contains(sig(m)) && !had.contains(m.mid) && !had.contains(wire(m))
                 && !buried(wire(m), in: conv) && !buried(m.mid, in: conv) && !diedBefore(wire(m), in: conv)

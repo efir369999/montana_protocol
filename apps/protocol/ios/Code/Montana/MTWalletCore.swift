@@ -2380,7 +2380,7 @@ enum MTCoinSend {
                 // A copy a correspondent gave back carries that name inside its own (MTRestoredMid.given), so it is credited under it
                 // -- the letter and its copy credit once, and a letter the vault had not heard of before the phone was lost comes
                 // back; an archive's copy names no wire name and credits nothing -- its coins moved under the wire name.
-                let wire = m.mid.hasPrefix(MTRestoredMid.given) ? String(m.mid.dropFirst(MTRestoredMid.given.count)) : m.mid
+                let wire = MTRestoredMid.wire(m.mid)
                 guard MTChatMint.wireName(wire), !book.received(wire) else { continue }
                 guard let coin = m.coinLetter, !MTGroup.isKey(chat), credits(coin, mid: wire, from: chat),
                       book.receive(coin.c, from: chat, ref: wire, on: nil) else { continue }
