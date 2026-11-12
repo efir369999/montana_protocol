@@ -2,9 +2,9 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2380) - 2026-11-12
+## 1.0 (2381) - 2026-11-12
 
-Source commit `31e6e4b73e2d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2380.md).
+Source commit `f4d52813684d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2381.md).
 
 - Restoring an account from the 24 words: no separate group call chat appears any more -- a group call is started only from its group's chat, and an old invitation the network still held no longer creates a chat.
 - After a restore your other devices are no longer woken by notifications about old group messages and group calls: what the restored device catches up on arrives silently.
