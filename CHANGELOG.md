@@ -2,6 +2,17 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2382) - 2026-11-12
+
+Source commit `a48939be104a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2382.md).
+
+- Switching between accounts on one phone: if the phone's keychain refuses the account being opened, everything of it goes back to its place and the account you left opens as it was -- the two accounts never mix.
+- Please check: on a phone with two accounts, switch between them several times -- each opens with its own chats, name and photo, and nothing of one shows in the other.
+
+**Security and anonymity**
+
+- Seats: MTSeats.liftStore folds a lift back when the seed is refused -- the lifted folders return to the shelf and the store is cleared before the person who left is lifted again (critic K4). No change to the wire format.
+
 ## 1.0 (2381) - 2026-11-12
 
 Source commit `f4d52813684d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2381.md).
