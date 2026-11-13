@@ -5758,6 +5758,27 @@ struct MTClientRelease: Codable, Equatable {
 enum MontanaRelease {
     static var ownBuild: Int { Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0 }
     static var ownVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
+    /// A BUILD'S OWN WORDS, FROM THEIR ONE OWNER (OZ 1 p.6, the author's words 21412, 21414, 21415, 21417: the Protocol's update
+    /// messages in the Montana room stood empty on T1, T2 and T3 -- the app laid its own build's row with no words and waited for the
+    /// network's, which a build put on directly never hears before its row, and an older build's word is refused as history). The
+    /// notes of build N have one owner, as its number has (Version.xcconfig): docs/releases/N.json, the file the TestFlight road
+    /// writes as whatsNew (tools/mt-edition.py, notes). Its edition's folder rides inside the app as a folder of the project's
+    /// resources, and the room reads it here, keeping no copy.
+    #if MONTANA_MESSENGER
+    static let notesFolder = "messenger"
+    #else
+    static let notesFolder = "releases"
+    #endif
+    static func notes(of build: Int) -> (en: [String], l10n: [String: [String]])? {
+        guard 0 < build, let url = Bundle.main.url(forResource: String(build), withExtension: "json", subdirectory: notesFolder),
+              let data = try? Data(contentsOf: url), let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let words = doc["notes"] as? [String: Any], let en = words["en"] as? [String], !en.isEmpty else { return nil }
+        var l10n = [String: [String]]()
+        for (lang, said) in words where lang != "en" {
+            if let lines = said as? [String], !lines.isEmpty { l10n[lang] = lines }
+        }
+        return (en, l10n)
+    }
     static func check(door: String) async {
         await MTReleaseState.shared.check(door: door)
         #if !MONTANA_MESSENGER   // no levels in Messenger (decision 618 (b), cut C3a)

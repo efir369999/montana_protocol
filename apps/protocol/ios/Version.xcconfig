@@ -4,4 +4,4 @@
 // (mt-delivery-guard.py version), the cleaner (mt-clean-builds.py) and the council read the number here. A road N of either edition
 // needs CURRENT_PROJECT_VERSION = N here, committed (the author's word 21149: one number for Protocol and Messenger).
 MARKETING_VERSION = 1.0
-CURRENT_PROJECT_VERSION = 2389
+CURRENT_PROJECT_VERSION = 2390

@@ -413,7 +413,7 @@ struct ChatsListView: View {
             barSlot(Self.chatsSlot) { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .chats } } label: {
                 Image(systemName: UIState.Glyph.chats).font(.system(size: 20, weight: .semibold))
                     .foregroundColor(MontanaOctagon.barGlyph)
-                    .overlay(alignment: .topTrailing) { if barOpen { glyphBadge(store.unreadCounts.count) } }   // the unread, where the chats live
+                    .overlay(alignment: .topTrailing) { if barOpen { glyphBadge(MTApplication.chats.badge(in: store)) } }   // a person's chats alone (OZ 1 p.5)
             }
             // THE GROUPS AND THE CHANNELS RIGHT OF THE CHATS, NO GLOBE, IN BOTH EDITIONS (the author's words 21097 and 21176, 13.11.2026:
             // «right of the time panel the order of the buttons -- chats, groups, channels -- remove the globe entirely»; «the same in the
@@ -423,14 +423,14 @@ struct ChatsListView: View {
                 Image(systemName: UIState.Glyph.groups).font(.system(size: 20, weight: .semibold))
                     .foregroundColor(MontanaOctagon.barGlyph)
                     .overlay(alignment: .topTrailing) {
-                        if barOpen { glyphBadge(store.unreadCounts.keys.filter { k in MTGroup.isKey(k) && MTGroup.shared.kind(k) != .channel }.count) }
+                        if barOpen { glyphBadge(MTApplication.groups.badge(in: store)) }   // the groups' unread over Groups (OZ 1 p.5)
                     }
             }
             barSlot(Self.channelsSlot) { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .channels } } label: {
                 Image(systemName: UIState.Glyph.channels).font(.system(size: 20, weight: .semibold))
                     .foregroundColor(MontanaOctagon.barGlyph)
                     .overlay(alignment: .topTrailing) {
-                        if barOpen { glyphBadge(store.unreadCounts.keys.filter { k in MTGroup.shared.kind(k) == .channel }.count) }
+                        if barOpen { glyphBadge(MTApplication.channels.badge(in: store)) }   // the channels' and the Montana room's over Channels (OZ 1 p.5)
                     }
             }
         }

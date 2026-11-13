@@ -3130,7 +3130,9 @@ class ChatStore: ObservableObject {
             // THE ROW SPEAKS EVERY LANGUAGE THE WORD CARRIES (19.10.2026, the author's word 08:4x UTC: «the text must be all in
             // the chosen system language»): a row born by a build that kept no translations stood in English under a Russian
             // title for good (T2, 2246). The same row, its same name, takes the languages the word brings now -- never a second row.
-            if let row = messages[montanaRoomKey]?[i], !l10n.isEmpty, releaseLanguages(row.text) != l10n {
+            // A ROW LAID WITHOUT WORDS TAKES THEM WHEN THEY COME (OZ 1 p.6): the app's own row of a build whose notes it did not carry.
+            if let row = messages[montanaRoomKey]?[i],
+               (!l10n.isEmpty && releaseLanguages(row.text) != l10n) || (!notes.isEmpty && releaseInfoOf(row.text)?.notes.isEmpty == true) {
                 messages[montanaRoomKey]?[i].text = releaseMark + json
                 if let healed = messages[montanaRoomKey]?[i] { _ = MTRowJournal.put(montanaRoomKey, healed) }
                 MontanaTrace.mark("release", "row stands build=\(build) — its languages filled in")
@@ -3156,8 +3158,14 @@ class ChatStore: ObservableObject {
     func standMontanaRoom(build: Int, version: String) {
         guard 0 < build else { return }
         if deletedChats.contains(montanaRoomKey) { deletedChats.remove(montanaRoomKey) }
+        // EVERY ROW SPEAKS ITS BUILD'S OWN WORDS (OZ 1 p.6): a row laid empty by an earlier build fills in from the notes' one owner.
+        for row in messages[montanaRoomKey] ?? [] {
+            guard let r = releaseInfoOf(row.text), r.notes.isEmpty, let own = MontanaRelease.notes(of: r.build) else { continue }
+            appendRelease(build: r.build, version: r.version, notes: own.en, l10n: own.l10n, url: r.url)
+        }
         guard !(messages[montanaRoomKey] ?? []).contains(where: { m in build <= (releaseInfoOf(m.text)?.build ?? 0) }) else { return }
-        if appendRelease(build: build, version: version, notes: [], l10n: [:], url: "") {
+        let own = MontanaRelease.notes(of: build)   // the app's own row is born with its words, never empty
+        if appendRelease(build: build, version: version, notes: own?.en ?? [], l10n: own?.l10n ?? [:], url: "") {
             MontanaTrace.mark("release", "the room stands build=\(build) -- the app's own row")
         }
     }

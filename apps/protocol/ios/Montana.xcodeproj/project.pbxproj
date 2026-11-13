@@ -110,6 +110,8 @@
 		95A1C0DE2FE56DC000F43202 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 95A1C0DE2FE56DC000F43201 /* AppIcon.icon */; };
 		AA11CA11S1GNTSVBDF00012 /* callsigns.tsv in Resources */ = {isa = PBXBuildFile; fileRef = AA11CA11S1GNTSVFREF00011 /* callsigns.tsv */; };
 		AA11D00R5TXTB111DF100010 /* nodes.txt in Resources */ = {isa = PBXBuildFile; fileRef = AA11D00R5TXTF11EREF00009 /* nodes.txt */; };
+		MT6RE1EA5E5000000000B001 /* releases in Resources */ = {isa = PBXBuildFile; fileRef = MT6RE1EA5E5000000000F001 /* releases */; };
+		MT6RE1EA5E5000000000B002 /* messenger in Resources */ = {isa = PBXBuildFile; fileRef = MT6RE1EA5E5000000000F002 /* messenger */; };
 		951B4D862FE56DC000F4327B /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 951B4D852FE56DC000F4327B /* Preview Assets.xcassets */; };
 		951B4D902FE56DC100F4327B /* MontanaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951B4D8F2FE56DC100F4327B /* MontanaTests.swift */; };
 		951B4D9A2FE56DC100F4327B /* MontanaUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951B4D992FE56DC100F4327B /* MontanaUITests.swift */; };
@@ -527,6 +529,8 @@
 		95A1C0DE2FE56DC000F43201 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		AA11CA11S1GNTSVFREF00011 /* callsigns.tsv */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = callsigns.tsv; sourceTree = "<group>"; };
 		AA11D00R5TXTF11EREF00009 /* nodes.txt */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; path = nodes.txt; sourceTree = "<group>"; };
+		MT6RE1EA5E5000000000F001 /* releases */ = {isa = PBXFileReference; lastKnownFileType = folder; name = releases; path = docs/releases; sourceTree = SOURCE_ROOT; };
+		MT6RE1EA5E5000000000F002 /* messenger */ = {isa = PBXFileReference; lastKnownFileType = folder; name = messenger; path = docs/releases/messenger; sourceTree = SOURCE_ROOT; };
 		951B4D832FE56DC000F4327B /* Montana.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Montana.entitlements; sourceTree = "<group>"; };
 		951B4D852FE56DC000F4327B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		951B4D8B2FE56DC100F4327B /* MontanaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MontanaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -740,6 +744,8 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 		951B4D712FE56DBC00F4327B = {
 			isa = PBXGroup;
 			children = (
+				MT6RE1EA5E5000000000F001 /* releases */,
+				MT6RE1EA5E5000000000F002 /* messenger */,
 				MT919A000000000000000001 /* Names.xcconfig */,
 				951B4D7C2FE56DBC00F4327B /* Montana */,
 				951B4D8E2FE56DC100F4327B /* MontanaTests */,
@@ -1238,6 +1244,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 				AA11CA11S1GNTSVBDF00012 /* callsigns.tsv in Resources */,
 				AA11D00R5TXTB111DF100010 /* nodes.txt in Resources */,
 				AA11BB22CC33DD44EE55FF77 /* Localizable.xcstrings in Resources */,
+				MT6RE1EA5E5000000000B001 /* releases in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1258,7 +1265,7 @@ E9D0EDEBF2387839D7D7CA6C /* MTScene.swift */ = {isa = PBXFileReference; includeI
 		994D5981ED3AAD5ECCF05FCD = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (C96831C90719654063A71715, ED76CE5CED02A4F46965A24F, ); runOnlyForDeploymentPostprocessing = 0; };
 		406BE5113E069A85DDC92A78 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (1E6DA873974EA5E34426F4A2, F33B14F6300E4E63697B98E5, 1215EBABE2640FD47553AD10, ); runOnlyForDeploymentPostprocessing = 0; };
 		0C0F9E93E7ED7B3D8871E4E1 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A1D17B94B56A54F0B3D63863, E9FA79595EC639FCE1299625, ); runOnlyForDeploymentPostprocessing = 0; };
-		33983B110EB3A838FF450662 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (7B7056ED4355D6C97159AF31, 559A635F1703D8FE7857CD03, 022338214046AA2799FA0E74, 97B614CB0B1C4634CF85157C, MT897A55E700000000000002, 09CE82D8E65391DB38AC519F, A2104591ABC30FEC1E780D59, 1771A00D97E7478B3532E516, 1A7F45FBE0316462AF5659C2, DF3B8A2E2F02A02A85D3EFFD, ); runOnlyForDeploymentPostprocessing = 0; };
+		33983B110EB3A838FF450662 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (MT6RE1EA5E5000000000B002, 7B7056ED4355D6C97159AF31, 559A635F1703D8FE7857CD03, 022338214046AA2799FA0E74, 97B614CB0B1C4634CF85157C, MT897A55E700000000000002, 09CE82D8E65391DB38AC519F, A2104591ABC30FEC1E780D59, 1771A00D97E7478B3532E516, 1A7F45FBE0316462AF5659C2, DF3B8A2E2F02A02A85D3EFFD, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */

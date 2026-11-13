@@ -1602,10 +1602,11 @@ enum MTApplication: String, CaseIterable, Identifiable {
     func badge(in store: ChatStore) -> Int {
         switch self {
         case .calls: return store.missedCallsUnseen
-        // THE GROUPS AND THE CHANNELS ARE APPS OF THEIR OWN (the author's words 06.10.2026 08:5x-09:0x UTC): each counts the unread of its own rows.
-        case .chats: return store.unreadCounts.keys.filter { !MTGroup.isKey($0) }.count
-        case .groups: return store.unreadCounts.keys.filter { MTGroup.isKey($0) && MTGroup.shared.kind($0) != .channel }.count
-        case .channels: return store.unreadCounts.keys.filter { MTGroup.shared.kind($0) == .channel }.count
+        // THE GROUPS AND THE CHANNELS ARE APPS OF THEIR OWN (the author's words 06.10.2026 08:5x-09:0x UTC): each counts the unread of its own
+        // rows, by the one answer of a row's list (MTChatFolders.room, OZ 1 p.5): the Montana room counts over Channels, not over Chats.
+        case .chats: return store.unreadCounts.keys.filter { MTChatFolders.room(of: $0) == nil }.count
+        case .groups: return store.unreadCounts.keys.filter { MTChatFolders.room(of: $0) == .groups }.count
+        case .channels: return store.unreadCounts.keys.filter { MTChatFolders.room(of: $0) == .channels }.count
         default: return 0
         }
     }
