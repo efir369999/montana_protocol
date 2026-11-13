@@ -422,6 +422,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         AppDelegate.launchedAt = ProcessInfo.processInfo.systemUptime
         MontanaTelemetry.shared.install()   // crashes/hangs/events → Montana/Diagnostics/telemetry.log
         MontanaSeed.warmRoot()   // the key's root ready off the main thread before the first screen asks (decision 494, link 14170)
+        ChatConversationView.warmTypes()   // the chat page's types built off the main thread before the first chat (OZ 1 p.1.10)
         // THE TOUCH DIARY STAYS ON OUR OWN PHONES (App Review 2.5.14, 08.10.2026: a record of a person's activity needs their
         // explicit consent): the Debug builds the Mac puts on the author's phones write every touch and every field's editing
         // (24.09); a build from TestFlight or the App Store writes none.

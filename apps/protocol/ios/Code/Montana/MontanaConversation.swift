@@ -1439,6 +1439,31 @@ struct ChatConversationView: View {
     @AppStorage("cbBg1") private var cbBg1 = "000000"
     @AppStorage("cbBg2") private var cbBg2 = "0A0A0A"
 
+    /// THE FIRST CHAT OF A RUN STOOD 281-365 MS ON T1 (13.11.2026 23:14 UTC, build 2392, OZ 1 p.1.10): the stack of that frame was
+    /// __swift_instantiateConcreteTypeFromMangledNameV2 inside chatCore, bottomGroup and composePreviews -- the runtime built the
+    /// metadata of the page's nested generic types at the first tap, and every later chat of the run opened without that cost.
+    /// Every link is boxed (mtBoxed), so the body's type alone does not reach the links: each link's type is named here through a
+    /// closure that is never called, once, off the main thread, right after the launch (MontanaApp, beside MontanaSeed.warmRoot).
+    /// Type metadata is thread-safe and stays for the process; no view is built and no state is read. The cost is a trace line.
+    nonisolated static func warmTypes() {
+        DispatchQueue.global(qos: .utility).async {
+            let t0 = ProcessInfo.processInfo.systemUptime
+            var seen: [ObjectIdentifier] = []
+            func meta<T>(_ link: @MainActor (ChatConversationView) -> T) { seen.append(ObjectIdentifier(T.self)) }
+            meta { $0.body }; meta { $0.chatCoreL0 }; meta { $0.chatCoreL1 }; meta { $0.chatCoreL2 }; meta { $0.chatCoreM1 };
+            meta { $0.chatCoreM2 }; meta { $0.chatTop }; meta { $0.chatTitleDoor }; meta { $0.chatTitlePage };
+            meta { $0.chatTitleBubble }; meta { $0.chatCoreM3 }; meta { $0.chatCoreL3 }; meta { $0.chatCore };
+            meta { $0.searchBar }; meta { $0.savedChips }; meta { $0.messagesList }; meta { $0.unreadDivider };
+            meta { $0.pastedPreview }; meta { $0.mentionPlate }; meta { $0.linkPlate }; meta { $0.recoveredNote };
+            meta { $0.groupMutedNote }; meta { $0.closedNote }; meta { $0.groupDeleteBar }; meta { $0.channelJoinBar };
+            meta { $0.channelMuteBar }; meta { $0.bottomGroup }; meta { $0.rowGroup }; meta { $0.topFieldGround };
+            meta { $0.composePreviews }; meta { $0.composeSlot }; meta { $0.chatBackground }; meta { $0.logoPattern };
+            meta { $0.defaultBackground }; meta { $0.selectionTopBar }; meta { $0.selectionBar }; meta { $0.scheduleSheet }
+            let ms = Int((ProcessInfo.processInfo.systemUptime - t0) * 1000)
+            MontanaTrace.mark("chat_types", "links=\(seen.count) ms=\(ms)")
+        }
+    }
+
     @Environment(\.mtChatKeyboardGeometry) private var pageKeyboard
     var body: some View {
         // Keyboard construction, split by ownership: UIKit's keyboardLayoutGuide owns WHERE the
