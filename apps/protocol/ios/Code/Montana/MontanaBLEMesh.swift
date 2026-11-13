@@ -1142,8 +1142,7 @@ extension MTMeshRoom {
     /// made small enough first; the rest leaves as it is.
     @MainActor static func share(_ row: Message) -> Bool {
         guard MontanaPhoneNode.meshDiscoverable else { return false }
-        let pair: (String, String)? = row.imageFile.map { ($0, "img") } ?? row.videoFile.map { ($0, "vid") }
-            ?? row.audioFile.map { ($0, "aud") } ?? row.docFile.map { ($0, "doc") }
+        let pair: (String, String)? = row.attachment.map { ($0.file, $0.kind) }
         guard let (file, kind) = pair else { return false }
         let url = attachmentURL(file)
         let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0

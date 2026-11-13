@@ -947,7 +947,7 @@ enum MTKeepDerive {
         answeredBack[conv] = now
         let since = (o["a"] as? Double) ?? 0
         let rows = (store.messages[conv] ?? []).filter {
-            $0.createdAt > since && !$0.text.isEmpty && $0.imageFile == nil && $0.videoFile == nil && $0.audioFile == nil && $0.docFile == nil
+            $0.createdAt > since && !$0.text.isEmpty && $0.attachment == nil
         }
         guard !rows.isEmpty else { say(conv, ["w": "given", "c": 0]); return }
         // A letter of the asker rides with the author field it came with (Message.authorTag): their phone names it theirs by

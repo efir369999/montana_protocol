@@ -103,7 +103,7 @@ final class MontanaVPNTunnel: ObservableObject {
         }
     }
 
-    // The VPN keeps its own record and nothing else's. It is a reference client for one job, and a
+    // The VPN keeps its own record and nothing else's. It is a client for one job, and a
     // client that writes into the mesh's telemetry has taken a dependency on the mesh to do that job.
     private func tg(_ m: String) { MontanaVPNLog.write(m) }
 

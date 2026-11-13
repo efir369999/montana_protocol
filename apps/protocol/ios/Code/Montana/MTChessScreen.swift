@@ -3,7 +3,7 @@ import SwiftUI
 extension Message {
     var chessLetter: MTChessLetter? {
         guard !isForwarded, !edited, replyText == nil,
-              imageFile == nil, videoFile == nil, audioFile == nil, docFile == nil else { return nil }
+              attachment == nil else { return nil }
         return MTChessLetter.parse(text)
     }
 }

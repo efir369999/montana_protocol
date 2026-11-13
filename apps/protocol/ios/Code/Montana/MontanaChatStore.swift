@@ -320,7 +320,7 @@ class ChatStore: ObservableObject {
         // in the list as in the player bar) — from the record, never from the history (stage 9).
         if let k = Self.rowMediaKind(m) {
             rec["k"] = k
-            if let f = Self.rowMediaFile(m) { rec["f"] = f }
+            if let f = m.attachment?.file { rec["f"] = f }
         }
         // s: the stage of my last letter (of its plate, ladderLetter) — the row is born wearing it (rowStatus); the ladder's one
         // door keeps it (followStages).
@@ -419,16 +419,18 @@ class ChatStore: ObservableObject {
     static func rowMediaKind(_ m: Message) -> String? {
         // A call's letter wears the menu's own glyph (the author's word 16.09): the handset, the camera.
         if let ci = callInfoOf(m.text) { return ci.video ? "vcall" : "acall" }
-        if m.audioFile != nil { return "aud" }
-        if let v = m.videoFile { return v.hasPrefix("vnote_") ? "vnote" : "vid" }
-        if m.imageFile != nil { return "img" }
-        if let d = m.docFile { return mtIsAudioName(m.docName ?? "") || mtIsAudioName(d) ? "music" : "doc" }
+        if let a = m.attachment {
+            switch a.kind {
+            case "aud": return "aud"
+            case "vid": return a.file.hasPrefix("vnote_") ? "vnote" : "vid"
+            case "img": return "img"
+            default: return mtIsAudioName(m.docName ?? "") || mtIsAudioName(a.file) ? "music" : "doc"
+            }
+        }
         // A letter with a web link wears the bar's own link glyph (the author's word 16.09).
         if !m.text.hasPrefix(mediaMark), MTLinkPreviewBuilder.firstWebURL(in: m.text) != nil { return "link" }
         return nil
     }
-    /// The file the thumbnail is drawn from, for the word above.
-    static func rowMediaFile(_ m: Message) -> String? { m.audioFile ?? m.videoFile ?? m.imageFile ?? m.docFile }
     /// What the row's thumbnail stands for: «aud» (the orb, mine or theirs) or «vnote» with the
     /// poster's file when the app's door has named it; nil — no thumbnail.
     func rowMedia(_ chat: Chat) -> (kind: String, file: String?, mine: Bool)? {
@@ -437,7 +439,7 @@ class ChatStore: ObservableObject {
     }
     /// The letter that carries a file (the bar's way back to its bubble, the author's word 15.09).
     func letterId(of file: String, in chat: String) -> MID? {
-        messages[chat]?.last(where: { $0.audioFile == file || $0.videoFile == file })?.id
+        messages[chat]?.last(where: { $0.attachment?.file == file })?.id
     }
     /// THE REACTION IN THE ROW, AS UNDER THE BUBBLE (the author's word 20.09: «the thumbnails in the
     /// chat list show the face and the answer as the plate does»): the newest event of a conversation
@@ -456,7 +458,7 @@ class ChatStore: ObservableObject {
             rec["r"] = e; rec["rm"] = mine ? "1" : nil
             rec["ra"] = m.mid                                      // the letter answered, by its one name
             rec["p"] = Self.listPreview(m)                       // the letter answered, in the row's words
-            if let k = Self.rowMediaKind(m) { rec["k"] = k; rec["f"] = Self.rowMediaFile(m) } else { rec["k"] = nil; rec["f"] = nil }
+            if let k = Self.rowMediaKind(m) { rec["k"] = k; rec["f"] = m.attachment?.file } else { rec["k"] = nil; rec["f"] = nil }
             rec["m"] = m.isFromMe ? "1" : nil
             rec["t"] = MTClock.time(Date(timeIntervalSince1970: born))   // the answer's own moment, not its arrival
             // When: a letter born later replaces it, an older rebuild does not — the answer's birth, not the moment this
@@ -1056,8 +1058,8 @@ class ChatStore: ObservableObject {
     /// `listDrafts`.
     var drafts: [String: String] = ChatStore.draftsAll()
     /// WHAT THE CHATS LIST SHOWS UNDER A NAME: every chat's draft at once, except the chat open on the screen, whose
-    /// words the list learns when it is left (openConv) -- the list lies under it and draws nothing meanwhile, as the
-    /// reference keeps a draft for the list when the chat is closed. One writer: showDraft.
+    /// words the list learns when it is left (openConv) -- the list lies under it and draws nothing meanwhile, so a
+    /// draft reaches the list when the chat is closed. One writer: showDraft.
     @Published private(set) var listDrafts: [String: String] = [:]
     func showDraft(_ chat: String) {
         let v = drafts[chat]
@@ -1329,7 +1331,7 @@ class ChatStore: ObservableObject {
                 guard let sid = m.msgId else { continue }
                 let bare = sid.hasPrefix("mid:") ? String(sid.dropFirst(4)) : sid
                 if queueMids.contains(bare) || MTGroup.shared.rides(bare, queued: queueMids) { continue }   // a group's row rides on its copies (MTGroup)
-                if let f = m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile,
+                if let f = m.attachment?.file,
                    uploadTasks[f] != nil || uploadProgress[f] != nil { continue }
                 // THE GRACE IS COUNTED FROM THE RUNG, NOT FROM THE BIRTH (OZ 1 p.15.5): «retry» on a letter born 26.10 put it back
                 // on the clock at 12.11 21:43, and the birth was weeks behind the edge -- red again one second later.
@@ -1378,7 +1380,7 @@ class ChatStore: ObservableObject {
         // The transcode lives in the encode registry, not here (22.09): the hand reaches it by the
         // letter's name, which the registry holds beside the file's.
         if let sid = messages[chat]?.first(where: {
-            $0.videoFile == key || $0.imageFile == key || $0.audioFile == key || $0.docFile == key
+            $0.attachment?.file == key
         })?.msgId, sid.hasPrefix("mid:") {
             MTEncodeRegistry.shared.cancel(letter: String(sid.dropFirst(4)))
         }
@@ -1421,7 +1423,7 @@ class ChatStore: ObservableObject {
         // cargo one second later, and the receiver hunted a manifest that no longer existed for
         // thirteen minutes. A row that owns a file IS a media letter, whatever the envelope says.
         let row = messages[MTSamePair.root(chat)]?.first(where: { $0.msgId == rsid })   // a folded pipe's row stands in its conversation
-        let rowFile = row.flatMap { $0.videoFile ?? $0.imageFile ?? $0.audioFile ?? $0.docFile }
+        let rowFile = row?.attachment?.file
         if !buried, text.hasPrefix(mediaMark) || text.hasPrefix(voiceMark) || rowFile != nil {
             let file = rowFile
             guard let file, MontanaMediaStore.exists(file) else {
@@ -1463,7 +1465,7 @@ class ChatStore: ObservableObject {
     @MainActor
     func setMediaMid(_ chat: String, file: String, mid: String) {
         guard let i = messages[chat]?.firstIndex(where: {
-            $0.videoFile == file || $0.imageFile == file || $0.audioFile == file || $0.docFile == file
+            $0.attachment?.file == file
         }) else { return }
         messages[chat]?[i].msgId = "mid:\(mid)"
     }
@@ -1610,7 +1612,7 @@ class ChatStore: ObservableObject {
             // THE ROW IS THE TRUTH OF THE FILE NAME ([C-1]): the row's file outranks the intent's word of it
             // (rows of the older builds still wear a file that became _mtc.mp4 before 22.09).
             if let m = messages[p.chat]?.first(where: { $0.msgId == "mid:" + p.mid }),
-               let rf = m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile, rf != f.file {
+               let rf = m.attachment?.file, rf != f.file {
                 f = (f.kind, rf, (rf as NSString).pathExtension)
             }
             let url = attachmentURL(f.file)
@@ -1626,7 +1628,7 @@ class ChatStore: ObservableObject {
                 MontanaTrace.markFolded("piece_resume", "skipped mid=\(p.mid.prefix(8)) — a living send holds \(f.file.prefix(24))", window: 60, key: p.mid)
                 continue
             }
-            guard let m = messages[p.chat]?.first(where: { $0.videoFile == f.file || $0.imageFile == f.file || $0.audioFile == f.file || $0.docFile == f.file }),
+            guard let m = messages[p.chat]?.first(where: { $0.attachment?.file == f.file }),
                   m.deliveryStatus == .sending || m.deliveryStatus == .failed else {
                 MontanaTrace.markFolded("piece_resume", "no row to resume mid=\(p.mid.prefix(8)) — the mirror law decides", window: 60, key: p.mid)
                 continue
@@ -1636,6 +1638,67 @@ class ChatStore: ObservableObject {
             MontanaMediaSender(store: self).sendMediaOverE2E(fileName: f.file, kind: f.kind, docName: m.docName,
                                                             caption: m.text, peer: p.to, chatKey: p.chat)
         }
+    }
+
+    // A KEPT FILE ASKED FOR AGAIN (12.11.2026, OZ 1 p.10.1): a phone restored from the light copy holds every letter and no
+    // attachment, and a delivered letter's pieces have left the nodes. The person's tap on the row asks its sender by the word
+    // every build already reads (cargoLostMark); the sender who still holds the file lays it again under the same letter name,
+    // and the standing row takes it (rx_refill). One ask and one answer per letter in six hours, on each side.
+    static let keptFileAsksKey = "keptFileAsks"
+    static let keptFileAskSpan: Double = 6 * 3600
+    /// THE ONE CLOCK OF A KEPT FILE'S ASK AND ANSWER: true with the moment kept, false while the last one is younger than the span.
+    private func mayAskKeptFile(_ name: String) -> Bool {
+        let now = Date().timeIntervalSince1970
+        var book = MontanaLocalVault.getString(Self.keptFileAsksKey).flatMap { $0.data(using: .utf8) }
+            .flatMap { try? JSONDecoder().decode([String: Double].self, from: $0) } ?? [:]
+        book = book.filter { now - $0.value < Self.keptFileAskSpan }
+        guard book[name] == nil else { return false }
+        book[name] = now
+        guard let d = try? JSONEncoder().encode(book), let s = String(data: d, encoding: .utf8) else { return false }
+        return MontanaLocalVault.setString(Self.keptFileAsksKey, s)
+    }
+    /// The receiver's half: an incoming attachment's row stands without its file, with no intent to receive it -- its sender is
+    /// asked. A group's letter is not asked here: the group's road drops a pipe word to the group's key (p.10.1, the group's half).
+    private func askKeptFile(_ sid: String) {
+        guard let hit = messages.lazy.compactMap({ kv in kv.value.first { $0.msgId == sid }.map { (kv.key, $0) } }).first,
+              !hit.1.isFromMe, !MTGroup.isKey(hit.0), let kept = hit.1.attachment, !MontanaMediaStore.exists(kept.file),
+              !reconstructInFlight.contains(sid) else { return }
+        let arr = (try? JSONSerialization.jsonObject(with: Data(pendingMediaJSON.utf8)) as? [[String: String]]) ?? []
+        guard !arr.contains(where: { $0["sid"] == sid }) else { return }
+        let bare = sid.hasPrefix("mid:") ? String(sid.dropFirst(4)) : sid
+        guard mayAskKeptFile("ask:" + bare) else {
+            MontanaTrace.mark("kept_file", mid: bare, "asked within the span -- nothing sent")
+            return
+        }
+        MontanaDeliveryEngine.shared.enqueue(to: hit.0, chat: hit.0, mid: UUID().uuidString, text: cargoLostMark + bare, silent: true)
+        MontanaTrace.mark("kept_file", mid: bare, "the row stands without its file -- its sender is asked")
+    }
+    /// The holder's half: a «cargo gone» word about a letter that no longer rides here (delivered, receipted) is a restored phone
+    /// asking; the file still on this disk is laid again under the same letter name, once in the span.
+    @MainActor
+    func serveKeptFile(mid: String, chat: String) {
+        let mine: (Message) -> Bool = { $0.isFromMe && ($0.mid == mid || $0.msgId == "mid:" + mid) }
+        let home = MTSamePair.root(chat)
+        let key = messages[chat]?.contains(where: mine) == true ? chat : home
+        guard let row = messages[key]?.first(where: mine), let kept = row.attachment else {
+            MontanaTrace.mark("kept_file", mid: mid, "no letter of mine with a file by this name -- nothing to lay")
+            return
+        }
+        guard FileManager.default.fileExists(atPath: attachmentURL(kept.file).path) else {
+            MontanaTrace.mark("kept_file", mid: mid, "the file is gone from this phone too")
+            return
+        }
+        guard uploadTasks[kept.file] == nil, uploadProgress[kept.file] == nil else {
+            MontanaTrace.mark("kept_file", mid: mid, "joins the living send")
+            return
+        }
+        guard mayAskKeptFile("serve:" + mid) else {
+            MontanaTrace.mark("kept_file", mid: mid, "laid within the span -- the ask waits")
+            return
+        }
+        MontanaTrace.mark("kept_file", mid: mid, "a restored phone asks -- laid again kind=\(kept.kind)")
+        MontanaMediaSender(store: self).sendMediaOverE2E(fileName: kept.file, kind: kept.kind, docName: row.docName, caption: row.text,
+                                                          peer: chat, chatKey: key)
     }
 
     // A receiver can prove that every store has lost an attachment's cargo.  Leaving that
@@ -1673,13 +1736,9 @@ class ChatStore: ObservableObject {
             MontanaTrace.mark("cargo_repair", mid: mid, "refused — the sender row is absent")
             return
         }
-        let file: String?
-        let kind: String
-        if let f = row.videoFile { file = f; kind = "vid" }
-        else if let f = row.imageFile { file = f; kind = "img" }
-        else if let f = row.audioFile { file = f; kind = "aud" }
-        else if let f = row.docFile { file = f; kind = "doc" }
-        else { file = nil; kind = "" }
+        let kept = row.attachment
+        let file = kept?.file
+        let kind = kept?.kind ?? ""
         guard let file, FileManager.default.fileExists(atPath: attachmentURL(file).path) else {
             MontanaTrace.mark("cargo_repair", mid: mid, "refused — no source file remains")
             return
@@ -1725,7 +1784,7 @@ class ChatStore: ObservableObject {
                 // settled, both at birth (below) and here for what was born before.
                 if Self.isLocalRoom(chat) { advance(chat, i, to: .sent); continue }
                 guard m.deliveryStatus == .sending,
-                      let file = m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile else { continue }
+                      let file = m.attachment?.file else { continue }
                 // A send alive RIGHT NOW is nobody's corpse — on a cold start the only such send
                 // is a resumed intent (the drain hands the queued intents to resumePieces).
                 if uploadTasks[file] != nil || uploadProgress[file] != nil { continue }
@@ -1756,7 +1815,7 @@ class ChatStore: ObservableObject {
     @MainActor
     func letterMidFor(_ chat: String, file: String) -> String {
         if let i = messages[chat]?.firstIndex(where: {
-            $0.videoFile == file || $0.imageFile == file || $0.audioFile == file || $0.docFile == file
+            $0.attachment?.file == file
         }), let id = messages[chat]?[i].msgId, id.hasPrefix("mid:") {
             return String(id.dropFirst(4))
         }
@@ -1771,7 +1830,7 @@ class ChatStore: ObservableObject {
     @MainActor
     func setMediaStatus(_ chat: String, file: String, _ st: DeliveryStatus) {
         guard let i = messages[chat]?.firstIndex(where: {
-            $0.videoFile == file || $0.imageFile == file || $0.audioFile == file || $0.docFile == file
+            $0.attachment?.file == file
         }) else { return }
         #if !MONTANA_MESSENGER
         // THE MESH WALL'S MEDIA RIDE THE RADIO (29.09): every media road of a room without a wire ends here, settled «sent»; the
@@ -1786,7 +1845,7 @@ class ChatStore: ObservableObject {
     @MainActor
     func setMediaRefused(_ chat: String, file: String, because why: MTRefusal) {
         guard let i = messages[chat]?.firstIndex(where: {
-            $0.videoFile == file || $0.imageFile == file || $0.audioFile == file || $0.docFile == file
+            $0.attachment?.file == file
         }) else { return }
         putOut(chat, i, because: why)
     }
@@ -2137,8 +2196,7 @@ class ChatStore: ObservableObject {
         // Cancelling the upload task reaches the encode (cancellable by construction) and
         // frees the gate; dropPiece clears the intent, the resume and the segment dir.
         if let row = messages[chat]?.first(where: { $0.msgId == msgId }) {
-            for f in [row.videoFile, row.imageFile, row.audioFile, row.docFile] {
-                guard let f, !f.isEmpty else { continue }
+            if let f = row.attachment?.file, !f.isEmpty {
                 uploadTasks[f]?.cancel(); uploadTasks[f] = nil
                 setUploadProgress(f, nil); setUploadStatus(f, nil)
             }
@@ -3081,7 +3139,7 @@ class ChatStore: ObservableObject {
         MontanaTrace.mark("money_flow", "begun peer=\(String(peer.prefix(10)))")
     }
     #endif
-    /// A GROUP'S EVENT STANDS IN ITS FEED (MTGroupEvent, stage R -- the reference folder's service rows): this phone's own row,
+    /// A GROUP'S EVENT STANDS IN ITS FEED (MTGroupEvent, stage R -- the group's service rows): this phone's own row,
     /// read, drawn in the middle of the feed; it rings nothing and is never sent.
     func appendGroupEvent(_ key: String, _ text: String) {
         let m = Message(text: text, isFromMe: true, time: nowHHMM(), deliveryStatus: .read)
@@ -3307,8 +3365,7 @@ class ChatStore: ObservableObject {
         for m in rows where !m.mid.hasPrefix("mid:") {
             guard 0 < m.createdAt, let t = Self.archivedText(m),
                   want.contains(String(Int(m.createdAt)) + "|" + (m.isFromMe ? "1" : "0") + "|" + MontanaArchive.rowHash(t)) else { continue }
-            let kind = m.imageFile != nil ? "img" : (m.videoFile != nil ? "vid" : (m.audioFile != nil ? "aud" : "doc"))
-            let file = (m.imageFile ?? m.videoFile ?? m.audioFile ?? m.docFile).map { f in (kind: kind, name: f, docName: m.docName, duration: m.audioDuration) }
+            let file = m.attachment.map { a in (kind: a.kind, name: a.file, docName: m.docName, duration: m.audioDuration) }
             MontanaArchive.giveTwin(chat: chat, mid: m.mid, text: m.text, own: m.isFromMe, at: m.createdAt, senderRef: m.senderRef, file: file)
             given += 1
         }
@@ -3739,12 +3796,12 @@ class ChatStore: ObservableObject {
                                  unread: 0, status: status, convId: key), at: 0)
                 rowsChanged = true
             }
-            if let n = rc.name, peerNames[key] != n {
-                peerNames[key] = n
-                MTNameBook.syncContact(conv: key, first: n, last: nil)
-            }
+            // THE ARCHIVE'S NAME IS ONE MORE WITNESS (OZ 1 p.14.1): it enters by the book's one door as the weakest, at no moment --
+            // it lands only where no dated word of the person stands -- and never on the card, which mirrors my hand alone. Written
+            // past the door, a head sealed under one device's word renamed a person over a fresher word and wore it on their card.
+            if let n = rc.name, !n.isEmpty, n.count <= 64 { setPeerName(ref: key, name: n, at: 0, source: "archive") }
             if let face = rc.face, faceCount[face] == 1, peerAvatars[key] == nil, setPeerAvatar(ref: key, data: face) { faces += 1 }   // never this seed's own face: the writer refuses it (No.61)
-            media += arr.filter { $0.imageFile ?? $0.videoFile ?? $0.audioFile ?? $0.docFile != nil }.count
+            media += arr.filter { $0.attachment != nil }.count
             let last = arr.max(by: ChatStore.before) ?? arr[arr.count - 1]
             noteOrder(key, at: Int(last.createdAt * 1000))
             noteListState(key, last: last)
@@ -3913,7 +3970,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     @MainActor
     /// Rows that still hold a long-letter REFERENCE instead of words (an older build wrote the
     /// raw reference when the blob was out of reach) are healed here: the blob is fetched now
-    /// that every door serves every blob, and the words take the reference's place. Nothing
+    /// that every door serves every blob, and the words take the place of that reference. Nothing
     /// else on the row changes. Called when a chat opens; a row that cannot be healed yet waits
     /// and is drawn as «New message», never as raw text. THE ONE ROAD, ITS HOUR AND ITS VERDICT
     /// (the author's word 25.09: «do not try to fetch what is not there, and do not ask again once
@@ -3970,7 +4027,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     func notePlayed(file: String) {
         let order = (openConv.map { [$0] } ?? []) + messages.keys.filter { $0 != openConv }
         for chat in order {
-            guard let i = messages[chat]?.firstIndex(where: { $0.audioFile == file || $0.videoFile == file }) else { continue }
+            guard let i = messages[chat]?.firstIndex(where: { $0.attachment?.file == file }) else { continue }
             guard let m = messages[chat]?[i], !m.isFromMe, !m.heard else { return }
             messages[chat]?[i].heard = true
             guard MontanaConv.holds(chat) else { return }
@@ -4045,13 +4102,11 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         }
         // A PICTURE'S OR A VIDEO'S CAPTION IS A PERSON'S WORDS (the author's word 19.09): it takes the
         // peer's edit like a text letter — never one's own letter, never a voice, a file or a call row.
-        let captioned = !row.isMine && (row.imageFile != nil || row.videoFile != nil)
-            && row.audioFile == nil && row.docFile == nil && !isControlMarker(row.text)
+        let captioned = !row.isMine && row.imagery != nil && !isControlMarker(row.text)
         if captioned {
             // the caption's road joins the text letter's below
         } else {
-        guard !row.isMine, row.imageFile == nil, row.videoFile == nil,
-              row.audioFile == nil, row.docFile == nil, !isControlMarker(row.text) else {
+        guard !row.isMine, row.attachment == nil, !isControlMarker(row.text) else {
             MontanaTrace.mark("edit_rx", "REFUSED mid=\(String(sid.prefix(8))) — not the peer's text letter")
             return
         }
@@ -4089,7 +4144,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         var blobs: [String] = []
         var files: [String] = []
         for m in msgs {
-            if let f = m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile { files.append(f) }
+            if let f = m.attachment?.file { files.append(f) }
             guard m.text.hasPrefix(mediaMark) else { continue }
             let body = String(m.text.dropFirst(mediaMark.count))
             guard let d = body.data(using: .utf8),
@@ -4104,9 +4159,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         var elsewhere = Set<String>()
         for (other, msgs) in messages where other != conv {
             for m in msgs {
-                for f in [m.videoFile, m.imageFile, m.audioFile, m.docFile] {
-                    if let f, !f.isEmpty { elsewhere.insert(f) }
-                }
+                if let f = m.attachment?.file, !f.isEmpty { elsewhere.insert(f) }
             }
         }
         MontanaMediaStore.remove(files.filter { !elsewhere.contains($0) })
@@ -4242,7 +4295,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     /// The attachment's chunk manifest by file name: what to assemble it from when no whole file exists.
     func mediaManifest(forFile name: String) -> (chunks: [[String: Any]], key: Data, size: Int)? {
         for (_, msgs) in messages {
-            for m in msgs where (m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile) == name
+            for m in msgs where m.attachment?.file == name
                 && m.text.hasPrefix(mediaMark) {
                 let body = String(m.text.dropFirst(mediaMark.count))
                 guard let d = body.data(using: .utf8),
@@ -4277,9 +4330,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         live.formUnion(MontanaGifBook.shared.allFiles)
         for (_, msgs) in messages {
             for m in msgs {
-                for f in [m.videoFile, m.imageFile, m.audioFile, m.docFile] {
-                    if let f, !f.isEmpty { live.insert(f) }
-                }
+                if let f = m.attachment?.file, !f.isEmpty { live.insert(f) }
             }
         }
         DispatchQueue.global(qos: .utility).async {
@@ -4331,7 +4382,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // false, and chunks piled beside a file of the same size — the very «disk taken twice».
         for (_, msgs) in messages {
             for m in msgs where m.text.hasPrefix(mediaMark) {
-                let file = (m.videoFile ?? m.imageFile ?? m.audioFile ?? m.docFile) ?? ""
+                let file = m.attachment?.file ?? ""
                 guard !file.isEmpty, !MontanaMediaStore.exists(file) else { continue }
                 let body = String(m.text.dropFirst(mediaMark.count))
                 guard let d = body.data(using: .utf8),
@@ -4396,9 +4447,8 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
     /// store. The file's name is what a restore needs to find it again without the network.
     /// What a row is in the archive — ONE builder for the write and for the audit against it ([C-1]).
     static func archivedText(_ m: Message) -> String? {
-        guard let f = m.imageFile ?? m.videoFile ?? m.audioFile ?? m.docFile else { return m.text }
-        let kind = m.imageFile != nil ? "img" : (m.videoFile != nil ? "vid" : (m.audioFile != nil ? "aud" : "doc"))
-        let rec = ArchivedMedia(k: kind, f: f, n: m.docName, cap: m.text.isEmpty ? nil : m.text, d: m.audioDuration > 0 ? m.audioDuration : nil)
+        guard let a = m.attachment else { return m.text }
+        let rec = ArchivedMedia(k: a.kind, f: a.file, n: m.docName, cap: m.text.isEmpty ? nil : m.text, d: m.audioDuration > 0 ? m.audioDuration : nil)
         let enc = JSONEncoder(); enc.outputFormatting = [.sortedKeys]
         guard let d = try? enc.encode(rec), let s = String(data: d, encoding: .utf8) else { return nil }
         return mediaMark + s
@@ -4959,8 +5009,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // all take the same text, and no screen ever shows words their author has already replaced.
         var row = m
         if let sid = row.msgId, let tx = takePendingEdit(chat, sid: sid),
-           !row.isFromMe, row.imageFile == nil, row.videoFile == nil,
-           row.audioFile == nil, row.docFile == nil, !isControlMarker(row.text) {
+           !row.isFromMe, row.attachment == nil, !isControlMarker(row.text) {
             row.text = tx; row.edited = true
             MontanaTrace.mark("edit_rx", "applied at landing mid=\(String(sid.dropFirst(4).prefix(8)))")
         }
@@ -5170,7 +5219,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         // A FILE YOUR NODE KEEPS COMES BACK FROM IT (18.10): the cache cleared it from this phone, the book names its pieces.
         if let sid = msgId, !sid.isEmpty,
            let row = messages.values.lazy.compactMap({ rows in rows.first { $0.msgId == sid } }).first,
-           let file = row.videoFile ?? row.imageFile ?? row.audioFile ?? row.docFile,
+           let file = row.attachment?.file,
            !MontanaMediaStore.exists(file), MTHomeBook.shared.entry(file) != nil {
             Task { @MainActor in MTHomeKeep.shared.bring(file, force: true) }
             return
@@ -5185,6 +5234,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
                 }
                 MontanaTrace.mark("rx_media_gone", "lifted by hand sid=\(String(sid.prefix(14)))")
             }
+            askKeptFile(sid)   // a row with no intent to receive (a restored phone) asks its sender (p.10.1)
         }
         retryPendingMedia()
     }
@@ -5341,7 +5391,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         guard let sid = msgId else { return false }
         let rowId = sid.hasPrefix("mid:") ? sid : "mid:" + sid
         guard let row = (messages[chat] ?? []).first(where: { $0.msgId == rowId }),
-              let file = row.videoFile ?? row.imageFile ?? row.audioFile ?? row.docFile,
+              let file = row.attachment?.file,
               MontanaMediaStore.exists(file) else { return false }
         return true
     }
@@ -5812,7 +5862,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         }
         // A file your node keeps plays from its first pieces there (MTHomeShelf), and lands as the bring would.
         if let src = MTHomeShelf.streamSource(name) {
-            let chat = messages.first { _, rows in rows.contains { [$0.videoFile, $0.audioFile].contains(name) } }?.key
+            let chat = messages.first { _, rows in rows.contains { $0.attachment?.file == name } }?.key
             return (src, { [weak self] in if let chat { self?.fillMedia(chat, name: name) } })
         }
         return nil
@@ -6759,7 +6809,7 @@ MontanaLocalVault.setEncrypted("scheduledMsgs", d)
         MontanaTrace.mark("pin_rx", "\(op) by=\(sid.isEmpty ? "words" : "name")")
         if op == "pin" {
             pin(chat, m.id)
-            // «Only Pin» (a group's pin said with n 0, the reference's choice) pins without a banner
+            // «Only Pin» (a group's pin said with n 0, the pinner's choice) pins without a banner
             if openConv != chat, (obj["n"] as? Int) != 0 { MontanaNotify.presentPinned(from: chat, chat: chat, words: MTRowLetter.words(m.text), sid: sid) }
         } else {
             unpin(chat, m.id)
@@ -7187,7 +7237,8 @@ enum SeedScope {
 
         // the VPN's keys of this device alone come through its door (MTApps.vpn.deviceKeys, slice S3b b3)
         MTGroupRoom.bookKey,   // the group rooms this phone knows and their people's room keys (07.10.2026): live minutes, never a copy's
-        MTGroupRoom.standingKey, MTGroupRoom.announcedKey,   // the room keys named for the next room, mine and the seats' (nq, 11.11.2026): a room's secret, never a copy's
+        MTGroupRoom.standingKey, MTGroupRoom.announcedKey, MTGroupRoom.announcedAtKey,   // the room keys named for the next room, mine and the seats' (nq, 11.11.2026), and the moments that named them (OZ 1 p.6-7): a room's secret, never a copy's
+        ChatStore.keptFileAsksKey,   // the kept files this phone asked for and laid again (OZ 1 p.10.1): this device's clock, never a copy's
         MTGroupRoom.overKey,   // the rooms that ended here (11.11.2026, the author's words 19800, 19801): this device's memory, never a copy's
         "filesPageFolder",   // the folder of the last file taken on this phone (MTFilesFolder, 27.10.2026): a path of this device's file system, never a copy's
         "pagesWall", "pagesWallRecent", "pagesWallBlur", MontanaWakePush.skewKey]

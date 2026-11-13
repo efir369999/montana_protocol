@@ -17947,6 +17947,22 @@
         }
       }
     },
+    "This person's page opens once the group's owner updates Montana.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Страница человека откроется, когда владелец группы обновит Montana."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群主更新 Montana 后，即可打开此人的页面。"
+          }
+        }
+      }
+    },
     "An anonymous messenger. Your identity comes from your secret phrase, and your chats are encrypted on your device.": {
       "localizations": {
         "ru": {

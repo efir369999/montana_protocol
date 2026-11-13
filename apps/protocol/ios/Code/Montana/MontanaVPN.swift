@@ -45,7 +45,7 @@ struct MontanaVPNConfig: Codable, Equatable {
     var publicKey: String             // Reality pbk
     var shortId: String               // Reality sid
     var method: String                // SS cipher (aes-256-gcm...)
-    // Transport details a link may carry beyond the reference profile. Optional, so a record sealed
+    // Transport details a link may carry beyond the base profile. Optional, so a record sealed
     // by an earlier build decodes unchanged: a missing key is nil, not a failure.
     var path: String? = nil           // ws / xhttp / httpupgrade path
     var hostHeader: String? = nil     // ws / xhttp / httpupgrade Host header (not the SNI)
@@ -79,7 +79,7 @@ struct MontanaVPNConfig: Codable, Equatable {
     var raw: String? = nil            // unsupported: the link itself, so it can be copied and spoken by a later engine
     var reason: String? = nil         // unsupported: why -- the engine's word (protocol, plugin, transport)
     /// THE ENGINE-JSON ROW IS CARRIED WHOLE (29.09, the author's word after T1: every gRPC row of a JSON plan timed out or
-    /// closed its pipe while the reference client measured the same rows in 171-399 ms). A panel that serves whole engine
+    /// closed its pipe while a standard client measured the same rows in 171-399 ms). A panel that serves whole engine
     /// configs tuned every field of the outbound for its own servers -- the gRPC window size and user agent behind a CDN, the
     /// idle and health-check timers, the socket options -- and a row read into this record and written back lost every field
     /// this record has no name for. The outbound is kept as served (JSON text) and handed to the engine as it is; the record's
@@ -466,7 +466,7 @@ enum MontanaXrayConfig {
         (s ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
-    /// THE OUTBOUND A JSON PLAN SERVED, AS IT IS (29.09; the reference client runs the panel's config whole, and its gRPC rows
+    /// THE OUTBOUND A JSON PLAN SERVED, AS IT IS (29.09; a standard client runs the panel's config whole, and its gRPC rows
     /// answer where ours closed the pipe). Two words of ours only: the tag the extension and the measure line address, and the
     /// one TLS key this engine refuses (allowInsecure left the engine; a row that leaned on it verifies the certificate now, as
     /// a link's row does). Every other field reaches the engine exactly as the panel wrote it. Nil for a row that came as a link
@@ -588,7 +588,7 @@ enum MontanaVPNStore {
 }
 
 
-// The delay of a server, measured the way every reference client measures it: bring the outbound up and
+// The delay of a server, measured the way every standard client measures it: bring the outbound up and
 // time an answer from a 204-endpoint THROUGH it. Two earlier answers were wrong for two different reasons,
 // both measured on 22.09:
 //

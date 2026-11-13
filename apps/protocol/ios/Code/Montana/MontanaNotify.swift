@@ -383,7 +383,7 @@ enum MontanaNotify {
         let words = speaker.isEmpty || !showsSender ? body : speaker + ": " + body
         decorate(plate, from: chat, chat: chat, body: preview ? words : String(localized: "New message", bundle: MTLanguage.bundle), countUnread: false)
         plate.title = title
-        if mentioned {   // A MENTION RINGS THROUGH THE MUTE (stage R, as the reference rings one): the person was named
+        if mentioned {   // A MENTION RINGS THROUGH THE MUTE (stage R): the person was named
             plate.interruptionLevel = .active
             plate.sound = (MontanaKeychain.get("notifSound")?.first ?? 1) == 1 ? .default : nil
         }

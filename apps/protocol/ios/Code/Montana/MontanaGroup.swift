@@ -53,12 +53,12 @@ struct MTGroupState: Codable, Equatable {
     /// This phone left the group or its owner took it out: the rows stay readable, nothing is written or taken into it.
     var left: Bool? = nil
     /// Its owner took this phone out (their «out»), as against a leaving by this phone's own hand: the chat's head says which
-    /// (the reference folder: «you were removed from the group» / «you have left the group»).
+    /// (the head's words: «you were removed from the group» / «you have left the group»).
     var removed: Bool? = nil
-    /// The seats the owner of a carried group named its administrators (stage R.6, the reference folder: «Promote»): they take
+    /// The seats the owner of a carried group named its administrators (stage R.6, «Promote»): they take
     /// another's letter away for everyone and ask the owner to take a person out. Named by the owner alone, in its invitation.
     var admins: [String]? = nil
-    /// The owner's standing mark of the group's invite link (stage R.6, the reference folder: «Invite Link»): whoever opens the
+    /// The owner's standing mark of the group's invite link (stage R.6, «Invite Link»): whoever opens the
     /// link meets the owner by its card and asks with this mark; a new mark (reset) ends every link given before. Owner only.
     var invite: String? = nil
     /// The face last taken from an invitation, by its length and its tail: a repeat of the same word lays no second file.
@@ -75,22 +75,22 @@ struct MTGroupState: Codable, Equatable {
     /// WHO READ THIS PHONE'S LETTERS, AND HOW FAR (the checklist's B.13): each reader's seat with the birth millisecond of the newest
     /// letter they read. This phone's own record, never on the wire; bounded by the group's people (I-14).
     var readBy: [String: Int64]? = nil
-    /// THE OWNER'S POSTS GO WITHOUT SOUND (the reference's «Silent Broadcast», the bell in a channel's field): this phone's own choice
+    /// THE OWNER'S POSTS GO WITHOUT SOUND («Silent Broadcast», the bell in a channel's field): this phone's own choice
     /// for its channel, never on the wire as a setting -- each post says it (MTGroupWord.sl).
     var silent: Bool? = nil
-    /// WHAT THE MEMBERS MAY NOT DO (the checklist's G.5, the reference's «Permissions»): the rights the owner took from them, by their
-    /// short words (MTGroupRight); absent -- everything, the reference's default for a new group. Said by the owner alone, in its invitation.
+    /// WHAT THE MEMBERS MAY NOT DO (the checklist's G.5, «Permissions»): the rights the owner took from them, by their
+    /// short words (MTGroupRight); absent -- everything, the default for a new group. Said by the owner alone, in its invitation.
     var barred: [String]? = nil
-    /// SLOW MODE (the reference's «Slowmode»): the seconds a member waits between letters; absent or 0 -- off.
+    /// SLOW MODE («Slowmode»): the seconds a member waits between letters; absent or 0 -- off.
     var slow: Int? = nil
-    /// WHAT EACH ADMINISTRATOR MAY NOT DO (the checklist's G.6, the reference's «What can this admin do?»): by seat, the admin's
+    /// WHAT EACH ADMINISTRATOR MAY NOT DO (the checklist's G.6, «What can this admin do?»): by seat, the admin's
     /// rights the owner left out (MTAdminRight); absent -- all of them. Said by the owner alone, in its invitation.
     var adminTaken: [String: [String]]? = nil
-    /// The custom titles the owner gave (the reference's «Custom Title»), by seat: shown instead of «owner» or «admin».
+    /// The custom titles the owner gave («Custom Title»), by seat: shown instead of «owner» or «admin».
     var ranks: [String: String]? = nil
     /// The group's invite link as the owner hands it to an administrator who may invite by it (MTAdminRight.invite).
     var link: String? = nil
-    /// THE LINK ASKS THE OWNER FIRST (the checklist's G.8, the reference's «Request Admin Approval»): who opens it waits in the
+    /// THE LINK ASKS THE OWNER FIRST (the checklist's G.8, «Request Admin Approval»): who opens it waits in the
     /// requests until the owner adds or dismisses them. The owner's phone alone keeps both; nothing of it rides the wire.
     var approval: Bool? = nil
     /// CHAT HISTORY FOR NEW MEMBERS (the checklist's G.4, «Visible» / «Hidden»): true -- one added reads the group's
@@ -98,22 +98,22 @@ struct MTGroupState: Codable, Equatable {
     /// MTGroup.create); the owner may hide it. The owner's choice, never on the wire.
     var history: Bool? = nil
     var requests: [MTGroupRequest]? = nil
-    /// THE CHANNEL SIGNS ITS POSTS (the reference's «Sign Messages»): the owner's choice, carried to every subscriber in its invitation
+    /// THE CHANNEL SIGNS ITS POSTS («Sign Messages»): the owner's choice, carried to every subscriber in its invitation
     /// (MTGroupWord.sg); each post then wears its writer's name in its stamp.
     var signs: Bool? = nil
-    /// THE CHANNEL TAKES NO REACTIONS (the reference's «Allow Reactions» off): false -- its owner turned them off; carried to every
+    /// THE CHANNEL TAKES NO REACTIONS («Allow Reactions» off): false -- its owner turned them off; carried to every
     /// subscriber in its invitation (MTGroupWord.rx). Absent -- every reaction is taken.
     var reacts: Bool? = nil
-    /// THE PEOPLE ITS OWNER TOOK OUT OF A CHANNEL (the reference's «Removed Users»): they cannot come back by the invite link until the
+    /// THE PEOPLE ITS OWNER TOOK OUT OF A CHANNEL («Removed Users»): they cannot come back by the invite link until the
     /// owner lets them, or adds them again. The owner's phone alone keeps them; nothing of it rides the wire.
     var banned: [MTGroupMember]? = nil
-    /// WHAT WAS DONE IN A CHANNEL (the reference's «Recent Actions»): the owner's phone writes each deed as it does it, by the names it
+    /// WHAT WAS DONE IN A CHANNEL («Recent Actions»): the owner's phone writes each deed as it does it, by the names it
     /// knew then, and shows the last two days. Never on the wire.
     var acts: [MTChannelAct]? = nil
-    /// SUBSCRIBERS COMMENT UNDER THE CHANNEL'S POSTS (the reference's discussion under a post): the owner's choice, carried in its
+    /// SUBSCRIBERS COMMENT UNDER THE CHANNEL'S POSTS (a discussion under a post): the owner's choice, carried in its
     /// invitation (MTGroupWord.dc); the comments ride the channel itself (MTChannelComments), no group of their own.
     var talks: Bool? = nil
-    /// THE REACTIONS A CHANNEL TAKES (the reference's «Some Reactions»): the owner's list; absent -- every reaction (while it takes
+    /// THE REACTIONS A CHANNEL TAKES («Some Reactions»): the owner's list; absent -- every reaction (while it takes
     /// any, MTGroupState.reacts). Carried in its invitation (MTGroupWord.rl).
     var reactList: [String]? = nil
     /// THE GROUP'S SEATS AS ITS OWNER NAMES THEM, ON A MEMBER'S PHONE (OZ 1 p.1, the author's decision 877 a): every member's seat,
@@ -130,7 +130,7 @@ struct MTGroupState: Codable, Equatable {
     /// The owner of the group: its phone carries every word of it to the group's people (MTGroup.carried).
     var mine: Bool { owner.isEmpty }
     var canManage: Bool { mine && left != true }
-    /// A group's every person writes; a channel's owner and the administrators it named post (the reference's «Post Messages»).
+    /// A group's every person writes; a channel's owner and the administrators it named post («Post Messages»).
     var canWrite: Bool {
         return left != true && (kind == .group || mine
             || (admins?.contains(me) == true && !(adminTaken?[me] ?? []).contains(MTChannelRight.post.rawValue)))   // «Post Messages»
@@ -187,12 +187,12 @@ struct MTGroupWord: Codable {
     /// 1: the targeted word rings on the seats it is for (an invitation); a room's other targeted word (a key handed to one who came
     /// in) rides silent.
     var rg: Int? = nil
-    /// 1 on an «out»: the owner deleted the group for everyone (the reference folder: «Delete for All»). A build that
+    /// 1 on an «out»: the owner deleted the group for everyone («Delete for All»). A build that
     /// does not read it takes the word as a taking out -- the group stands there read-only, as the owner's word allows.
     var dl: Int? = nil
     /// The owner's administrators on an «inv» (stage R.6): the seats it named; absent -- none.
     var ad: [String]? = nil
-    /// 1 on a channel's post sent without sound (the reference's «Silent Broadcast»): it rides silent and rings nothing where it lands.
+    /// 1 on a channel's post sent without sound («Silent Broadcast»): it rides silent and rings nothing where it lands.
     /// A build that does not read it skips the key; the push is silent there too.
     var sl: Int? = nil
     /// 1 on a channel's «inv»: its posts are signed (Sign Messages). A build that does not read it skips the key.
@@ -231,7 +231,7 @@ struct MTGroupWord: Codable {
     var ps: [String]? = nil
 }
 
-/// ONE WHO ASKED TO JOIN BY THE LINK (the reference's «Member Requests»): the pipe the owner met them by, the name they gave and when.
+/// ONE WHO ASKED TO JOIN BY THE LINK («Member Requests»): the pipe the owner met them by, the name they gave and when.
 struct MTGroupRequest: Codable, Equatable {
     var pipe: String
     var name: String
@@ -249,29 +249,29 @@ struct MTGroupPayee {
 }
 #endif
 
-/// WHAT AN ADMINISTRATOR MAY DO (the checklist's G.6, the reference's «What can this admin do?»), each a short word on the wire --
+/// WHAT AN ADMINISTRATOR MAY DO (the checklist's G.6, «What can this admin do?»), each a short word on the wire --
 /// the rights whose deed this phone's group can hold: the owner names the ones an administrator lacks.
 enum MTAdminRight: String, CaseIterable {
     case info = "ci", delete = "dm", ban = "bu", invite = "il", pin = "pm"
 }
 
-/// WHAT A CHANNEL'S ADMINISTRATOR MAY DO (the reference's channel «Admin Rights»), the rights its owner's phone carries out: the
+/// WHAT A CHANNEL'S ADMINISTRATOR MAY DO (a channel's «Admin Rights»), the rights its owner's phone carries out: the
 /// channel's name, words and face asked of the owner; posting through the owner; taking another's post away; handing the channel's
 /// link. Each a short word on the wire, three of them a group's own; the owner names the ones an administrator lacks.
 enum MTChannelRight: String, CaseIterable {
     case info = "ci", post = "po", delete = "dm", invite = "il"
 }
 
-/// WHAT MEMBERS OF A GROUP MAY DO (the checklist's G.5, the reference's «What can members of this group do?»), each a short word on
+/// WHAT MEMBERS OF A GROUP MAY DO (the checklist's G.5, «What can members of this group do?»), each a short word on
 /// the wire. The owner names the ones its members lack; the owner and the administrators it named keep them all.
 enum MTGroupRight: String, CaseIterable {
     case text = "tx", photos = "ph", videos = "vd", stickers = "gf", music = "mu", files = "fl", voice = "vo", rounds = "rv",
          links = "ln", reactions = "re", pin = "pn", info = "ci"
-    /// «Send Media» opened, in the reference's order.
+    /// «Send Media» opened, in the page's order.
     static let media: [MTGroupRight] = [.photos, .videos, .stickers, .music, .files, .voice, .rounds, .links, .reactions]
     /// The rows of the permissions page, the media standing as one row with its own.
     static let shown: [MTGroupRight] = [.text] + media + [.pin, .info]
-    /// What the field says when this phone tries what the group took from its members, in the reference's sentence.
+    /// What the field says when this phone tries what the group took from its members, in the field's own sentence.
     var refusal: String {
         let b = MTLanguage.bundle
         switch self {
@@ -290,7 +290,7 @@ enum MTGroupRight: String, CaseIterable {
     }
 }
 
-/// A GROUP'S EVENT, A ROW IN THE MIDDLE OF ITS FEED (stage R, the reference folder's service rows: «X created the group»,
+/// A GROUP'S EVENT, A ROW IN THE MIDDLE OF ITS FEED (stage R, the service rows: «X created the group»,
 /// «X added Y», «X removed Y», «X left the group», a new name or face, a voice chat begun and ended). The row is this
 /// phone's own; the owner's word «ev» names whom an event was about by seat alone -- a person's name reaches the group from
 /// that person, never from the owner -- so the row asks the group for the names when it is drawn.
@@ -599,7 +599,7 @@ final class MTGroup {
             if MontanaConv.holds(p), !ChatStore.refusesCold(p), !pipes.contains(p) { pipes.append(p) }
         }
         pipes = Array(pipes.prefix(Self.peopleLimit))
-        // A GROUP MAY BEGIN WITH NOBODY YET, as the reference's does (the checklist's A.2): its owner adds people from its page
+        // A GROUP MAY BEGIN WITH NOBODY YET (the checklist's A.2): its owner adds people from its page
         guard ready(), !name.isEmpty else {
             MontanaTrace.mark("group_refused", "birth -- title=\(name.isEmpty ? 0 : 1) people=\(pipes.count) store=\(unread ? 0 : 1)")
             return nil
@@ -619,7 +619,7 @@ final class MTGroup {
         g.rostered = true   // its invitations below name the seats (OZ 1 p.1)
         groups[id] = g
         saveGroups()
-        let row = stand(g, face: face.isEmpty ? nil : saveChatAvatar(face), store: store)
+        let row = stand(g, face: face.isEmpty ? nil : saveChatAvatar(face), store: store, revive: true)
         lay(MTGroupEvent(e: "made", g: id, a: Self.ownerSeat, t: name), store: store)   // «You created the group»
         let thumb = Self.thumb(face)
         let me = Self.clean(E2E.myDisplayName(), Self.nameLimit)
@@ -646,11 +646,14 @@ final class MTGroup {
         return Self.mark + js
     }
 
-    /// The group's row on the list: the one standing or archived, or a new one at the top. A deleted group's row comes back
-    /// with its next word, as a deleted conversation does.
+    /// The group's row on the list: the one standing or archived, or a new one at the top.
     /// `fresh` -- a word of the group raised it now; a row stood back by standAll keeps its place by its newest letter.
+    /// `revive` -- A ROW THE PERSON PUT AWAY COMES BACK ONLY BY A PERSON'S DEED (the author's words 20142, 20902, 20907, 20913: «the
+    /// chat of a group call pops up from nowhere»): a letter, the group's birth, being added again. A renewal of the group, a member's
+    /// info, the sibling's renewal keep the group's state and leave its row away -- the renewal of every group at 146's first launch
+    /// (keepRoster) brought back on T1 and T2 the calls' groups the person had deleted. Every caller says which it is.
     @MainActor @discardableResult
-    private func stand(_ g: MTGroupState, face: String?, store: ChatStore, fresh: Bool = true) -> Chat {
+    private func stand(_ g: MTGroupState, face: String?, store: ChatStore, fresh: Bool = true, revive: Bool) -> Chat {
         let key = Self.key(of: g.id)
         // THE GROUP OWNS ITS FACE (17.10.2026): a new face is written into the group's state first; the row and the notices'
         // mirror follow it -- a row lost to a copy or a shelf comes back wearing it, and a banner wears it while the app sleeps.
@@ -659,7 +662,15 @@ final class MTGroup {
             saveGroups()
             store.mirrorFaceToShared(key)
         }
-        if store.deletedChats.contains(key) { store.deletedChats.remove(key) }
+        let shelf = Chat(name: key, lastMessage: "", time: nowHHMM(), unread: 0, status: "", photoURL: face ?? groups[g.id]?.face,
+                         isGroup: true, isAdmin: g.mine, members: [], convId: key, displayName: g.title)
+        if store.deletedChats.contains(key) {
+            guard revive else {
+                MontanaTrace.mark("group_row", "put away -- the group's own word leaves it away")
+                return shelf
+            }
+            store.deletedChats.remove(key)
+        }
         var rows = store.storedChats()
         if let i = rows.firstIndex(where: { $0.id == key }) {
             if rows[i].displayName != g.title || (face != nil && rows[i].photoURL != face) {
@@ -670,12 +681,10 @@ final class MTGroup {
             return rows[i]
         }
         if let held = store.storedArchived().first(where: { $0.id == key }) { return held }
-        let row = Chat(name: key, lastMessage: "", time: nowHHMM(), unread: 0, status: "", photoURL: face ?? groups[g.id]?.face,
-                       isGroup: true, isAdmin: g.mine, members: [], convId: key, displayName: g.title)
-        rows.insert(row, at: 0)
+        rows.insert(shelf, at: 0)
         store.saveStored(chats: rows)
         if fresh { store.bump(key) }
-        return row
+        return shelf
     }
 
     /// EVERY GROUP THIS PHONE HOLDS STANDS ON A SHELF (the author's word 17.10.2026 13:0x UTC: «groups and channels did not come
@@ -698,7 +707,7 @@ final class MTGroup {
                 faces += 1
             }
             guard row == nil, !store.deletedChats.contains(key) else { continue }
-            stand(groups[id] ?? g, face: nil, store: store, fresh: false)
+            stand(groups[id] ?? g, face: nil, store: store, fresh: false, revive: false)
             stood += 1
         }
         if faces > 0 { saveGroups() }
@@ -747,7 +756,7 @@ final class MTGroup {
             // the person's own letters of the box's term, by their names: the other device lands each once (replayLetter)
             let carrier = g.mine ? g.members.first?.pipe ?? "" : g.owner
             for r in (store.messages[Self.key(of: id)] ?? []).suffix(300) where r.isFromMe && edge < r.createdAt {
-                guard r.mid.hasPrefix("mid:"), r.imageFile == nil, r.videoFile == nil, r.audioFile == nil, r.docFile == nil,
+                guard r.mid.hasPrefix("mid:"), r.attachment == nil,
                       Self.carries(r.text) else { continue }
                 let name = String(r.mid.dropFirst(4))
                 guard Self.isLetterName(name) else { continue }
@@ -832,7 +841,7 @@ final class MTGroup {
         w.sl = g.kind == .channel && g.silent == true ? 1 : nil   // the bell in the owner's field (Silent Broadcast)
         dress(&w, in: g)
         if spread(w, in: g, except: nil, own: true) == 0, let i = store.messages[key]?.firstIndex(where: { $0.mid == row.mid }) {
-            // a group of its owner alone holds the letter here, as the reference's does (A.2); else nobody to carry to: honest red
+            // a group of its owner alone holds the letter here (A.2); else nobody to carry to: honest red
             if Self.alone(g) { store.advance(key, i, to: .delivered) } else { store.putOut(key, i, because: .nobodyToCarry) }
         }
         return row
@@ -961,7 +970,7 @@ final class MTGroup {
         }
     }
 
-    // -- administrators (stage R.6, the reference folder: «Promote», «Dismiss Admin») ---------------------------------
+    // -- administrators (stage R.6, «Promote», «Dismiss Admin») ---------------------------------
 
     /// WHETHER THE OWNER'S NEXT POSTS GO WITHOUT SOUND (the bell in a channel's field): its owner's choice, kept on its state.
     func silent(_ key: String) -> Bool { state(key)?.silent == true }
@@ -988,7 +997,7 @@ final class MTGroup {
         if let b = g.banned?.first(where: { b in b.seat == seat }) { return shownName(pipe: b.pipe, said: g.names[seat]) }
         return shownName(pipe: nil, said: g.names[seat])
     }
-    /// THE OWNER LETS A REMOVED PERSON BACK BY THE LINK (the reference's «Removed Users», Delete): they are no longer kept out.
+    /// THE OWNER LETS A REMOVED PERSON BACK BY THE LINK («Removed Users», Delete): they are no longer kept out.
     @MainActor
     func unban(_ key: String, seat: String) {
         guard var g = state(key), g.canManage, g.banned?.contains(where: { b in b.seat == seat }) == true else { return }
@@ -1002,11 +1011,11 @@ final class MTGroup {
         guard let g = state(key) else { return [] }
         return (g.banned ?? []).map { b in (b.seat, seatName(g, b.seat), b.pipe) }
     }
-    // -- a channel's comments (the reference's discussion under a post; MTChannelComments) ---------------------------------
+    // -- a channel's comments (a discussion under a post; MTChannelComments) ---------------------------------
 
     /// [I-14]: a comment's words, at most.
     static let commentLimit = 4096
-    /// [I-15] ONE COMMENT FROM ONE PERSON IN THIS MANY SECONDS (the critic's note on c59776c7; the reference's slowmode): a person who
+    /// [I-15] ONE COMMENT FROM ONE PERSON IN THIS MANY SECONDS (the critic's note on c59776c7; a slow mode of comments): a person who
     /// floods would push everyone else's comments out of a post's five hundred. Time, not money: the owner takes one comment from a
     /// seat in this span and refuses the rest with a receipt; a subscriber's own phone keeps the same span and its field says what is
     /// left. The owner's own comments wait for nobody.
@@ -1144,7 +1153,7 @@ final class MTGroup {
     /// Whether this phone moderates the group: its owner or an administrator the owner named. A moderator takes another's letter
     /// away for everyone.
     func moderates(_ key: String) -> Bool {
-        guard let g = state(key), g.left != true else { return false }   // a channel's administrators delete posts too (the reference's)
+        guard let g = state(key), g.left != true else { return false }   // a channel's administrators delete posts too
         return Self.adminCan(g, seat: g.me, .delete)   // a group's and a channel's by the right (G.6; a channel's «Delete Messages of Others»)
     }
     /// WHETHER A SEAT HOLDS AN ADMINISTRATOR'S RIGHT (G.6): the owner every one; an administrator the ones the owner did not take.
@@ -1218,7 +1227,7 @@ final class MTGroup {
         return .held
     }
 
-    // -- typing (the checklist's B.12, the reference's «X is typing» in a group's head) ------------------------------------------
+    // -- typing (the checklist's B.12, «X is typing» in a group's head) ------------------------------------------
 
     /// A GROUP'S TYPING WORD LIVES AN INSTANT: thrown at the pipes this phone holds for the group (E2E.signalNow) -- the owner's phone
     /// at every member, a member's at the owner -- never queued, never receipted, never written; the owner throws a member's word on.
@@ -1272,7 +1281,7 @@ final class MTGroup {
         return .instant
     }
 
-    // -- read (the checklist's B.13, the reference's small group: a letter read, and who saw it) -------------------------------
+    // -- read (the checklist's B.13, a small group: a letter read, and who saw it) -------------------------------
 
     /// How far this phone told each group it read: one word a moment, and only when the mark moved. Held in memory: a launch tells once.
     private var readTold: [String: Int64] = [:]
@@ -1355,7 +1364,7 @@ final class MTGroup {
         }
         return .held
     }
-    /// THE READERS OF A LETTER OF MINE, BY NAME (the reference's «N Seen» over the letter's menu): the seats whose mark covers its birth.
+    /// THE READERS OF A LETTER OF MINE, BY NAME («N Seen» over the letter's menu): the seats whose mark covers its birth.
     func seenBy(_ m: Message, in key: String) -> [String]? {
         guard let g = state(key), g.kind == .group, m.isFromMe, let b = m.msgId.flatMap(ChatStore.birthMs(fromMid:)) else { return nil }
         let ms = Int64(b * 1000)
@@ -1363,7 +1372,7 @@ final class MTGroup {
             .sorted { a, b in a.localizedCaseInsensitiveCompare(b) == .orderedAscending }
     }
 
-    // -- permissions and slow mode (the checklist's G.5, the reference's «Permissions» and «Slowmode») -------------------------------
+    // -- permissions and slow mode (the checklist's G.5, «Permissions» and «Slowmode») -------------------------------
 
     /// THE RIGHTS A LETTER ASKS OF ITS SPEAKER: a reaction, a pin, a sticker, each kind of media by its manifest, and words -- with
     /// «Embed Links» where they carry a link. A deletion of one's own asks none.
@@ -1404,7 +1413,7 @@ final class MTGroup {
     /// The moment the owner last took a letter of each member while slow mode stands, by group and seat (I-15: time, not money).
     private var slowAt: [String: Double] = [:]
     /// A MEMBER'S LETTER IN SLOW MODE: taken once an interval; a letter before it is held unanswered and knocks again -- delayed,
-    /// never lost. The owner and its administrators are not paced, as in the reference.
+    /// never lost. The owner and its administrators are not paced.
     private func paceSlow(_ g: MTGroupState, seat: String) -> Bool {
         guard let s = g.slow, 0 < s, seat != Self.ownerSeat, g.admins?.contains(seat) != true else { return true }
         let k = g.id + "/" + seat, now = Date().timeIntervalSince1970
@@ -1412,7 +1421,7 @@ final class MTGroup {
         slowAt[k] = now
         return true
     }
-    /// WHY THIS PHONE MAY NOT SEND THESE WORDS NOW, in the reference's sentence -- a right the group took, or slow mode's wait;
+    /// WHY THIS PHONE MAY NOT SEND THESE WORDS NOW, in the field's own sentence -- a right the group took, or slow mode's wait;
     /// nil when it may. The field asks before it empties itself, so nothing typed is lost to a refusal.
     @MainActor
     func refusal(_ words: String, in key: String, letter: Bool, store: ChatStore) -> String? {
@@ -1440,7 +1449,7 @@ final class MTGroup {
         guard let s = g.slow, 0 < s,
               let last = (store.messages[key] ?? []).last(where: { r in
                   r.isFromMe && MTGroupEvent.of(r.text) == nil
-                      && Set([r.imageFile, r.videoFile, r.audioFile, r.docFile].compactMap { $0 }).isDisjoint(with: files)
+                      && r.attachment.map { !files.contains($0.file) } ?? true
               })?.createdAt else { return nil }
         let left = Double(s) - (Date().timeIntervalSince1970 - last)
         guard 0 < left else { return nil }
@@ -1493,15 +1502,15 @@ final class MTGroup {
         let key = Self.key(of: g.id)
         let file = Self.face(w.fc)
         renew(key, title: w.ti ?? g.title, faceFile: file, about: w.ds, by: m.seat, store: store)
-        if let held = groups[g.id] { stand(held, face: file, store: store, fresh: false) }   // the owner's own row follows the group
+        if let held = groups[g.id] { stand(held, face: file, store: store, fresh: false, revive: false) }   // the owner's own row follows the group
         return .held
     }
 
     // -- chat history for new members (the checklist's G.4) ---------------------------------------------------------------------
 
-    /// The letters of the past one added may read (I-14: bounded, as the reference's own first page is).
+    /// The letters of the past one added may read (I-14: bounded, one first page).
     static let historyLimit = 50
-    /// THE OWNER SHOWS OR HIDES THE GROUP'S PAST TO NEW MEMBERS (the reference's «Chat History For New Members»).
+    /// THE OWNER SHOWS OR HIDES THE GROUP'S PAST TO NEW MEMBERS («Chat History For New Members»).
     @MainActor
     func setHistory(_ key: String, visible: Bool) {
         guard var g = state(key), g.canManage, g.kind == .group, (g.history == true) != visible else { return }
@@ -1511,7 +1520,7 @@ final class MTGroup {
         MontanaTrace.mark("group_history", visible ? "visible" : "hidden")
     }
 
-    // -- member requests (the checklist's G.8, the reference's «Request Admin Approval» and «Member Requests») ----------------------
+    // -- member requests (the checklist's G.8, «Request Admin Approval» and «Member Requests») ----------------------
 
     /// The owner turns the link's approval on or off; the requests already waiting stay until they are answered.
     @MainActor
@@ -1546,10 +1555,10 @@ final class MTGroup {
         saveGroups()
     }
 
-    // -- the pin for everyone (the checklist's B.11, the reference: «Pin this message and notify all members of the group?») ------
+    // -- the pin for everyone (the checklist's B.11: «Pin this message and notify all members of the group?») ------
 
     /// WHO PINS FOR EVERYONE: the owner, the administrators it named, and every member while the group lets its members pin -- the
-    /// reference's own default for a new group. The one gate of a pin, asked where it is sent and wherever it lands.
+    /// default for a new group. The one gate of a pin, asked where it is sent and wherever it lands.
     static func pins(_ g: MTGroupState, seat: String) -> Bool {
         guard g.kind == .group else { return false }
         return adminCan(g, seat: seat, .pin) || !(g.barred ?? []).contains(MTGroupRight.pin.rawValue)
@@ -1560,7 +1569,7 @@ final class MTGroup {
         return Self.pins(g, seat: g.me)
     }
     /// A LETTER PINNED OR UNPINNED FOR EVERYONE: here at once, and its word carried to every phone of the group by the answers' road
-    /// (signal); a pin lays the reference's service row. `notify` -- «Pin and notify all members» against «Only Pin».
+    /// (signal); a pin lays its service row. `notify` -- «Pin and notify all members» against «Only Pin».
     @MainActor
     func pin(_ m: Message, pin: Bool, notify: Bool, in key: String, store: ChatStore) {
         guard let g = state(key), g.left != true, Self.pins(g, seat: g.me), let sid = m.msgId, sid.hasPrefix("mid:") else { return }
@@ -1578,7 +1587,7 @@ final class MTGroup {
         return w.count <= 40 ? w : String(w.prefix(40)) + "…"
     }
 
-    // -- a channel's views (the reference's eye under a post; MTChannelViews) ---------------------------------
+    // -- a channel's views (the eye under a post; MTChannelViews) ---------------------------------
 
     /// A SUBSCRIBER'S SCREEN SHOWED POSTS: their names go to the owner alone, silent, for its count. False -- no pipe to the owner
     /// now, and the posts wait. It is a read receipt: with the person's «Read receipts» off the word never leaves (the critic's K-1).
@@ -1622,7 +1631,7 @@ final class MTGroup {
         return .held
     }
 
-    // -- the group's invite link (stage R.6, the reference folder: «Invite Link», «joined the group via invite link») -------------
+    // -- the group's invite link (stage R.6, «Invite Link», «joined the group via invite link») -------------
 
     /// The link the owner hands out: its own card (whoever opens it meets the owner, the one road of a link) and the group's mark
     /// after it (jg). Nil -- no card stands yet, or this phone is no owner of the group.
@@ -1638,7 +1647,7 @@ final class MTGroup {
         parts.queryItems = (parts.queryItems ?? []) + [URLQueryItem(name: Self.joinParam, value: g.id + "." + (g.invite ?? ""))]
         return parts.url
     }
-    /// A new mark: every link given before opens nothing more (the reference's «Reset Link»).
+    /// A new mark: every link given before opens nothing more («Reset Link»).
     @MainActor
     func resetInvite(_ key: String) {
         guard var g = state(key), g.canManage else { return }
@@ -1697,7 +1706,7 @@ final class MTGroup {
               let mark = w.tx, let held = g.invite, mark == held else { return .refused }
         let from = MTSamePair.root(pipe)
         if g.members.contains(where: { MTSamePair.root($0.pipe) == from }) { return .held }   // already in: nothing more
-        // ONE THE OWNER TOOK OUT DOES NOT COME BACK BY THE LINK (the reference's «Removed Users»): the owner lets them, or adds them
+        // ONE THE OWNER TOOK OUT DOES NOT COME BACK BY THE LINK («Removed Users»): the owner lets them, or adds them
         if g.banned?.contains(where: { MTSamePair.root($0.pipe) == from }) == true {
             MontanaTrace.mark("group_link", "a removed person asked by the link -- refused")
             return .refused
@@ -1720,7 +1729,7 @@ final class MTGroup {
         return .held
     }
 
-    // -- mentions (stage R, the reference folder: «@» names a person of the group) ---------------------------------
+    // -- mentions (stage R, «@» names a person of the group) ---------------------------------
 
     /// The people a «@» may name in a group: everyone this phone knows by name in it -- the owner's phone everyone it carries to,
     /// a member's phone the owner and whoever spoke -- this phone aside, and nobody known only as «Member».
@@ -1733,8 +1742,8 @@ final class MTGroup {
         return out.filter { $0.seat != g.me && $0.name != Self.memberWord }.map { MTRoomPerson(seat: $0.seat, name: $0.name) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
-    /// A LETTER THAT NAMES ME (the reference folder's mention): «@» and the name I go by. It rings even in
-    /// a chat whose sound is off, as the reference rings a mention.
+    /// A LETTER THAT NAMES ME (a mention): «@» and the name I go by. It rings even in
+    /// a chat whose sound is off: a mention always rings.
     static func mentionsMe(_ words: String) -> Bool {
         let low = words.lowercased()
         let names = [E2E.myDisplayName()]
@@ -1826,12 +1835,12 @@ final class MTGroup {
             return nil
         }
     }
-    /// A room's length as the reference's row says it: minutes and seconds, hours when it ran past one.
+    /// A room's length as its row says it: minutes and seconds, hours when it ran past one.
     static func span(_ seconds: Int) -> String {
         let s = max(0, seconds)
         return 3600 <= s ? String(format: "%d:%02d:%02d", s / 3600, s % 3600 / 60, s % 60) : String(format: "%d:%02d", s / 60, s % 60)
     }
-    /// What the head of a group's chat says once this phone is out of it (the reference folder: «you were removed from the group»,
+    /// What the head of a group's chat says once this phone is out of it («you were removed from the group»,
     /// «you have left the group»).
     func outWords(_ key: String) -> String? {
         guard let g = state(key), g.left == true else { return nil }
@@ -1844,7 +1853,7 @@ final class MTGroup {
                        : String(localized: "you have left the group", bundle: MTLanguage.bundle)
     }
 
-    /// DELETE AND EXIT (the reference folder: the button standing in the field's place once a person is out): the chat and its rows
+    /// DELETE AND EXIT (the button standing in the field's place once a person is out): the chat and its rows
     /// leave this phone; the group stays known as one this phone is out of, so a word still on its way finds its road over and brings
     /// nothing back -- only the owner adding this phone again stands it anew.
     @MainActor
@@ -1856,13 +1865,13 @@ final class MTGroup {
         store.deleteChat(row, forBoth: false)
         MontanaTrace.mark("group_erased", "out=\(g.removed == true ? "removed" : "left")")
     }
-    /// LEAVE GROUP (the reference folder: «Are you sure you want to leave and delete %@?»): the owner is told, and the chat goes.
+    /// LEAVE GROUP («Are you sure you want to leave and delete %@?»): the owner is told, and the chat goes.
     @MainActor
     func leaveAndErase(_ key: String, store: ChatStore) {
         leave(key, store: store)
         erase(key, store: store)
     }
-    /// DELETE FOR ALL (the reference folder: the owner's «Delete Group» -- «delete the group and all of its messages for all
+    /// DELETE FOR ALL (the owner's «Delete Group» -- «delete the group and all of its messages for all
     /// members»): every member is told by the owner's own «out», marked as the group's end -- a build that reads the mark erases the
     /// chat, an older one stands it read-only, as a taking out -- and the chat leaves this phone, the group known as ended here.
     @MainActor
@@ -1932,7 +1941,7 @@ final class MTGroup {
         guard !fresh.isEmpty else { return }
         g.members += fresh
         g.count = g.members.count + 1
-        // one taken out and added again by the owner's own hand is let back (the reference's «Add To Channel»)
+        // one taken out and added again by the owner's own hand is let back («Add To Channel»)
         g.banned = g.banned?.filter { b in !fresh.contains { f in f.pipe == MTSamePair.root(b.pipe) } }.nilIfEmpty
         act(&g, viaLink ? "joined" : "invited", p: fresh.map { f in seatName(g, f.seat) })
         groups[g.id] = g
@@ -1945,22 +1954,22 @@ final class MTGroup {
             let w = MTGroupWord(t: "pc", g: g.id, n: n.isEmpty ? nil : n, s: seat, tx: link)   // COMPAT-GATED: an older build refuses «pc»
             for m in fresh { _ = carry(w, to: m.pipe, letter: "", own: false) }
         }
-        // one who came by the group's link joined by their own hand (the reference: «%@ joined the group via invite link»)
+        // one who came by the group's link joined by their own hand (the row: «%@ joined the group via invite link»)
         let came = viaLink ? MTGroupEvent(e: "joined", g: g.id, a: fresh[0].seat)
                            : MTGroupEvent(e: "added", g: g.id, a: Self.ownerSeat, p: fresh.map(\.seat))
         lay(came, store: store)
         tellEvent(came, in: g)
-        // A SUBSCRIBER ADDED LATER READS THE CHANNEL'S NEWEST POSTS (the reference shows a channel's history to whoever comes in;
+        // A SUBSCRIBER ADDED LATER READS THE CHANNEL'S NEWEST POSTS (a channel shows its history to whoever comes in;
         // the author's words 17.10.2026 15:4x UTC: «channels ... 1 to 1»): the newest ten posts of words, each under its own one name
         // and so at its own moment, as every subscriber was carried it. A post with a file stays: its sealed pieces were laid for
         // the receivers of its day.
-        // CHAT HISTORY FOR NEW MEMBERS (G.4, the reference's «Visible»): one added reads the group's newest words -- fifty letters of
+        // CHAT HISTORY FOR NEW MEMBERS (G.4, «Visible»): one added reads the group's newest words -- fifty letters of
         // words, each under its own one name and so at its own moment, by its own speaker, silent; a letter with a file stays, its
         // sealed pieces laid for the receivers of its day.
         if g.kind == .group, g.history == true {
             let me = Self.clean(E2E.myDisplayName(), Self.nameLimit)
             let past = (store.messages[key] ?? []).filter { m in
-                m.imageFile == nil && m.videoFile == nil && m.audioFile == nil && m.docFile == nil
+                m.attachment == nil
                     && MTGroupEvent.of(m.text) == nil && Self.carries(m.text) && !m.text.hasPrefix(mediaMark)
             }
             let head = Self.speaker(g.id, "")
@@ -1978,7 +1987,7 @@ final class MTGroup {
         if g.kind == .channel {
             let me = Self.clean(E2E.myDisplayName(), Self.nameLimit)
             let posts = (store.messages[key] ?? []).filter { m in
-                m.isFromMe && m.imageFile == nil && m.videoFile == nil && m.audioFile == nil && m.docFile == nil
+                m.isFromMe && m.attachment == nil
                     && MTGroupEvent.of(m.text) == nil && Self.carries(m.text)
             }
             for p in posts.suffix(10) {
@@ -1997,7 +2006,7 @@ final class MTGroup {
     @MainActor
     func remove(_ key: String, seat: String, by actor: String = MTGroup.ownerSeat, store: ChatStore) {
         guard var g = state(key), g.canManage, let m = g.members.first(where: { $0.seat == seat }) else { return }
-        // ONE TAKEN OUT IS KEPT OUT (the reference's «Removed Users»): a channel's and -- the groups checklist's G.7 and E.4 -- a group's;
+        // ONE TAKEN OUT IS KEPT OUT («Removed Users»): a channel's and -- the groups checklist's G.7 and E.4 -- a group's;
         // the link opens nothing for them until the owner lets them back or adds them again
         g.banned = Array(((g.banned ?? []).filter { b in b.seat != seat } + [m]).suffix(Self.peopleLimit))
         act(&g, "removed", p: [seatName(g, seat)])
@@ -2396,7 +2405,7 @@ final class MTGroup {
         if newFace { g.faceTag = tag }
         groups[w.g] = g
         saveGroups()
-        stand(g, face: newFace ? Self.face(w.fc) : nil, store: store)
+        stand(g, face: newFace ? Self.face(w.fc) : nil, store: store, revive: fresh)   // the sibling's birth of a group, never its renewal
         if fresh { lay(MTGroupEvent(e: "made", g: g.id, a: Self.ownerSeat, t: title), store: store) }
         if renamed { lay(MTGroupEvent(e: "named", g: g.id, a: Self.ownerSeat, t: title), store: store) }
     }
@@ -2411,7 +2420,7 @@ final class MTGroup {
         let sid = "mid:" + id
         guard store.messages[key]?.contains(where: { r in r.mid == sid }) != true, !store.buried(sid, in: key) else { return }
         let mine = seat == g.me
-        stand(g, face: nil, store: store)
+        stand(g, face: nil, store: store, revive: true)   // a letter
         let born = MontanaDeliveryEngine.letterMoment(mid: sid, sentAt: nil, own: mine)
         let quote = (w.qt ?? "").isEmpty ? nil : w.qt
         let row = Message(text: words, isFromMe: mine, time: hhmm(at: born), replyText: quote, deliveryStatus: mine ? .sent : .delivered,
@@ -2472,8 +2481,8 @@ final class MTGroup {
             if newFace { g.faceTag = tag }
             groups[w.g] = g
             saveGroups()
-            stand(g, face: newFace ? Self.face(w.fc) : nil, store: store)
-            // the reference folder's rows: added again, a new name, a new face -- each the owner's deed
+            stand(g, face: newFace ? Self.face(w.fc) : nil, store: store, revive: back)   // a renewal leaves a row put away; being added again brings it
+            // the service rows: added again, a new name, a new face -- each the owner's deed
             if back { lay(MTGroupEvent(e: "added", g: g.id, a: Self.ownerSeat, p: [seat]), store: store) }
             let actor = w.s.flatMap { s in Self.isSeat(s) ? s : nil } ?? Self.ownerSeat   // a member's renewal, named by the owner (G.5)
             if renamed { lay(MTGroupEvent(e: "named", g: g.id, a: actor, t: title), store: store) }
@@ -2503,7 +2512,7 @@ final class MTGroup {
         g.seats = seats
         groups[w.g] = g
         saveGroups()
-        stand(g, face: Self.face(w.fc), store: store)
+        stand(g, face: Self.face(w.fc), store: store, revive: true)   // the group is born here
         lay(MTGroupEvent(e: "added", g: g.id, a: Self.ownerSeat, p: [seat]), store: store)   // «X added you»
         giveCards()   // this phone's own card, where the owner names seats (OZ 1 p.8)
         MontanaTrace.mark("group_rx", "invitation kind=\(kind.rawValue) people=\(count) from=\(String(pipe.prefix(10)))")
@@ -2523,7 +2532,7 @@ final class MTGroup {
         if post, g.kind != .channel || g.mine { return .refused }   // a wall's post rides a channel alone, from its owner
         #endif
         guard let seat = speakerSeat(g, w, from: MTSamePair.root(pipe)) else { return .refused }
-        // A CHANNEL CARRIES ITS ADMINISTRATORS' POSTS (the reference's «Post Messages» right): the owner named them; anyone else
+        // A CHANNEL CARRIES ITS ADMINISTRATORS' POSTS («Post Messages» right): the owner named them; anyone else
         // only reads.
         guard !g.mine || g.kind == .group || (g.admins?.contains(seat) == true
                                               && !(g.adminTaken?[seat] ?? []).contains(MTChannelRight.post.rawValue)) else {   // «Post Messages»
@@ -2549,7 +2558,7 @@ final class MTGroup {
             guard Self.allows(g, seat: seat, words) else { MontanaTrace.mark("group_refused", "a letter past the group's permissions"); return .refused }
             guard paceSlow(g, seat: seat) else { return .wait }
         }
-        stand(g, face: nil, store: store)
+        stand(g, face: nil, store: store, revive: true)   // a letter
         let born = MontanaDeliveryEngine.letterMoment(mid: sid, sentAt: nil)
         let quote = (w.qt ?? "").isEmpty ? nil : w.qt
         let past = MontanaSeed.before(ChatStore.birthMs(fromMid: sid))   // a restore's catch-up (865 a): silent here and on its way on
@@ -2557,7 +2566,7 @@ final class MTGroup {
                           msgId: sid, senderRef: Self.speaker(g.id, seat), createdAt: born,
                           replyToId: store.localId(forMid: w.qm, chat: key))
         let landed = store.append(key, row)
-        MTGroupTyping.shared.stopped(key, seat: seat)   // the letter came: its speaker types no more (the reference's head)
+        MTGroupTyping.shared.stopped(key, seat: seat)   // the letter came: its speaker types no more (the group's head)
         #if MONTANA_MESSENGER
         MontanaTrace.mark("group_rx", mid: id, "letter landed=\(landed ? 1 : 0) owner=\(g.mine ? 1 : 0)")
         #else
@@ -2648,11 +2657,11 @@ final class MTGroup {
         let from = MTSamePair.root(pipe)
         guard let seat = speakerSeat(g, w, from: from) else { return .refused }
         guard !answersHeard.contains(id) else { return .held }
-        // A CHANNEL WHOSE OWNER TURNED REACTIONS OFF TAKES NONE (the reference's «Allow Reactions»): a subscriber's reaction ends here
+        // A CHANNEL WHOSE OWNER TURNED REACTIONS OFF TAKES NONE («Allow Reactions»): a subscriber's reaction ends here
         if words.hasPrefix(reactionMark), g.kind == .channel, g.reacts == false, seat != Self.ownerSeat, g.admins?.contains(seat) != true {
             return .refused
         }
-        // A CHANNEL THAT TAKES SOME REACTIONS TAKES THOSE ALONE (the reference's «Some Reactions»): another added is refused here
+        // A CHANNEL THAT TAKES SOME REACTIONS TAKES THOSE ALONE («Some Reactions»): another added is refused here
         if words.hasPrefix(reactionMark), g.kind == .channel, let list = g.reactList, seat != Self.ownerSeat, g.admins?.contains(seat) != true,
            let o = Self.json(String(words.dropFirst(reactionMark.count))), (o["op"] as? String) == "add", let e = o["e"] as? String,
            !list.contains(e) {
@@ -2673,7 +2682,7 @@ final class MTGroup {
         // takes the owner's word, and a deletion of a letter not landed yet buries it before it comes.
         if let target = Self.target(words) {
             if let row = store.messages[key]?.first(where: { $0.mid == target }) {
-                // The owner and the administrators it named take another's letter away (stage R.6, as the reference's admins
+                // The owner and the administrators it named take another's letter away (stage R.6, as a group's admins
                 // delete messages); the owner's word alone names them. An edit stays the speaker's own.
                 let boss = words.hasPrefix(deleteMark) && Self.adminCan(g, seat: seat, .delete)   // G.6: «Delete Messages»
                 guard Self.author(row, in: g) == seat || boss else {
@@ -2694,7 +2703,7 @@ final class MTGroup {
         if 512 < answersHeard.count { answersHeard.removeFirst(answersHeard.count - 512) }
         let born = MontanaDeliveryEngine.letterMoment(mid: "mid:" + id, sentAt: nil)
         store.append(key, Message(text: words, isFromMe: false, time: "", msgId: "mid:" + id, senderRef: Self.speaker(g.id, seat), createdAt: born))
-        // the reference's service row of a pin: «X pinned "..."», laid on this phone under the pinned letter's own words
+        // the service row of a pin: «X pinned "..."», laid on this phone under the pinned letter's own words
         if words.hasPrefix(pinMark), let o = Self.json(String(words.dropFirst(pinMark.count))), (o["op"] as? String) == "pin",
            let sid = o["sid"] as? String, let row = store.messages[key]?.first(where: { r in r.msgId == sid }) {
             lay(MTGroupEvent(e: "pinned", g: g.id, a: seat, t: Self.pinWords(row)), store: store)
@@ -2912,7 +2921,7 @@ final class MTGroup {
 }
 
 
-/// THE PLATE OF «@» ABOVE A GROUP'S FIELD (stage R, the reference folder's mention list): it follows the word typed after «@»,
+/// THE PLATE OF «@» ABOVE A GROUP'S FIELD (stage R, the mention list): it follows the word typed after «@»,
 /// a holder of its own, as the link's plate is -- typing redraws the plate, never the feed.
 final class MTMentionCompose: ObservableObject {
     static let shared = MTMentionCompose()
@@ -2946,7 +2955,7 @@ extension Array {
 }
 
 /// WHO TYPES IN A GROUP NOW (the checklist's B.12): seats by the moment their word landed, each alive the store's typing life, and
-/// the head's line in the reference's words -- one name, two names, a name and how many others.
+/// the head's line in its own words -- one name, two names, a name and how many others.
 final class MTGroupTyping: ObservableObject {
     static let shared = MTGroupTyping()
     @Published private(set) var seats: [String: [String: Date]] = [:]

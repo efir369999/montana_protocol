@@ -4,4 +4,4 @@
 // (mt-delivery-guard.py version), the cleaner (mt-clean-builds.py) and the council read the number here. A Protocol road N needs
 // CURRENT_PROJECT_VERSION = N here, committed; another edition's road gives its own number to xcodebuild on the command line.
 MARKETING_VERSION = 1.0
-CURRENT_PROJECT_VERSION = 2386
+CURRENT_PROJECT_VERSION = 2387

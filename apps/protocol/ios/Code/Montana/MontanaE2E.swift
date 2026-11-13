@@ -787,7 +787,7 @@ final class E2E {
     /// conversation (15.2: one post, not the three D-1 measured — 37% of the diary). The beat
     /// never dials: looking for a road is a letter's job (16.1.5: a beat every 20 s dialled a dead
     /// IPv6 door, four lines a beat). A blocked person hears nothing of me (the author's word
-    /// 15.09, the reference's rule): no presence, no typing, no draft, no name, no face — the one
+    /// 15.09): no presence, no typing, no draft, no name, no face — the one
     /// gate every road asks.
     func silenced(_ peer: String) -> Bool { store?.blockedChats.contains(peer) ?? false }
     private func speakPresence(to peer: String, _ text: String, why: String, alsoNode: Bool = false) {
@@ -1442,7 +1442,7 @@ final class E2E {
 
     // The recipient could not decrypt (chain desync) → we ask the sender to recreate the session.
     // The sender received a rekey → reset the session and resend recent messages to this device.
-    // ── device linking (Signal model) ──
+    // ── device linking by QR ──
     // New device: prepare an offer for the QR and start waiting for the grant.
     func beginLinkOnNewDevice() -> LinkOffer? {
         guard let dev = currentDeviceId, let (priv, offer) = MontanaLink.makeOffer(deviceId: dev) else { return nil }

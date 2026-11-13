@@ -164,7 +164,7 @@ final class NotificationService: UNNotificationServiceExtension {
             openedMid = mid
             openedQuiet = Self.isQuietText(text)
             cargoLetter = (mid, text)
-            // A DELETION FOR EVERYONE (16.10.2026 No.72; the author's words «let deletion reach me by a silent push»; the recon's own
+            // A DELETION FOR EVERYONE (16.10.2026 No.72; the author's words «let deletion reach me by a silent push»; a silent
             // road): the deleted letter's notice leaves the screen at the deletion's own push, always (16165 p.5), and the push
             // wears no face of its own; the app lands the deletion from the stash above, by its one door.
             if text.hasPrefix("\u{200B}\u{200B}DL:") {
@@ -1383,7 +1383,7 @@ final class NotificationService: UNNotificationServiceExtension {
         return true
     }
 
-    /// THE NOTICE OF A LETTER DELETED FOR EVERYONE LEAVES THE SCREEN (16.10.2026 No.72, the recon: the reference's extension takes a
+    /// THE NOTICE OF A LETTER DELETED FOR EVERYONE LEAVES THE SCREEN (16.10.2026 No.72: the extension takes a
     /// deleted message's notice off at the deletion's own push), always -- no phone keeps what others delete (16165 p.5). A notice
     /// is named by its letter's wire name (userInfo «mid», bare or «mid:»-led).
     private static func takeNoticeOff(_ target: String, then done: @escaping () -> Void) {

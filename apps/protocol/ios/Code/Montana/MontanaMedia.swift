@@ -33,8 +33,8 @@ import Contacts
 // VOICE RECORDING — records a voice message into an .m4a file via the microphone.
 // ════════════════════════════════════════════════════════════
 /// THE SOUND OF A SPOKEN WORD, SET ONCE ([C-1], the author's word 18.09): the voice tape and the
-/// video note's sound track are the same speech through the same door. THE REFERENCE'S QUALITY (read
-/// 22.09: its tape is 48 kHz mono): 48 kHz mono, AAC at 64 kbit/s — eight kilobytes a second, the
+/// video note's sound track are the same speech through the same door. THE QUALITY (set
+/// 22.09): 48 kHz mono, AAC at 64 kbit/s — eight kilobytes a second, the
 /// voice whole and clean (the author's word 22.09). The files stay what they were (.m4a, .mov): every
 /// older build plays them as before.
 enum MontanaVoiceSound {
@@ -58,17 +58,17 @@ final class VoiceRecorder: NSObject, ObservableObject {
     static let levelCount = 240   // six seconds of 25 ms slots: the wave's room holds up to ~120 lines
     private var recorder: AVAudioRecorder?
     private var meter: CADisplayLink?
-    /// A line of the wave is one slot of time — the reference's 1200 samples at 48 kHz, 25 ms; the
+    /// A line of the wave is one slot of time — 1200 samples at 48 kHz, 25 ms; the
     /// reading is taken every frame and the slot keeps its loudest.
     static let slot: TimeInterval = 0.025
     private var slotStart: TimeInterval = 0
     /// THE WAVE IS THE SOUND ITSELF: a slot keeps the linear amplitude 10^(dB/20) of its loudest reading —
-    /// no curve, no floor. THE REFERENCE'S FULL LEVEL (read 22.09, ManagedAudioRecorder: micLevel =
+    /// no curve, no floor. THE FULL LEVEL (22.09: a mic level of
     /// peak / 4000 of an Int16): a sample of 4000 — −18 dBFS — is the whole height; louder than that a
-    /// tape's own loudest word is (the reference's waveform is scaled to its peak). One rule for the
+    /// tape's own loudest word is (the waveform is scaled to its peak). One rule for the
     /// lines and the swell.
-    static let referenceFull: Float = 4000 / 32767
-    static func shown(_ amp: Float, peak: Float) -> Float { min(1, amp / max(peak, referenceFull)) }
+    static let fullLevel: Float = 4000 / 32767
+    static func shown(_ amp: Float, peak: Float) -> Float { min(1, amp / max(peak, fullLevel)) }
     private var fileName: String?
     /// The finger is still down. A permission answer arrives on its own tick; a release in that
     /// gap used to stop a tape not yet started, and the tape then started without a finger and
@@ -184,8 +184,8 @@ final class VoiceRecorder: NSObject, ObservableObject {
         MontanaScreenAwake.hold("voice")
         MontanaTrace.mark("voice_rec", "start")
         // NATIVE-CHECKED: the clock and the wave are the recorder's own readings (currentTime,
-        // peakPower), asked at the screen's own pace (CADisplayLink, the reference's mic button's
-        // clock too) so no swing of the voice falls between two readings; a bar of the wave keeps
+        // peakPower), asked at the screen's own pace (CADisplayLink, the clock a record
+        // button keeps) so no swing of the voice falls between two readings; a bar of the wave keeps
         // the loudest reading of its slot (the author's word 21.09: the wave reacts to the sound as
         // the platform's recorder does).
         slotStart = 0
@@ -354,8 +354,8 @@ final class VoicePlayer: NSObject, ObservableObject {
     /// The chat's voices in feed order, set when one starts: auto-next walks it forward.
     var voiceQueue: [(file: String, sender: String, mine: Bool)] = []
     /// THE TRACK UNDER A VOICE OR A NOTE KEEPS ITS PLACE (the author's word 26.09: «the mini player must remember the place where it
-    /// stopped playing and not be reset by recording or listening to a voice or a video message»; the reference read the same day --
-    /// its media manager pauses the music's player when a voice starts and never stops it, and once the voice's player is gone the
+    /// stopped playing and not be reset by recording or listening to a voice or a video message»; the rule set the same day --
+    /// the media owner pauses the music's player when a voice starts and never stops it, and once the voice's player is gone the
     /// music's paused state is what its bar shows again). One sound plays at a time still: the track steps aside, paused, with its
     /// sound, its name and its place, while the voice or the note plays; when they end -- or are closed -- it comes back to the bar
     /// paused where it stood, and its play goes on from there. A new track chosen meanwhile lets it go.
@@ -418,7 +418,7 @@ final class VoicePlayer: NSObject, ObservableObject {
         }
         player?.onEnd = { [weak self] in self?.finished() }
         player?.rate = voice ? voiceRate : 1
-        // A LONG LISTEN GOES ON WHERE IT STOPPED (the reference's stored playback state, 26.09): a track of ten minutes and more, a
+        // A LONG LISTEN GOES ON WHERE IT STOPPED (a stored playback state, 26.09): a track of ten minutes and more, a
         // voice of five, starts at its kept moment (MTPlayPlaces); a stream starts where its pieces begin.
         if let p = player as? MTFileSound, let at = MTPlayPlaces.at(file, of: p.duration, voice: voice) {
             p.currentTime = at
@@ -613,8 +613,8 @@ final class VoicePlayer: NSObject, ObservableObject {
     func noteClosed() {
         DispatchQueue.main.async { [weak self] in self?.unpark() }
     }
-    /// A TAPE TAKES THE MICROPHONE, NOT THE PLACE (the author's word 26.09: «not reset by recording»; the reference pauses what
-    /// plays when a recording begins, and stops nothing): what plays pauses where it stands and stays on the bar; its play goes on
+    /// A TAPE TAKES THE MICROPHONE, NOT THE PLACE (the author's word 26.09: «not reset by recording»; a recording pauses what
+    /// plays when it begins, and stops nothing): what plays pauses where it stands and stays on the bar; its play goes on
     /// from there after the tape.
     func holdForTape() {
         playRequest += 1
@@ -921,7 +921,7 @@ final class VoicePlayer: NSObject, ObservableObject {
     }
 }
 
-/// WHERE A LONG LISTEN STOPPED (the reference's stored playback state, read 26.09 in its media manager: a track of ten minutes and
+/// WHERE A LONG LISTEN STOPPED (a stored playback state, 26.09: a track of ten minutes and
 /// more, a voice of five, keeps its moment when it stops -- between five seconds in and five before its end -- and the next play of
 /// the same file starts there). One owner, one key of the defaults, written when a listen stops, never by the clock, and bounded to
 /// the newest two hundred.
@@ -1217,9 +1217,8 @@ enum MTMosaic {
     /// What folds into a plate: a picture or a video; a round note, a voice, a file and a sticker do not.
     static func folds(_ m: Message) -> Bool {
         if m.docName == MontanaStickerBook.docName { return false }
-        if m.imageFile != nil { return true }
-        if let v = m.videoFile { return !v.hasPrefix("vnote_") }
-        return false
+        guard let v = m.imagery else { return false }
+        return !(v.video && v.file.hasPrefix("vnote_"))
     }
     /// The picture's own shape for the cut: the decoded picture, the video's poster, the video's
     /// track, else a square — the manifest preview already shapes a picture still on its way.

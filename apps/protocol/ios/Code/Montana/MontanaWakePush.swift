@@ -2801,7 +2801,7 @@ enum MontanaWakePush {
         let stashed = await pickup(ear, buries: { chat, mid in
             // A BLOCKED PERSON'S LETTER IS BURIED HERE, NOT LEFT TO WAIT (the author's
             // question 15.09: after an unblock the letters of the block arrived — the
-            // reference delivers them never). The tombstone the feed already keeps for
+            // letters of a block are delivered never). The tombstone the feed already keeps for
             // «deleted for everyone» takes the letter's name, and the node is told to
             // drop it like a placed one; a later resend meets the tombstone.
             guard ChatStore.refusesNow(chat) else { return false }

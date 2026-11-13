@@ -2766,7 +2766,7 @@ enum MTChannelWallFold {
             if let f = file(p) {
                 if f.video { row.videoFile = f.name } else { row.imageFile = f.name }
             }
-            guard !row.text.isEmpty || row.imageFile != nil || row.videoFile != nil else { continue }
+            guard !row.text.isEmpty || row.imagery != nil else { continue }
             MTRowJournal.put(key, store.placeRow(key, row))
             laid += 1
         }

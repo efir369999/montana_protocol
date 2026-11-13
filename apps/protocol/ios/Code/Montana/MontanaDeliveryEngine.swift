@@ -237,7 +237,7 @@ final class MontanaDeliveryEngine {
         // feed refused the row, and this door had already rung the banner and repeated the receipt).
         if store.refuses(from) {
             // A letter (not a passing control word) is buried under the feed's tombstone: a resend
-            // after an unblock meets it and is never shown — the reference delivers it never.
+            // after an unblock meets it and is never shown — it is never delivered.
             if !isControlMarker(text) { store.bury(["mid:" + mid], in: from) }   // in this conversation alone
             MontanaTrace.markFolded("rx_blocked", "door peer=\(String(from.prefix(10)))", window: 60, key: "door:" + from)
             return
@@ -325,7 +325,7 @@ final class MontanaDeliveryEngine {
             // copy's manifest — the sender re-uploaded under the same name — and the assembly road
             // receipts when the file is whole. Nothing is erased, nothing is doubled.
             if text.hasPrefix(mediaMark), let row = store.messages[home]?.first(where: { $0.msgId == sid }),
-               let f = row.videoFile ?? row.imageFile ?? row.audioFile ?? row.docFile, !MontanaMediaStore.exists(f) {
+               let f = row.attachment?.file, !MontanaMediaStore.exists(f) {
                 MontanaTrace.mark("rx_refill", mid: mid, "the row stands without its file — the copy's cargo is taken")
                 store.reconstructMedia(from, body: String(text.dropFirst(mediaMark.count)), isFromMe: false,
                                        time: row.time, msgId: sid, senderRef: row.senderRef, transport: transport)
@@ -1589,7 +1589,10 @@ final class MontanaDeliveryEngine {
                 // THE LINE CLAIMS NO RECEIPT IT CANNOT SEE (23.09, the critic): a face retired after its
                 // hour or a letter replaced leaves the queue unreceipted too; the queue knows only that
                 // no letter of this name rides.
-                MontanaTrace.mark("cargo_check", mid: m, "no letter of this name rides here (receipted, retired or replaced) — the word is ignored")
+                // A RESTORED PHONE ASKS FOR A DELIVERED LETTER'S FILE (12.11.2026, OZ 1 p.10.1): the ladder stands, and the file this
+                // phone still holds is laid again under the same name (ChatStore.serveKeptFile, once in six hours a letter).
+                MontanaTrace.mark("cargo_check", mid: m, "no letter of this name rides here (receipted, retired or replaced) — the kept file is offered")
+                Task { @MainActor [weak self] in self?.store?.serveKeptFile(mid: m, chat: chat) }
                 return
             }
             cargoChecked[m] = 0

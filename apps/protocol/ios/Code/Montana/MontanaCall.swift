@@ -1659,7 +1659,7 @@ final class MontanaCall: NSObject {
     /// and it decides once per call -- a later activation never undoes a person's choice.
     private var videoSpeakerDecided = false
     private func autoSpeakerOnVideo() {
-        // THE REFERENCE'S RULE: the loudspeaker is offered only when the sound stands at the ear;
+        // THE LOUDSPEAKER WAITS FOR THE EAR: the loudspeaker is offered only when the sound stands at the ear;
         // a headset, a speaker or a car already holds it and is never taken over (measured 11:05).
         guard !videoSpeakerDecided, isVideo, state == "connected", audioActive else { return }
         videoSpeakerDecided = true
@@ -2455,7 +2455,7 @@ final class MontanaCall: NSObject {
         guard state == "idle" else { return }
         // ONE CALL OF OURS AT A TIME (07.10): a group's room in hand is left first by its own hand, never put on hold by ours.
         if MTGroupRoom.isLive { MTGroupRoom.shared.say("Leave the group call first"); return }
-        // A blocked person is called by nobody (the reference's rule): their answer would be refused
+        // A blocked person is called by nobody: their answer would be refused
         // at the door anyway (measured 15.09 13:35 — the call rang them and died on the answer).
         if ChatStore.refusesNow(peer) { MontanaTrace.mark("call_refused", "blocked peer=\(String(peer.prefix(10)))"); return }
         // UNDER THE PERMITTED-LIST FILTER A CALL HAS NO ROAD (29.09): the doors may stand on a permitted cascade, the media
@@ -5561,7 +5561,7 @@ final class MontanaCall: NSObject {
                 MontanaCall.shared.speakerOn = (out.current == .speaker)
                 MontanaTrace.mark("speaker", "\(out.current == .speaker ? "on" : "off") by=system route=\(out.ports) state=\(MontanaCall.stateSnapshot) tone=\(MontanaCall.shared.tonePlaying ? 1 : 0)")
             }
-            // THE PHONE'S OUTPUT TAKES THE PHONE'S MICROPHONE (the reference's rule; measured 15:43:
+            // THE PHONE'S OUTPUT TAKES THE PHONE'S MICROPHONE (measured 15:43:
             // the system menu put the sound on the loudspeaker, the headset's voice link kept the
             // microphone, and a second later «new device available» pulled the sound back to the
             // headset — twice). A choice of the phone or its loudspeaker is completed with the
@@ -7443,8 +7443,8 @@ final class MTCallFloat: NSObject, AVPictureInPictureControllerDelegate {
 
     /// ONE CONTROLLER PER VIEW THAT STANDS (23.09, T1 20:27 on 1914: possible=1, the shape set, and the system never
     /// tried to raise the window when the person went home, twice). It was born on the app's own window — covered by
-    /// the call's — and its source was swapped onto the call screen afterwards. The reference implementation births its
-    /// controller once, on the call screen that stands, only when a picture flows, and never swaps it; so does this: a
+    /// the call's — and its source was swapped onto the call screen afterwards. Now a
+    /// controller is born once and never swapped: a
     /// controller is born on the view that stands while a picture flows (mine or the peer's), and a change of that view
     /// births a new one. A standing window is never disturbed by a change behind it.
     private func refresh(_ why: String) {
@@ -7540,7 +7540,7 @@ final class MTCallFloat: NSObject, AVPictureInPictureControllerDelegate {
     /// window still stood as with the app folded -- I saw her on two screens»). T1 22:58:32-23:00:28: the window rose
     /// when the app left, the app came back at 22:59:15 and again at 22:59:47, and the window stood over it until the
     /// person tapped it (23:00:40-23:01:24 the same, 19 s over the app). The platform does not end a call's window
-    /// when its app returns; the app ends it, as the reference implementation does -- half a second after the return,
+    /// when its app returns; the app ends it itself -- half a second after the return,
     /// asked twice more while it still stands. Told by the app's one road of activation (the scene's phase), so the
     /// call's own file still listens to no activation (P-118.10). Our own ending unfolds nothing: the fold stays as the
     /// return set it (a screen share keeps its fold).
@@ -8254,7 +8254,7 @@ struct CallOverlayView: View {
                 let audioBtn = CallAudioButton(model: model, side: m.side, col: m.col)
                 let videoBtn = gridBtn("Video", "video.fill",
                                        active: (model.video && !model.cameraOff) || model.videoAskPending || model.videoJoinPending, side: m.side, col: m.col) { MontanaCall.shared.toggleVideo() }
-                // THE MICROPHONE OFF IS SHOWN AS THE SYSTEM'S OWN CALL SHOWS IT (the author's word 24.09 with the reference):
+                // THE MICROPHONE OFF IS SHOWN AS THE SYSTEM'S OWN CALL SHOWS IT (the author's word 24.09):
                 // the lit plate with the crossed microphone in red; the press answers under the finger with a light tap.
                 let muteBtn = gridBtn("Mute", "mic.slash.fill",
                                       active: model.muted, activeGlyph: .red, side: m.side, col: m.col) {
@@ -8441,7 +8441,7 @@ struct CallOverlayView: View {
 
 
 
-/// The capture device, built after the proven reference implementation and owned by us.
+/// The capture device, written and owned by us.
 /// The stock library capturer swallows the refusal to add the camera input, keeps a session
 /// without a camera and reports a clean start; it also lets the capture session reconfigure
 /// the application audio session, which a CallKit call already owns — the receiver side
@@ -8577,8 +8577,8 @@ final class MontanaCamera: RTCVideoCapturer {
 
     @objc private func orientationChanged() { queue.async { [weak self] in self?.updateRotation() } }
 
-    /// Frame rotation by metadata, not by pixel shuffling. The angle table is the
-    /// reference's, including the separate front-camera branch in landscape.
+    /// Frame rotation by metadata, not by pixel shuffling. The angle table covers every
+    /// device orientation, including the separate front-camera branch in landscape.
     private func updateRotation() {
         let o = UIDevice.current.orientation
         switch o {
@@ -8592,8 +8592,8 @@ final class MontanaCamera: RTCVideoCapturer {
 }
 
 extension MontanaCamera: AVCaptureVideoDataOutputSampleBufferDelegate {
-    /// Every valid frame is delivered, warm-up included. The reference drops twelve while
-    /// exposure converges — half a second of black at 24 fps, and the person read it as
+    /// Every valid frame is delivered, warm-up included. Dropping the first twelve frames while
+    /// exposure converges was half a second of black at 24 fps, and the person read it as
     /// "the camera is not on". A darkening-to-bright frame IS the camera turning on (the
     /// system Camera shows exactly that), the lit-frame probe stays honest by variance,
     /// and the silence probe stops needing thirteen frames inside its 0.75 s window.
@@ -8731,7 +8731,7 @@ enum MontanaAudioRoute {
         return Reading(current: out, ports: outs.map { $0.portType.rawValue }.joined(separator: ","))
     }
 
-    /// THE AUDIO BUTTON WEARS THE SYSTEM CALL'S OWN WORDS (the author's word 24.09, the later one, with the reference
+    /// THE AUDIO BUTTON WEARS THE SYSTEM CALL'S OWN WORDS (the author's word 24.09, the later one, with a call's
     /// screenshot: «everything native and exactly as on a cellular call; the speaker button, not active -- the voice at
     /// the ear, pressed -- on the loudspeaker, with no sticky menus; headphones on -- the button is renamed natively and a
     /// press shows the native menu with the right source checked»). The phone alone: «Speaker», dark at the ear and lit
@@ -8929,7 +8929,7 @@ enum MTCallUpright {
 /// call, the voice player and the chat's reply at the ear. One turned it off under another: the player, yielding to a
 /// newborn call, turned the sensor off one turn after the call had turned it on. Every hand now holds and lets go of
 /// the sensor here by its name, and the sensor is on while any hand holds it.
-/// NEVER OFF WHILE «NEAR» (the reference's rule): a switch turned off while the sensor is covered leaves the screen dark,
+/// NEVER OFF WHILE «NEAR»: a switch turned off while the sensor is covered leaves the screen dark,
 /// and the platform no longer hears the sensor that would light it again. With no hand left and the sensor covered, the
 /// switch waits for «far» and goes off then. Every change of the sensor and of the switch is a diary line (proximity):
 /// a dark screen now says who held the sensor and what the sensor said last.

@@ -2044,7 +2044,7 @@ extension Message {
     /// The coin letter this row is, when it is one in its own right (a forward or a reply quoting one pays nothing).
     var coinLetter: MTCoinLetter? {
         // An edited row is never a coin letter: its coins were taken once, under the words it was born with (06.10).
-        guard !isForwarded, !edited, replyText == nil, imageFile == nil, videoFile == nil, audioFile == nil, docFile == nil else { return nil }
+        guard !isForwarded, !edited, replyText == nil, attachment == nil else { return nil }
         return MTCoinLetter.parse(text)
     }
 }

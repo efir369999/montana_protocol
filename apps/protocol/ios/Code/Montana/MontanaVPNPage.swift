@@ -373,7 +373,7 @@ struct MontanaVPNPage: View {
         MontanaVPNPlans.setManualFolded(!vpnListExpanded)
     }
 
-    // The header every section wears (the reference clients draw it so): fold, name, a line under it, then
+    // The header every section wears (the standard clients draw it so): fold, name, a line under it, then
     // refresh (a plan only), the gauge that measures the section, and the menu. The gauge left in the afternoon of 29.09 and
     // came back that evening by the author's word («bring the ping button back for every subscription; the hand-added
     // section wears the same panel and the same button»). The arrow and the title fold the section; the row's own selection

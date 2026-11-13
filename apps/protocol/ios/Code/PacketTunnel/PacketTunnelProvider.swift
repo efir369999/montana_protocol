@@ -406,7 +406,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             "outbounds": [outbound, ["protocol": "freedom", "tag": "direct"]],
             // Private and loopback destinations leave through `direct` even if a packet ever reaches
             // the engine. Sending a LAN address to a remote proxy cannot work and would break every
-            // local service on the network; a reference client routes them out untouched.
+            // local service on the network; a standard proxy client routes them out untouched.
             "routing": ["rules": [
                 ["type": "field", "outboundTag": "direct",
                  "ip": ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",

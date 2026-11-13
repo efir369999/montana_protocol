@@ -38,7 +38,7 @@ enum SettingsSheet: Int, Identifiable { case emoji, qr; var id: Int { rawValue }
 struct ScrollProbe: UIViewRepresentable {
     var onPull: (CGFloat) -> Void
     var onAttach: (UIScrollView) -> Void = { _ in }
-    /// The finger is released. The reference decides exactly here where to snap the header
+    /// The finger is released. Exactly here it is decided where the header snaps
     /// (scrollViewWillEndDragging → targetContentOffset), so it never rests in-between.
     var onDragEnd: (UIScrollView) -> Void = { _ in }
     func makeUIView(context: Context) -> UIView {
@@ -1063,7 +1063,7 @@ struct AppearanceView: View {
             }.listRowBackground(MTGlassRowPlate())
             // THE KEYS' LOOK (the author's word 21.09): the keys are drawn by the platform in its own
             // window and take no colour of ours — only their three looks. The panel around the field has
-            // no ground to colour (the reference's clear panel).
+            // no ground to colour (a clear panel).
             Section {
                 Picker("Keys", selection: $keyboardLook) {
                     Text("System").tag("system")
@@ -1249,7 +1249,7 @@ struct DataStorageView: View {
             }
             .listRowBackground(MTGlassRowPlate())
 
-            // THE CACHE, CLEARED AS THE REFERENCE CLEARS IT (the author's word 18.10.2026 17:1x UTC): what the person's own node
+            // THE CACHE, CLEARED (the author's word 18.10.2026 17:1x UTC): what the person's own node
             // holds leaves this phone, and comes back from the node at a look or a tap -- the node's word decides, asked anew.
             if MTHomeShelf.bringing {   // no node holds this phone's files (no row of one's own node, the author's word 16428): nothing to clear
                 Section {
@@ -1269,7 +1269,7 @@ struct DataStorageView: View {
                         .contentShape(Rectangle())
                     }
                     .disabled(homeKeep.clearing)
-                    // AS THE REFERENCE KEEPS ITS CACHE: a term for what nobody opened, a ceiling for the whole -- what leaves is what
+                    // HOW THE CACHE IS KEPT: a term for what nobody opened, a ceiling for the whole -- what leaves is what
                     // the node holds, asked anew.
                     VStack(alignment: .leading, spacing: 4) {
                         Picker(selection: $keepDays) {
