@@ -2,9 +2,30 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2389) - 2026-11-13
+
+Source commit `11c34ed741ae`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2389.md).
+
+- One build number for Messenger and the Protocol: both are 2389, built from the same code.
+- A message deleted for everyone no longer comes back as a notification: a banner rings only for a message that stands in the chat.
+- The official Montana channel with the updates stands among the channels, not among the chats.
+- A photo opened in a chat, a group or a channel turns to the next or the previous picture of the same chat with a swipe right or left; Save and Share stand under each one.
+- A phone restored from a copy asks for a group message's photo, video or gif again and receives it.
+- A new photo, video or gif refreshes your full copy at once, without waiting for the charger.
+- Please check: ask someone to send you a message and delete it for everyone -- no notification about it comes again, even a day later.
+- Please check: the Montana channel is on the Channels page and not on the Chats page.
+- Please check: open a photo in a chat with several photos and swipe left and right.
+
+**Security and anonymity**
+
+- A message deleted for everyone leaves the node box: when a deleted letter comes again, this phone asks every store to delete it (box-del), so it reaches none of the person's devices; before, the node's taken mark lived a day and the box yielded the deleted letter again.
+- Deleted words never reach the notification list: the notification extension learns this phone's graves from the shared claim folder of the app group and shows a deleted letter's repeat as an empty plate it takes off at once.
+- A banner rings only for a row standing in the chat (MontanaNotify.present asks ChatStore.stands). No change to the wire format; nothing new leaves the device.
+- A group message's file asked for again after a restore rides the group's own road, end-to-end sealed as every group word; the node sees no new field.
+
 ## 1.0 (2388) - 2026-11-13
 
-Source commit `f20dfb5f04cb`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2388.md).
+Source commit `b9b212d4fa30`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2388.md).
 
 - One build number for Messenger and the Protocol: both are 2388, built from the same code.
 - Settings, Privacy: choose who may message you, call you, see your page and add you to groups and channels -- Everyone, My contacts or Nobody. Your phone obeys the choice.
