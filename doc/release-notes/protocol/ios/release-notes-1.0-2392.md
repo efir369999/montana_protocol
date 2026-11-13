@@ -6,7 +6,6 @@ MT Protocol for iPhone, iPad and Mac, build 1.0 (2392), from source commit `4e5b
 Notable changes
 ---------------
 
-- One build number for Messenger and the Protocol: both are 2392, built from the same code.
 - A chat opens at once: a bubble no longer asks the disk while it is drawn -- where each photo, voice and video lies is known in memory and learned off the screen's thread.
 - The rest of a long chat is laid after the chat has risen, in small parts, so the opening does not stall.
 - The chats list stands still under an open chat and catches up when the chat is closed.
