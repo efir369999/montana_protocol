@@ -3403,13 +3403,25 @@ extension MTCoinTx {
     // -- the correspondents' coin keys, my open sends: files of the TimeChain's own folder (staying on the device). No lock over the
     // files (the layout law: a lock holds a word in memory, never a disk): the open sends are touched only on the main actor, and a
     // correspondent's key lost to a race comes again with their next about word. --
+    // THE FILE IS READ ONCE, THEN HELD (the author's words 21521, 21526, 13.11.2026 22:13 UTC: a chat opens at once): opening a chat
+    // asks toldKey from E2E.sendAboutIfNeeded on the main thread, and every ask read and parsed the whole file from disk -- 725 ms of
+    // one frame on T1 at 13.11.2026 22:10 UTC under a busy disk. The held copy is the file's one reader; save keeps both together.
+    private static var held: [String: [String: Any]] = [:]
+    private static let heldLock = NSLock()
+    // The held copy is keyed by the file's whole path, not its name: the chain's folder is the seated person's (MTTimeChainPlace.settle),
+    // and a copy keyed by the name alone would hand one person's correspondents to the next person seated on the same device.
     private static func load(_ name: String) -> [String: Any] {
-        guard let u = MTTimeChainPlace.dir()?.appendingPathComponent(name), let d = try? Data(contentsOf: u),
-              let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return [:] }
+        guard let u = MTTimeChainPlace.dir()?.appendingPathComponent(name) else { return [:] }
+        heldLock.lock(); let kept = held[u.path]; heldLock.unlock()   // LOCK-OK: a word in memory
+        if let kept { return kept }
+        guard let d = try? Data(contentsOf: u), let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return [:] }
+        heldLock.lock(); if held[u.path] == nil { held[u.path] = o }; heldLock.unlock()   // LOCK-OK: a word in memory
         return o
     }
     private static func save(_ name: String, _ o: [String: Any]) {
-        guard let u = MTTimeChainPlace.dir()?.appendingPathComponent(name), let d = try? JSONSerialization.data(withJSONObject: o) else { return }
+        guard let u = MTTimeChainPlace.dir()?.appendingPathComponent(name) else { return }
+        heldLock.lock(); held[u.path] = o; heldLock.unlock()   // LOCK-OK: a word in memory
+        guard let d = try? JSONSerialization.data(withJSONObject: o) else { return }
         MTDiskDoor.write(d, to: u, "coin-tx-state", options: .atomic)
     }
     /// A correspondent's coin key, told in their about word (k): the key a SEND of version 3 commits to.

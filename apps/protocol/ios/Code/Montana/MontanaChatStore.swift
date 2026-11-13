@@ -3251,19 +3251,34 @@ class ChatStore: ObservableObject {
         // One builder, built once per change of the history: the Calls tab read this on every
         // redraw, and every read walked every letter of every conversation on the main thread.
         if let memo = callLogMemo { return memo }
+        // ONLY THE CONVERSATIONS THAT MOVED ARE WALKED AGAIN (the author's words 21521, 21526, 13.11.2026 22:13 UTC: a chat opens at
+        // once): opening a chat loads its letters, the memo above is cleared, and the drawer's badge (missedCallsUnseen) walked every
+        // letter of every conversation on the main thread -- 1932 ms of one frame on T1 at 13.11.2026 22:11 UTC. A call letter is born
+        // once and never rewritten in place, so a conversation whose count, first and last letter stand holds the calls it held.
         var out: [CallRecord] = []
+        var kept: [String: CallsOfPeer] = [:]
         for (peer, list) in messages {
+            let first = list.first?.id ?? "", last = list.last?.id ?? ""
+            if let k = callsByPeer[peer], k.count == list.count, k.first == first, k.last == last {
+                out += k.rows; kept[peer] = k; continue
+            }
+            var rows: [CallRecord] = []
             for m in list {
                 if let ci = callInfoOf(m.text) {
-                    out.append(CallRecord(mid: m.id, peer: peer, video: ci.video, incoming: ci.incoming,
-                                          dur: ci.dur, missed: ci.missed, time: m.time, at: m.createdAt))
+                    rows.append(CallRecord(mid: m.id, peer: peer, video: ci.video, incoming: ci.incoming,
+                                           dur: ci.dur, missed: ci.missed, time: m.time, at: m.createdAt))
                 }
             }
+            kept[peer] = CallsOfPeer(count: list.count, first: first, last: last, rows: rows)
+            out += rows
         }
+        callsByPeer = kept
         let log = out.sorted { $0.at > $1.at }
         callLogMemo = log
         return log
     }
+    private struct CallsOfPeer { let count: Int; let first: String; let last: String; let rows: [CallRecord] }
+    private var callsByPeer: [String: CallsOfPeer] = [:]
     /// THE MUSIC LIBRARY, ONE BUILDER, BUILT ONCE PER CHANGE OF THE LETTERS OR OF THE LENT FOLDERS (the author's word
     /// 23.09: the music is a page under the bar now, and the page reads its tracks on every pass): the build walks every
     /// letter and asks the disk for every track's size, so it is kept until the letters change, as the call log is, or

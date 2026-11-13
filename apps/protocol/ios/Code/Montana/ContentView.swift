@@ -366,9 +366,16 @@ final class MTTurnDrag: ObservableObject {
     func openChat(_ c: Chat, jump: MID? = nil) {
         overlayJump = jump
         MTFrameMeter.shared.moveBegan()   // the chat's rise, to the platform's own end (25.09)
+        MTChatListView.chatOver = true   // the chats' list stands still under the chat (OZ 1 p.1.10)
         withAnimation(.easeOut(duration: 0.25), completionCriteria: .logicallyComplete) { overlayChat = c } completion: {
             MTFrameMeter.shared.moveEnded("chat:open")
         }
+    }
+    /// The chats' list comes back into sight: it applies again, and one pass of the store lays what moved under the chat (OZ 1 p.1.10).
+    func listBack() {
+        guard MTChatListView.chatOver else { return }
+        MTChatListView.chatOver = false
+        ChatStore.live?.objectWillChange.send()
     }
     /// «SHOW IN CHAT» — THE ONE ROAD ([C-1], the author's word 18.09: it worked now and then). The
     /// profile's menu, the player bar and the list all ask here: the chat already open jumps to the
@@ -385,6 +392,7 @@ final class MTTurnDrag: ObservableObject {
     }
     func closeChat() {
         MTFrameMeter.shared.moveBegan()
+        listBack()
         withAnimation(.easeOut(duration: 0.22), completionCriteria: .logicallyComplete) { overlayChat = nil } completion: {
             MTFrameMeter.shared.moveEnded("chat:close")
         }
@@ -624,6 +632,7 @@ struct ChatOverlay: View {
         handle: handle,
         keyboardPinned: true,   // the chat's floor is the keyboard's edge (the author's word 20.09)
         onClosed: {
+            ui.listBack()
             if let onClose { onClose() }
             else { ui.overlayChat = nil; ui.overlayJump = nil }
         })   // removed without animation (removal .identity): the slide was the exit

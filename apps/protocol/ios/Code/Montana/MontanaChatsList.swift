@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Combine
 import CryptoKit
 import MontanaBindings
 import PhotosUI
@@ -233,6 +234,7 @@ struct MontanaTimePanelList: View {
     var holdsRow: ((Chat) -> Bool)? = nil   // the rows a hold may begin on; nil -- every row (see MTChatListView)
     var bottomReserve: CGFloat = 0
     var headFloats = false   // a row of the page stands between the bar and the list with no plate (the archive row)
+    var yieldsToChat = false  // the list stands still under an open chat (MTChatListView.yieldsToChat)
     var page = ""             // the page's name for the diary
     var fieldNames: [String]? = nil   // the names of the page's own print, for the diary; nil — by their places
     var numbered = false      // the rows' numbers beside the bar while the list scrolls (MTRowNumber)
@@ -247,7 +249,7 @@ struct MontanaTimePanelList: View {
                        onOpen: onOpen, rowContent: rowContent, headContent: panel.head,
                        onPull: onPull, onHold: onHold, holdsRow: holdsRow, onRefresh: panel.onRefresh, onSettled: panel.onSettled,
                        pinTop: panel.pinTop, bottomReserve: bottomReserve,
-                       runsToEdges: true, headFloats: headFloats, page: page, fieldNames: fieldNames, numbered: numbered, live: live,
+                       runsToEdges: true, headFloats: headFloats, page: page, fieldNames: fieldNames, numbered: numbered, live: live, yieldsToChat: yieldsToChat,
                        endFirst: endFirst, canvasRow: canvasRow, separatorRow: separatorRow, focus: focus)
             // The list's frame never follows the keyboard (the author's word 10.09): the container is a
             // scroll view of its own; the results take the keyboard into account themselves.
@@ -1030,7 +1032,7 @@ struct ChatsListView: View {
                                holdsRow: { c in !selecting && c.name != Self.qrRow },
                                bottomReserve: playerReserve,
                                // The rows run on to the screen's edges, as the chat's letters: the panel list's own law (23.09).
-                               headFloats: storiesShown || archiveShown, page: "chats", fieldNames: MTChatListView.fieldNames,
+                               headFloats: storiesShown || archiveShown, yieldsToChat: true, page: "chats", fieldNames: MTChatListView.fieldNames,
                                // THE CHATS AS THE APP LIBRARY'S LIST (the author's words 28.09): the platform's plain list, every
                                // conversation a line with the platform's separator under it; the code's card stands alone, bare.
                                separatorRow: { c in c.name != Self.qrRow })
@@ -1949,14 +1951,26 @@ struct MTLetterThumb: View {
     /// WHETHER THE PICTURE IS THERE, in one number for the row's print: the file on disk, the poster
     /// on disk, or nothing yet. The cell used to be printed without it — a row configured before its
     /// picture existed kept the plate until something else about it changed (a relaunch, usually).
+    /// NEVER THE DISK ON THE MAIN THREAD (the words of the author 21521, 21526, 13.11.2026 22:13 UTC: a chat opens at once): the list
+    /// prints every row on each pass, and the passes under a chat being opened asked the disk for the file of each row on the main thread
+    /// -- 1790 ms of one frame on T1 at 13.11.2026 22:13 UTC under a busy disk. The place is the one owner's (MTMediaPlace, from memory);
+    /// a name of a row that moved asks the store for one more pass, which prints the row again -- never under an open chat (the list
+    /// stands still there, MTChatListView.chatOver, and the chat's closing applies what moved meanwhile).
     static func stamp(kind: String, file: String?) -> Int {
-        guard let f = file else { return 0 }
-        if kind == "img" || kind == "vid" || kind == "vnote" {
-            if FileManager.default.fileExists(atPath: attachmentURL(f).path) { return 2 }
-            if FileManager.default.fileExists(atPath: posterURL(f).path) { return 1 }
+        guard let f = file, kind == "img" || kind == "vid" || kind == "vnote" else { return 0 }
+        if listening == nil {
+            listening = MTMediaPlace.moved.sink { n in
+                guard shown.contains(n), !nudged, !MTChatListView.chatOver else { return }
+                nudged = true
+                DispatchQueue.main.async { nudged = false; ChatStore.live?.objectWillChange.send() }
+            }
         }
-        return 0
+        shown.insert(f)
+        return MTMediaPlace.of(f)
     }
+    private static var shown = Set<String>()   // the main thread's: the rows' pictures the list printed
+    private static var nudged = false
+    private static var listening: AnyCancellable?
     private var poster: UIImage? { Self.picture(kind: kind, file: file) }
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: side * 0.22)

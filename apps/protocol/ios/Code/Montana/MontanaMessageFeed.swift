@@ -362,6 +362,8 @@ final class MTFrameMeter {
     /// (motion what=… frames= fps= worst_ms= late=). Two motions at once are one line, named by the first to end.
     func moveBegan() { begin(rows: 0) }
     func moveEnded(_ what: String) { end(what, mark: "motion") }
+    /// A motion or a gesture is measured now: the screen moves (the feed's rest waits for it, OZ 1 p.1.10).
+    var moving: Bool { link != nil }
 
     /// From a control's action to the first frame after it: the wait the finger feels.
     func tap(_ what: String) {
@@ -798,6 +800,8 @@ struct MTFeedListView: UIViewRepresentable {
         /// end, where the reader does not stand -- no birth, the reader held where the first pass put them.
         static let firstScreenRows = 12
         private var restPending = false
+        private var restLaid = 0    // the rows the rest has laid so far, part by part
+        private var restWaits = 0   // the turns the rest waited for the chat's rise
 
         init(_ v: MTFeedListView) { self.view = v }
 
@@ -845,14 +849,28 @@ struct MTFeedListView: UIViewRepresentable {
             MTMainDoor.enter("feed-first") { self.applyNow(rows: rows) }
         }
 
+        /// THE REST COMES AFTER THE RISE, IN PARTS (OZ 1 p.1.10, decision 925 = a, (4)): the rest of the feed was laid whole on the
+        /// turn after the first screen -- inside the chat's rise -- and cost 270 ms of one frame at the opening of a chat of 87 letters
+        /// on T1 at 13.11.2026 22:30 UTC. It waits now while the screen moves (the rise, a fling; at most 40 frames), and then comes 24
+        /// rows a turn from the newest end, each part a frame of its own. A whole pass of the model (an arrival, a change) ends the parts.
         private func applyRest() {
             guard restPending else { return }
-            restPending = false
+            if MTFrameMeter.shared.moving, restWaits < 40 {
+                restWaits += 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 60) { [weak self] in self?.applyRest() }
+                return
+            }
+            let all = view.rows
+            restLaid += Self.firstScreenRows * 2
+            let whole = all.count <= restLaid
+            let part = whole ? all : view.newestOnTop ? Array(all.suffix(restLaid)) : Array(all.prefix(restLaid))
+            restPending = !whole
             stampNow = Int.min   // the first pass stood for the whole model; the rest of it is still to be laid
-            MTMainDoor.enter("feed-rest") { self.applyNow(rows: self.view.rows) }
+            MTMainDoor.enter("feed-rest") { self.applyNow(rows: part, part: true) }
+            if !whole { DispatchQueue.main.async { [weak self] in self?.applyRest() } }
         }
 
-        private func applyNow(rows: [ChatConversationView.ChatRowVM]) {
+        private func applyNow(rows: [ChatConversationView.ChatRowVM], part: Bool = false) {
             guard let cv, let ds = dataSource else { return }
             // A snapshot must not pin the feed under the dragging finger. Apply the latest model
             // once the native gesture ends, including arrivals and media height changes.
@@ -860,7 +878,7 @@ struct MTFeedListView: UIViewRepresentable {
             if appliedOnce, view.stamp == stampNow { finishScrollIfPending(); return }   // nothing the feed draws from has moved
             stampNow = view.stamp
             let firstScreen = !appliedOnce && rows.count > Self.firstScreenRows
-            restPending = firstScreen
+            if !part { restPending = firstScreen; restLaid = Self.firstScreenRows; restWaits = 0 }
             // The newest end: the slice's front on the keys (the feed is flipped, its first item the visual bottom), its back
             // when turned.
             let rows = !firstScreen ? rows
