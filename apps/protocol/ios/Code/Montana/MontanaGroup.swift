@@ -125,8 +125,11 @@ struct MTGroupState: Codable, Equatable {
     var cards: [String: String]? = nil
     /// The seat and the name this phone last laid its own card under (MTGroup.giveCards): a new seat or a new name lays it again.
     var cardGiven: String? = nil
-    /// The owner's phone told this group its seats (MTGroup.keepRoster): a group born before the seats rode is told them once.
-    var rostered: Bool? = nil
+    /// THE OWNER'S ROUND (OZ 1 p.8, the author's word 21075): the owner's build at which it last told the group its seats -- on its
+    /// own phone (MTGroup.keepRoster tells them again at a new build), on a member's phone as the owner's «inv» named it
+    /// (MTGroupWord.rr). A new round, or a new build of the member, lays the member's card again (MTGroup.cardMark), and the owner
+    /// answers it with every card it holds: a card an older build refused or the road lost comes back by itself.
+    var round: Int? = nil
     /// The owner of the group: its phone carries every word of it to the group's people (MTGroup.carried).
     var mine: Bool { owner.isEmpty }
     var canManage: Bool { mine && left != true }
@@ -229,6 +232,9 @@ struct MTGroupWord: Codable {
     /// EVERY MEMBER'S SEAT, on a group's «inv» (OZ 1 p.1, the author's decision 877 a): the owner names its people's seats, never
     /// their pipes. A build that does not read it skips the key and counts as the owner says (c).
     var ps: [String]? = nil
+    /// THE OWNER'S ROUND on a group's «inv» (MTGroupState.round, OZ 1 p.8): a build that does not read it skips the key and lays its
+    /// card as before.
+    var rr: Int? = nil
 }
 
 /// ONE WHO ASKED TO JOIN BY THE LINK («Member Requests»): the pipe the owner met them by, the name they gave and when.
@@ -616,7 +622,7 @@ final class MTGroup {
         var g = MTGroupState(id: id, kind: kind, title: name, about: Self.clean(about, Self.aboutLimit), owner: "", me: Self.ownerSeat,
                              members: members, count: members.count + 1, names: [:], at: Date().timeIntervalSince1970)
         if kind == .group { g.history = true }   // A NEW GROUP SHOWS ITS PAST TO NEW MEMBERS (the author's word 20455 p.2)
-        g.rostered = true   // its invitations below name the seats (OZ 1 p.1)
+        g.round = MontanaRelease.ownBuild   // its invitations below name the seats and the round (OZ 1 p.1, p.8)
         groups[id] = g
         saveGroups()
         let row = stand(g, face: face.isEmpty ? nil : saveChatAvatar(face), store: store, revive: true)
@@ -626,7 +632,7 @@ final class MTGroup {
         for m in members {
             var w = MTGroupWord(t: "inv", g: id, k: kind.rawValue, ti: name, ds: g.about.isEmpty ? nil : g.about, fc: thumb,
                                 c: g.count, me: m.seat, n: me.isEmpty ? nil : me)
-            w.ps = Self.roster(g)   // every member's seat (OZ 1 p.1)
+            Self.nameSeats(&w, g)   // every member's seat and the owner's round (OZ 1 p.1, p.8)
             _ = carry(w, to: m.pipe, letter: "", own: false)
         }
         MontanaTrace.mark("group_born", "kind=\(kind.rawValue) people=\(g.count)")
@@ -641,7 +647,7 @@ final class MTGroup {
         let me = Self.clean(E2E.myDisplayName(), Self.nameLimit)
         var w = MTGroupWord(t: "inv", g: g.id, k: g.kind.rawValue, ti: g.title, ds: g.about.isEmpty ? nil : g.about, fc: nil,
                             c: g.count, me: seat, n: me.isEmpty ? nil : me)
-        w.ps = Self.roster(g)   // every member's seat (OZ 1 p.1)
+        Self.nameSeats(&w, g)   // every member's seat and the owner's round (OZ 1 p.1, p.8)
         guard let d = try? JSONEncoder().encode(w), let js = String(data: d, encoding: .utf8) else { return nil }
         return Self.mark + js
     }
@@ -860,6 +866,9 @@ final class MTGroup {
         var w = MTGroupWord(t: "say", g: g.id, k: g.kind.rawValue, ti: g.title, n: me.isEmpty ? nil : me, id: mid, s: g.me, tx: letter)
         w.sl = g.kind == .channel && g.silent == true ? 1 : nil   // the bell in the owner's field (Silent Broadcast)
         dress(&w, in: g)
+        if store.messages[key]?.contains(where: { r in r.isFromMe && r.mid == "mid:" + mid && 0 < r.deliveryStatus.rung }) == true {
+            w.hs = 1   // a kept file laid again under its carried letter (p.10.1): the row stands everywhere, nobody is rung
+        }
         let n = spread(w, in: g, except: nil, own: true)
         if n == 0, Self.alone(g), let i = store.messages[key]?.firstIndex(where: { r in r.isFromMe && r.mid == "mid:" + mid }) {
             store.advance(key, i, to: .delivered)   // a group of its owner alone holds the letter here (A.2)
@@ -914,7 +923,7 @@ final class MTGroup {
     func resend(_ m: Message, in key: String, store: ChatStore) {
         guard let g = state(key), g.canWrite, m.isFromMe,
               let i = store.messages[key]?.firstIndex(where: { $0.mid == m.mid }) else { return }
-        let letter = m.mid.hasPrefix("mid:") ? String(m.mid.dropFirst(4)) : m.mid
+        let letter = MTMid.bare(m.mid)
         store.restartSend(key, i)
         let waiting = copies.filter { $0.value.own && $0.value.group == g.id && $0.value.letter == letter }
         if waiting.isEmpty {
@@ -1948,12 +1957,7 @@ final class MTGroup {
         saveGroups()
         let face = store.storedChats().first(where: { $0.id == key })?.photoURL.flatMap { try? Data(contentsOf: avatarsDirURL().appendingPathComponent($0)) }
         tellAll(g, face: face.flatMap { Self.thumb($0) }, only: Set(fresh.map(\.seat)))
-        // THE CARDS THE GROUP'S PEOPLE LAID GO TO ONE JUST ADDED (OZ 1 p.8): each with the name it came under, after the invitation
-        for (seat, link) in (g.cards ?? [:]).sorted(by: { a, b in a.key < b.key }) where g.members.contains(where: { m in m.seat == seat }) {
-            let n = g.names[seat] ?? ""
-            let w = MTGroupWord(t: "pc", g: g.id, n: n.isEmpty ? nil : n, s: seat, tx: link)   // COMPAT-GATED: an older build refuses «pc»
-            for m in fresh { _ = carry(w, to: m.pipe, letter: "", own: false) }
-        }
+        handCards(g, to: fresh)   // the cards the group's people laid go to one just added, after the invitation (OZ 1 p.8)
         // one who came by the group's link joined by their own hand (the row: «%@ joined the group via invite link»)
         let came = viaLink ? MTGroupEvent(e: "joined", g: g.id, a: fresh[0].seat)
                            : MTGroupEvent(e: "added", g: g.id, a: Self.ownerSeat, p: fresh.map(\.seat))
@@ -1974,7 +1978,7 @@ final class MTGroup {
             }
             let head = Self.speaker(g.id, "")
             for p in past.suffix(Self.historyLimit) {
-                let letter = p.mid.hasPrefix("mid:") ? String(p.mid.dropFirst(4)) : p.mid
+                let letter = MTMid.bare(p.mid)
                 let seat = p.isFromMe ? g.me : (p.senderRef.flatMap { r in r.hasPrefix(head) ? String(r.dropFirst(head.count)) : nil } ?? "")
                 guard Self.isLetterName(letter), Self.isSeat(seat), !fresh.contains(where: { f in f.seat == seat }) else { continue }
                 let name = seat == g.me ? me : (g.names[seat] ?? "")
@@ -1991,7 +1995,7 @@ final class MTGroup {
                     && MTGroupEvent.of(m.text) == nil && Self.carries(m.text)
             }
             for p in posts.suffix(10) {
-                let letter = p.mid.hasPrefix("mid:") ? String(p.mid.dropFirst(4)) : p.mid
+                let letter = MTMid.bare(p.mid)
                 guard Self.isLetterName(letter) else { continue }
                 let w = MTGroupWord(t: "say", g: g.id, k: g.kind.rawValue, ti: g.title, n: me.isEmpty ? nil : me, id: letter, s: g.me, tx: p.text,
                                     qt: (p.replyText ?? "").isEmpty ? nil : p.replyText)
@@ -2063,7 +2067,7 @@ final class MTGroup {
             w.rx = g.kind == .channel && g.reacts == false ? 0 : nil   // a channel takes no reactions (Allow Reactions off)
             w.dc = g.kind == .channel && g.talks == true ? 1 : nil   // a channel's subscribers comment (Allow Comments)
             w.rl = g.kind == .channel ? g.reactList : nil   // the reactions a channel takes (Some Reactions)
-            w.ps = Self.roster(g)   // every member's seat: the page and the head say the same (OZ 1 p.1)
+            Self.nameSeats(&w, g)   // every member's seat and the owner's round: the page and the head say the same (OZ 1 p.1, p.8)
             _ = carry(w, to: m.pipe, letter: "", own: false)
         }
     }
@@ -2073,8 +2077,32 @@ final class MTGroup {
     /// THE SEATS A GROUP'S «inv» NAMES, ONE ANSWER: every member's, never a pipe; a channel names none -- its subscribers are not
     /// shown to each other.
     static func roster(_ g: MTGroupState) -> [String]? { g.kind == .group ? g.members.map(\.seat) : nil }
+    /// WHAT AN «inv» NAMES OF THE GROUP'S PEOPLE, ONE ANSWER: the seats (roster) and the owner's round (MTGroupState.round).
+    static func nameSeats(_ w: inout MTGroupWord, _ g: MTGroupState) {
+        w.ps = roster(g)
+        w.rr = g.kind == .group ? g.round : nil
+    }
+    /// THE MARK A MEMBER'S CARD IS LAID UNDER, ONE ANSWER (OZ 1 p.8, the author's word 21075): the seat, the name, this phone's build
+    /// and the owner's round -- a new one of any lays the card again and brings every card the owner holds back in answer.
+    static func cardMark(_ g: MTGroupState, name: String) -> String { "\(g.me)/\(name)/\(MontanaRelease.ownBuild)/\(g.round ?? 0)" }
     /// Whether a word is a person's card: a link the one meeting road opens, and short.
     static func isCard(_ s: String) -> Bool { s.utf8.count <= 256 && MontanaCard.invite(inShort: s) != nil }
+
+    /// THE CARDS THE GROUP'S PEOPLE LAID, HANDED TO SOME OF THEM, ONE ANSWER (OZ 1 p.8): each card of one still in the group, with the
+    /// name it came under, to every person given -- never a person's own card back to them. One just added takes them after its
+    /// invitation (add); one who laid its card takes everyone else's (cardLaid). The count of the words that left.
+    @MainActor @discardableResult
+    private func handCards(_ g: MTGroupState, to people: [MTGroupMember]) -> Int {
+        var n = 0
+        for (seat, link) in (g.cards ?? [:]).sorted(by: { a, b in a.key < b.key }) where g.members.contains(where: { m in m.seat == seat }) {
+            let name = g.names[seat] ?? ""
+            let w = MTGroupWord(t: "pc", g: g.id, n: name.isEmpty ? nil : name, s: seat, tx: link)   // COMPAT-GATED: an older build refuses «pc»
+            for m in people where m.seat != seat {
+                if carry(w, to: m.pipe, letter: "", own: false) != nil { n += 1 }
+            }
+        }
+        return n
+    }
 
     /// A CARD LAID IN A GROUP: a member's permanent link with the name they give. The owner takes it from the member its pipe holds
     /// and hands it to everyone else; a member takes it from the owner for the seat the owner names. A group's alone.
@@ -2083,6 +2111,12 @@ final class MTGroup {
         guard var g = groups[w.g] else { return .wait }
         guard g.kind == .group, g.left != true, let link = w.tx, Self.isCard(link),
               let seat = speakerSeat(g, w, from: MTSamePair.root(pipe)) else { return .refused }
+        // THE OWNER ANSWERS ONE WHO LAID A CARD WITH EVERY OTHER CARD IT HOLDS (OZ 1 p.8, the author's word 21075): a card handed on
+        // while this member's build refused «pc», or lost on the road, reaches it again -- a repeat included; the member lays again
+        // only at a new build or a new round (cardMark).
+        if g.mine, let m = g.members.first(where: { x in x.seat == seat }) {
+            MontanaTrace.mark("group_card", "answered=\(handCards(g, to: [m]))")
+        }
         let name = Self.clean(w.n ?? "", Self.nameLimit)
         let named = !name.isEmpty && g.names[seat] != name
         if !named, g.cards?[seat] == link { return .held }   // a repeat: nothing new to keep or to hand on
@@ -2115,7 +2149,7 @@ final class MTGroup {
         }
     }
     private static func owesCard(_ g: MTGroupState, name: String) -> Bool {
-        !g.mine && g.kind == .group && g.left != true && g.seats != nil && g.cardGiven != g.me + "/" + name
+        !g.mine && g.kind == .group && g.left != true && g.seats != nil && g.cardGiven != cardMark(g, name: name)
     }
     @MainActor
     private func layCards(_ link: String, name: String) {
@@ -2124,23 +2158,27 @@ final class MTGroup {
             guard let g = groups[id], Self.owesCard(g, name: name) else { continue }
             let w = MTGroupWord(t: "pc", g: g.id, n: name.isEmpty ? nil : name, s: g.me, tx: link)   // COMPAT-GATED: only where the owner names seats
             guard carry(w, to: g.owner, letter: "", own: false) != nil else { continue }
-            groups[id]?.cardGiven = g.me + "/" + name
+            groups[id]?.cardGiven = Self.cardMark(g, name: name)
             laid += 1
         }
         if 0 < laid { saveGroups() }
         MontanaTrace.mark("group_card", "given=\(laid)")
     }
 
-    /// THE SEATS AND THE CARDS KEPT UP AT EVERY LOAD: the owner's phone tells a group born before the seats rode its seats once; a
-    /// member's phone lays its card where it is due.
+    /// THE SEATS AND THE CARDS KEPT UP AT EVERY LOAD: the owner's phone at a new build begins a new round -- it tells every group its
+    /// seats again with the round, silently (MTRing.groupWord), and each member lays its card again and is answered with all the
+    /// cards (OZ 1 p.8, the author's word 21075: the cards went once, and one refused or lost never came back); a member's phone
+    /// lays its card where it is due. Each group's state goes into the trace, so a page that does not open names its reason.
     @MainActor
     func keepRoster() {
         guard ready() else { return }
         for id in groups.keys.sorted() {
-            guard let g = groups[id], g.mine, g.kind == .group, g.left != true, g.rostered != true else { continue }
-            if !g.members.isEmpty { tellAll(g, face: nil) }
-            groups[id]?.rostered = true
+            guard let g = groups[id], g.kind == .group, g.left != true else { continue }
+            MontanaTrace.mark("group_roster", "mine=\(g.mine ? 1 : 0) people=\(g.mine ? g.members.count : g.seats?.count ?? -1) cards=\(g.cards?.count ?? 0) round=\(g.round ?? 0)")
+            guard g.mine, g.round != MontanaRelease.ownBuild else { continue }
+            groups[id]?.round = MontanaRelease.ownBuild
             saveGroups()
+            if let told = groups[id], !told.members.isEmpty { tellAll(told, face: nil) }
         }
         giveCards()
     }
@@ -2298,6 +2336,7 @@ final class MTGroup {
         case "lp": return carded(w, from: pipe, store: store)   // COMPAT-GATED: a letter's link card (17.10), an older build buries it
         case "sp": return passported(w, from: pipe, store: store)   // COMPAT-GATED: a sticker's passport (17.10), an older build buries it
         case "pc": return cardLaid(w, from: pipe)   // COMPAT-GATED: a member's card (OZ 1 p.8), laid only where the owner names seats
+        case "fk": return keptAsked(w, from: pipe, store: store)   // COMPAT-GATED: a restored phone asks a group letter's file again (OZ 1 p.10.1)
         default:
             MontanaTrace.mark("group_refused", "kind=\(String(w.t.prefix(8)))")   // a newer build's word: its road ends here
             return .refused
@@ -2447,6 +2486,12 @@ final class MTGroup {
         }
         let count = seats.map { s in s.count + 1 } ?? max(2, min(w.c ?? 2, Self.peopleLimit + 1))
         let ownerName = Self.clean(w.n ?? "", Self.nameLimit)
+        // WHO MAY ADD ME (OZ 1 p.1.8): a group or a channel new to this phone, or one I left, stands only by the rule of inviting;
+        // a renewal of a group I hold is no invitation.
+        if groups[w.g] == nil || groups[w.g]?.left == true, !MTPrivacy.admits(.invite, owner) {
+            MontanaTrace.mark("group_refused", "invitation refused by the rule of who may add me")
+            return .refused
+        }
         if var g = groups[w.g] {
             guard !g.mine, MTSamePair.root(g.owner) == owner else {
                 MontanaTrace.mark("group_refused", "invitation of a group held by another owner")
@@ -2466,6 +2511,7 @@ final class MTGroup {
             g.count = count
             g.me = seat
             g.seats = seats
+            g.round = seats == nil ? nil : w.rr   // the owner's round: a new one lays this phone's card again (OZ 1 p.8)
             if let s = seats { g.cards = g.cards?.filter { e in s.contains(e.key) } }   // a card of one gone leaves with their seat
             if !ownerName.isEmpty { g.names[Self.ownerSeat] = ownerName }
             g.admins = w.ad.map { $0.filter(Self.isSeat) }.flatMap { $0.isEmpty ? nil : $0 }   // the owner's word alone names them
@@ -2510,6 +2556,7 @@ final class MTGroup {
         g.reactList = Self.reactionList(w.rl)
         g.faceTag = w.fc.map(Self.tag(ofFace:))
         g.seats = seats
+        g.round = seats == nil ? nil : w.rr   // the owner's round (OZ 1 p.8)
         groups[w.g] = g
         saveGroups()
         stand(g, face: Self.face(w.fc), store: store, revive: true)   // the group is born here
@@ -2551,7 +2598,10 @@ final class MTGroup {
         }
         let key = Self.key(of: g.id)
         let sid = "mid:" + id
-        guard store.messages[key]?.contains(where: { $0.mid == sid }) != true else { return .held }   // a repeat: the row stands
+        if let row = store.messages[key]?.first(where: { $0.mid == sid }) {   // a repeat: the row stands
+            refill(row, words: words, id: id, seat: seat, in: g, store: store)   // with new cargo, the row's file comes (p.10.1)
+            return .held
+        }
         if g.mine {
             // THE GROUP'S PERMISSIONS AT THE DOOR (G.5): the owner carries every letter, so the owner refuses what the members may not
             // send -- whatever a member's build shows -- and holds a letter that came before its slow mode's interval: it knocks again.
@@ -2593,6 +2643,57 @@ final class MTGroup {
         return .held
     }
 
+    // A GROUP LETTER'S FILE ASKED FOR AGAIN (OZ 1 p.10.1, the group's half; decisions 875 = a, 883 = a): a phone restored from the
+    // light copy holds the group's rows and none of their files, and a delivered letter's pieces have left the nodes. It asks by
+    // «fk» on the group's own road -- a member the owner, the owner every member; the letter's author lays the file again under the
+    // same name (ChatStore.serveKeptFile, carryMedia), the owner carries the new cargo on, and the row without its file takes it.
+    /// The asker's half (ChatStore.askKeptFile holds its clock): one word to everyone this phone carries to; its receipts move no row.
+    @MainActor
+    func askKeptFile(_ key: String, letter id: String) {
+        guard let g = state(key), g.left != true, Self.isLetterName(id) else { return }
+        let w = MTGroupWord(t: "fk", g: g.id, k: g.kind.rawValue, id: id)
+        let n = carried(g).compactMap { p in carry(w, to: p, letter: "", own: false) }.count
+        MontanaTrace.mark("kept_file", mid: id, "a group letter's file is asked n=\(n)")
+    }
+    /// The holder's half: the letter's author lays its file again (serveKeptFile keeps its own clock); the owner, not its author,
+    /// passes the ask to the author's seat once in the span; anyone else holds the word.
+    @MainActor
+    private func keptAsked(_ w: MTGroupWord, from pipe: String, store: ChatStore) -> Verdict {
+        guard let g = groups[w.g], g.left != true, let id = w.id, Self.isLetterName(id) else { return .refused }
+        let root = MTSamePair.root(pipe)
+        let road = g.mine ? g.members.contains { m in MTSamePair.root(m.pipe) == root } : MTSamePair.root(g.owner) == root
+        guard road else { return .refused }   // only the group's own road asks
+        let key = Self.key(of: g.id)
+        guard let row = store.messages[key]?.first(where: { $0.mid == "mid:" + id }), row.attachment != nil else { return .held }
+        if row.isFromMe {
+            store.serveKeptFile(mid: id, chat: key)
+            return .held
+        }
+        guard g.mine, let ref = row.senderRef, let to = speakerPipe(ref), MTSamePair.root(to) != root,
+              store.mayAskKeptFile("pass:" + id) else { return .held }
+        _ = carry(w, to: to, letter: "", own: false)
+        MontanaTrace.mark("kept_file", mid: id, "the ask passes to the letter's author")
+        return .held
+    }
+    /// A REPEAT WITH NEW CARGO (p.10.1): the author laid a letter's file again under its name. The row without its file takes it;
+    /// the owner carries the new cargo on once in the span, silent -- the row stands everywhere already. Only the row's own
+    /// speaker lays its cargo.
+    @MainActor
+    private func refill(_ row: Message, words: String, id: String, seat: String, in g: MTGroupState, store: ChatStore) {
+        guard words.hasPrefix(mediaMark), words != row.text, let file = row.attachment?.file,
+              row.senderRef == Self.speaker(g.id, seat) else { return }
+        let key = Self.key(of: g.id)
+        if !MontanaMediaStore.exists(file) {
+            MontanaTrace.mark("rx_refill", mid: id, "a group row stands without its file -- the new cargo is taken")
+            store.reconstructMedia(key, body: String(words.dropFirst(mediaMark.count)), isFromMe: false, time: row.time,
+                                   msgId: row.msgId, senderRef: row.senderRef)
+        }
+        guard g.mine, store.mayAskKeptFile("carry:" + id) else { return }
+        var on = MTGroupWord(t: "say", g: g.id, k: g.kind.rawValue, ti: g.title, id: id, s: seat, tx: words)
+        on.hs = 1   // the row stands everywhere: the new cargo rings nobody
+        spread(on, in: g, except: seat, own: false)
+    }
+
     /// A LETTER'S CARD (MTGroup.carryCard): it lands on its letter's row by the pair's one rule of a late card (ChatStore.enrichLinkPreview
     /// -- the words, then the picture once), and the owner carries it on. Only the letter's speaker names its card, and only for a link
     /// the letter's own words carry; a card that outran its letter waits for it a while (cardWait).
@@ -2631,7 +2732,7 @@ final class MTGroup {
         guard g.left != true else { return .refused }
         guard let id = w.id, Self.isLetterName(id), let body = w.tx, body.utf8.count <= Self.passportLimit,
               var o = Self.json(body), (o["t"] as? String) == "id",
-              let named = o["m"] as? String, MontanaStickerBook.bare(named) == id else { return .refused }
+              let named = o["m"] as? String, MTMid.bare(named) == id else { return .refused }
         let from = MTSamePair.root(pipe)
         guard let seat = speakerSeat(g, w, from: from) else { return .refused }
         let key = Self.key(of: g.id)
@@ -2864,7 +2965,7 @@ final class MTGroup {
         var sid = ""
         if text.hasPrefix(editMark) { sid = (json(String(text.dropFirst(editMark.count)))?["sid"] as? String) ?? "" }
         else if text.hasPrefix(deleteMark) { sid = String(text.dropFirst(deleteMark.count)) }
-        let bare = sid.hasPrefix("mid:") ? String(sid.dropFirst(4)) : sid
+        let bare = MTMid.bare(sid)
         return isLetterName(bare) ? "mid:" + bare : nil
     }
     /// The seat whose letter a row is: mine is this phone's seat, another's is named by its speaker's reference.

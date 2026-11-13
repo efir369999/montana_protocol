@@ -939,7 +939,7 @@ struct MTChessGameScreen: View {
                 if row.deliveryStatus == .failed {
                     MontanaBarMark(glyph: "arrow.clockwise", label: "Retry") {
                         guard let mid = row.msgId else { return }
-                        let bare = mid.hasPrefix("mid:") ? String(mid.dropFirst(4)) : mid
+                        let bare = MTMid.bare(mid)
                         let ref = chat.convId ?? chat.name
                         store.settleByMid(conv: chat.name, mid: bare, .sending)
                         MontanaDeliveryEngine.shared.enqueue(to: ref, chat: chat.name, mid: bare, text: row.text, silent: !game.last.rings)

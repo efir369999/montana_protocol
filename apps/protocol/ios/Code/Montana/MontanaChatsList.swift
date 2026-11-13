@@ -181,13 +181,20 @@ struct MTKeyboardLift<Content: View>: View {
     }
 }
 
-/// THE GLOBE READS THE NODE ITSELF (23.09, the critic on T3's list): the page above watched the whole node for these two
-/// bits, and every publication of it — the neighbours' scan alone publishes twice every twenty seconds — drew the chat
-/// list again, its every row's print and its plate.
-struct MTBarGlobe: View {
+/// THE LOGO SAYS THE NETWORK IN MESSENGER AND IN THE PROTOCOL (the author's words 21097 and 21190, 13.11.2026: «the green ring around
+/// the logo will mean that there is a connection to the network»; «do it as in Messenger, so the ring's colour says the connection»):
+/// the globe left the time panel of both; the logo wears a green ring while this phone's node is up, and none while it is not. It reads
+/// the node itself, so the panel is not drawn again by it.
+struct MTBarLogo: View {
     @ObservedObject private var node = MontanaPhoneNode.shared
     var body: some View {
-        MontanaTransportIcon(transport: .internet, on: node.nodeUp, size: 22, known: node.nodeUpKnown)
+        MTFeedGlyph(side: 36)
+            .overlay {
+                if node.nodeUp {
+                    if MontanaSkin.isNative { Circle().stroke(Color.green, lineWidth: 2) }
+                    else { MontanaHexagon().stroke(Color.green, lineWidth: 2) }
+                }
+            }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(node.nodeUp ? Text("Connected") : Text("Disconnected"))
     }
@@ -301,7 +308,7 @@ struct ChatsListView: View {
         guard let ch = chatNamed(c), let mid = store.letterId(of: f, in: c) else { return }
         ui.showLetter(ch, mid)   // the one road («show in chat»)
     }
-    // THE PAGE WATCHES WHAT IT DRAWS (23.09, the critic on T3's list): the node is read by the globe (MTBarGlobe) and
+    // THE PAGE WATCHES WHAT IT DRAWS (23.09, the critic on T3's list): the node is read by the logo (MTBarLogo) and
     // the keys by the search's results (MTSearchResultsFrame), each where it is drawn; watched from here, every scan of
     // the neighbours and every move of the keys under the chat open above drew the whole list again.
     /// Above the list: the bar, the stories strip and the archive row. Siblings of the list in
@@ -311,7 +318,7 @@ struct ChatsListView: View {
     /// 23.09) and the column is drawn over them — the page's layout is the column's, unchanged.
     @ViewBuilder private var chatsFloating: some View {
         VStack(spacing: 0) {
-            chatsTopBar
+            if !barBottom { chatsTopBar }   // at the bottom it closes the column instead (chatsContent, OZ 1 p.1.8.1)
             // stories — ABOVE the search; hidden by swipe; hidden during search
             if storiesShown {
                 storiesStrip
@@ -397,14 +404,10 @@ struct ChatsListView: View {
                 if barOpen { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = MTApps.wall == nil ? .chats : .feed } } else { turnPanel(open: true, by: "logo") }
                 #endif
             } label: {
-                MTFeedGlyph(side: 36)   // the feed's glyph is the logo, one drawing for the bar and the drawer
-                    // THE BADGE ON THE TIME PANEL (the author's word 17.09): the unread chats and the
-                    // missed calls, the platform's own corner badge — on the logo while folded, on
-                    // the chats and the calls glyphs while unfolded.
+                MTBarLogo()   // the logo with the network's ring, in both editions (the author's words 21097, 21190)
+                    // THE BADGE ON THE TIME PANEL (the author's word 17.09): the unread chats and the missed calls, on the logo while
+                    // folded, on the chats and the calls glyphs while unfolded. No sending mark on the logo (the author's word 29.09).
                     .overlay(alignment: .topTrailing) { if !barOpen { glyphBadge(panelBadge) } }
-                    // NO SENDING MARK ON THE LOGO (the author's word 29.09: «and on the time logo's icon hung a blue send icon,
-                    // remove it altogether»): a letter on its way shows its state on its own bubble (DeliveryStatus), never
-                    // on the panel.
             }
             // The chats, right of the logo (the author's word 19.09): an outline, as every page's glyph (UIState.Glyph).
             barSlot(Self.chatsSlot) { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .chats } } label: {
@@ -412,26 +415,23 @@ struct ChatsListView: View {
                     .foregroundColor(MontanaOctagon.barGlyph)
                     .overlay(alignment: .topTrailing) { if barOpen { glyphBadge(store.unreadCounts.count) } }   // the unread, where the chats live
             }
-            // THE DYNAMIC GLYPH, between the chats and the globe (the author's word 19.09): the last opened of the
-            // player and the gallery; a tap opens that one again. Both are pages under the bar (the music 23.09, the
-            // gallery 25.09), one of them in the row at a time, and the puck goes under the glyph for either.
-            barSlot(Self.mediaSlot) { ui.askMedia() } label: {
-                Image(systemName: UIState.Glyph.of(ui.mediaPane))
-                    .font(.system(size: 22, weight: .semibold))
+            // THE GROUPS AND THE CHANNELS RIGHT OF THE CHATS, NO GLOBE, IN BOTH EDITIONS (the author's words 21097 and 21176, 13.11.2026:
+            // «right of the time panel the order of the buttons -- chats, groups, channels -- remove the globe entirely»; «the same in the
+            // Protocol's time panel»): the panel names its three lists of conversations; the network is said by the logo's ring
+            // (MTBarLogo); the gallery, the music and the network's pages by the drawer (decision 911 = a).
+            barSlot(Self.groupsSlot) { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .groups } } label: {
+                Image(systemName: UIState.Glyph.groups).font(.system(size: 20, weight: .semibold))
                     .foregroundColor(MontanaOctagon.barGlyph)
+                    .overlay(alignment: .topTrailing) {
+                        if barOpen { glyphBadge(store.unreadCounts.keys.filter { k in MTGroup.isKey(k) && MTGroup.shared.kind(k) != .channel }.count) }
+                    }
             }
-            // THE GLOBE CHOOSES THE NETWORK PAGE (the author's word 25.09: «a full page under the time panel, as the chats, the
-            // calls, the contacts and the feed»): a page of the finger's row, chosen as every glyph chooses its page, the puck
-            // under the globe. The touch is stamped as before (22.09) when it changes the page: the page reports the milliseconds
-            // from here to its opening; a tap on the globe of the standing page stamps nothing, there is no opening to measure.
-            barSlot(Self.globeSlot) {
-                let globe = UIState.globePane
-                #if !MONTANA_MESSENGER
-                if ui.pane != globe, globe == .vpn { MTApps.vpn?.opened() }
-                #endif
-                withAnimation(.easeInOut(duration: 0.2)) { ui.pane = globe }
-            } label: {
-                MTBarGlobe()
+            barSlot(Self.channelsSlot) { withAnimation(.easeInOut(duration: 0.2)) { ui.pane = .channels } } label: {
+                Image(systemName: UIState.Glyph.channels).font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(MontanaOctagon.barGlyph)
+                    .overlay(alignment: .topTrailing) {
+                        if barOpen { glyphBadge(store.unreadCounts.keys.filter { k in MTGroup.shared.kind(k) == .channel }.count) }
+                    }
             }
         }
         // THE PUCK IS BORN UNDER EVERY GLYPH (the author's word 24.09: «now and then the tab's selection circle turns
@@ -467,13 +467,14 @@ struct ChatsListView: View {
         // seven glyphs, at that corner, untouched by any clip — the platform's own anchor road.
         .frame(maxWidth: .infinity)   // folded, the plate hugs the logo at the screen's centre
         .padding(.horizontal, 12)
-        .padding(.top, MontanaOctagon.barTopPad)
-        .padding(.bottom, MontanaOctagon.barBottomPad)
+        .padding(.top, barBottom ? MontanaOctagon.barBottomPad : MontanaOctagon.barTopPad)
+        .padding(.bottom, barBottom ? MontanaOctagon.barTopPad : MontanaOctagon.barBottomPad)
     }
     @State private var paneKeep = MTPaneKeep()
     // UNFOLDED BY DEFAULT, AND THE LAST CHOICE IS KEPT (the author's word 21.09): the panel opens as
     // the person left it — the platform's own store (AppStorage), one key, read at birth.
     @AppStorage("timePanelOpen") private var barOpen = true
+    @AppStorage(MontanaOctagon.barBottomKey) private var barBottom = MontanaOctagon.barBottomBirth   // the panel's place (OZ 1 p.1.8.1)
     /// THE BADGE LIVES IN THE GLYPH'S OWN LAYER (the author's word 18.09, twice): the plate is a
     /// glass group, and the glyphs' glass composes over anything laid on the plate from outside —
     /// a badge drawn by the plate stood behind the buttons. So the badge is the glyph's overlay,
@@ -507,8 +508,8 @@ struct ChatsListView: View {
     private static let callsSlot = 2
     private static let logoSlot = 3   // the centre of seven — always (the author's word 19.09)
     private static let chatsSlot = 4
-    private static let mediaSlot = 5
-    private static let globeSlot = 6
+    private static let groupsSlot = 5     // right of the logo: chats, groups, channels, in both editions (the author's words 21097, 21176)
+    private static let channelsSlot = 6
     /// The pages whose search narrows their own rows (the music, 24.09; the feed and the network, 25.09): no results over
     /// them, no pin.
     private static func searchesItself(_ p: UIState.Pane) -> Bool {
@@ -524,12 +525,12 @@ struct ChatsListView: View {
     private static func slot(of pane: UIState.Pane) -> Int? {
         switch pane {
         case .chats: return chatsSlot; case .contacts: return contactsSlot; case .calls: return callsSlot
-        case .gallery, .groups, .channels: return mediaSlot   // the dynamic slot's pages (UIState.mediaPanes)
-        case .p2p: return pane == UIState.globePane ? globeSlot : nil
+        case .groups: return groupsSlot
+        case .channels: return channelsSlot
+        case .gallery, .p2p: return nil   // the drawer's pages: no glyph of theirs on the panel (the author's words 21097, 21178)
         #if !MONTANA_MESSENGER
-        case .music: return mediaSlot
         case .feed: return logoSlot
-        case .vpn, .mesh: return pane == UIState.globePane ? globeSlot : nil
+        case .music, .vpn, .mesh: return nil   // the Protocol's drawer pages (decision 911 = a)
         #endif
         }
     }
@@ -926,6 +927,9 @@ struct ChatsListView: View {
                 MTPaneSlide(drag: ui.turnDrag, keep: paneKeep, pass: paneKeep.renew(), panes: pages.map { p in
                     MTPaneSlide.Item(pane: p, view: AnyView(MTLazyPane { AnyView(paneView(p)) }))
                 })
+                // THE TIME PANEL AT THE BOTTOM (OZ 1 p.1.8.1): the same plate closes the column; the rows measure their run-on to the
+                // window's edges themselves (MTChatListFrame), so they run on under it as they do under the top one.
+                if barBottom { chatsTopBar.zIndex(1) }
             }
     }
 
@@ -992,7 +996,7 @@ struct ChatsListView: View {
             let known = folderBook.tellsContacts ? MTChatFolders.contactRefs() : nil
             let bare = folderBook.rows(of: folder, live: live, archived: archivedChats, store: store, contacts: known)
             VStack(spacing: 0) {
-                let empty = folder.isAll && bare.allSatisfy { c in ChatStore.isLocalRoom(c.name) } && archivedChats.isEmpty
+                let empty = p == .chats && bare.allSatisfy { c in ChatStore.isLocalRoom(c.name) } && archivedChats.isEmpty
                 let rows = empty ? bare + [Chat(name: Self.qrRow, lastMessage: "", time: "", unread: 0, status: "", convId: Self.qrRow)] : bare
                 MontanaTimePanelList(panel: timePanel(.chats, listEmpty: false, ownSearch: false), rows: rows,
                                fingerprint: rowPrint,
@@ -1004,7 +1008,7 @@ struct ChatsListView: View {
                                onOpen: rowTapped,
                                rowContent: { AnyView(chatRowCell($0).environmentObject(store).environment(ui)) },
                                onPull: { dy in
-                                   guard folder.isAll else { return }
+                                   guard p == .chats else { return }
                                    // The same two directions as before, now reported by the
                                    // container that owns the scroll: pull down summons the
                                    // archive row, pull up folds it; stories ride along.
@@ -1052,12 +1056,14 @@ struct ChatsListView: View {
         }
     }
 
-    /// The folder a page shows: the drawer's Groups and Channels open the folder of their kind; the chats page, every chat.
+    /// The folder a page shows, each its own kind (OZ 1 p.1.11, the author's word 21137): the drawer's Groups and Channels open the
+    /// folder of their kind; the chats page, the person's own chats alone -- it read the folder All, and every group and channel
+    /// stood in it.
     private func paneFolder(_ p: UIState.Pane) -> MTChatFolder {
         switch p {
-        case .groups: return folderBook.folder(only: .groups) ?? MTChatFolder(id: "groups", preset: .groups, kinds: [.groups])
-        case .channels: return folderBook.folder(only: .channels) ?? MTChatFolder(id: "channels", preset: .channels, kinds: [.channels])
-        default: return .all
+        case .groups: return folderBook.folder(only: .groups) ?? .groups
+        case .channels: return folderBook.folder(only: .channels) ?? .channels
+        default: return .chats
         }
     }
     /// A folder no conversation matches, in its own words: the Groups or the Channels page with none of its kind.

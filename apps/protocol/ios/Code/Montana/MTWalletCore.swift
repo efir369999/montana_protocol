@@ -2021,7 +2021,7 @@ struct MTCoinLetter: Codable, Hashable {
     /// wire name, so a copy carried under another name -- pasted from a bubble, shared in, typed -- names a letter that is not
     /// itself (MTCoinSend.credits).
     func bound(to mid: String) -> Bool {
-        let core = mid.hasPrefix("mid:") ? mid.dropFirst(4) : Substring(mid)
+        let core = MTMid.bare(mid)
         guard let dash = core.firstIndex(of: "-") else { return false }
         return core[core.index(after: dash)...].caseInsensitiveCompare(id) == .orderedSame
     }
