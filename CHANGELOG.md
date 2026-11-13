@@ -2,6 +2,23 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2387) - 2026-11-13
+
+Source commit `3081b32b00f1`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2387.md).
+
+- A group chat you deleted, such as the chat of a group call, no longer comes back by itself: only a new letter in it, or being added again, brings it back.
+- In a group, a tap on a member whose page cannot open yet says why: the page opens once the group's owner updates Montana.
+- On a device restored from a copy, a tap on a photo or video in a personal chat that came without its file asks its sender, and the file arrives again while the sender still has it.
+- Please check: delete the chat of a group call; after the update it does not come back.
+- Please check: in a group, tap a member who is not in your contacts: their page opens, or a line says it opens after the owner's update.
+- Please check: on a restored iPad, tap a photo without its file in a personal chat: it arrives.
+
+**Security and anonymity**
+
+- A restored device asks a personal chat's sender for a missing attachment by the existing cargo-gone word (cargoLostMark); the sender lays the file again under the same letter name, once per letter in six hours on each side (keptFileAsks in the local vault). No new word on the wire.
+- A group's own renewal words no longer lift a row the person deleted; only a letter, the group's birth or being added again do. No change to the wire format.
+- A group member with neither pipe nor card shows a local alert only; nothing is sent.
+
 ## 1.0 (2386) - 2026-11-13
 
 Source commit `f83b58cba25c`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2386.md).
