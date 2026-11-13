@@ -2617,6 +2617,20 @@ struct ContactsTabView: View {
         }
         MontanaTrace.mark("book_keep", "ref=\(String(ref.prefix(10))) — by the permanent link")
     }
+    /// OUT OF THE BOOK, the one road (the tab's deleted person and a twin's word, decision 886 = a): the cards leave, and the
+    /// names given them by hand with them. An unreadable book is left as it stands.
+    static func dropFromBook(_ refs: Set<String>) {
+        let raw = MontanaLocalVault.getString("mtContacts") ?? ""
+        guard !refs.isEmpty, !raw.isEmpty, let list = try? JSONDecoder().decode([MTContact].self, from: Data(raw.utf8)) else { return }
+        let kept = list.filter { !refs.contains($0.ref) }
+        if kept.count != list.count, let d = try? JSONEncoder().encode(kept) {
+            MontanaLocalVault.setString("mtContacts", String(data: d, encoding: .utf8) ?? "")
+            MTNameBook.invalidateContacts()
+        }
+        for a in refs {
+            MTNameBook.setManual(conv: a, first: nil, last: nil)
+        }
+    }
     /// A ROW OF THE TAB: a person as the chats tab lists them, and the card of the book behind
     /// them when there is one; a card not yet written to stands after the list.
     private struct MTPerson: Identifiable {
@@ -2680,11 +2694,7 @@ struct ContactsTabView: View {
     }
     /// The card of the book goes with the conversation: a deleted person leaves the tab whole.
     private func dropCards(_ refs: Set<String>) {
-        guard !refs.isEmpty else { return }
-        save(contactsList.filter { !refs.contains($0.ref) })
-        for a in refs {
-            MTNameBook.setManual(conv: a, first: nil, last: nil)
-        }
+        ContactsTabView.dropFromBook(refs)
     }
     /// DELETE — the chats tab's road (ChatStore.deleteChat) and the card with it.
     private func delete(_ chat: Chat, forBoth: Bool) {

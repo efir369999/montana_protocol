@@ -23870,6 +23870,22 @@
         }
       }
     },
+    "Awaiting the core %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ждут ядра %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待核心确认 %@"
+          }
+        }
+      }
+    },
     "Active": {
       "localizations": {
         "ru": {

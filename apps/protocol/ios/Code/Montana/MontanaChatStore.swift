@@ -7125,6 +7125,8 @@ enum SeedScope {
     // Account content: conversations, profile, sync. Reset on account SWITCH.
     static let dataKeys: [String] = ["chatsJSON", "archivedJSON", "chatMessages", "pinnedMessages",
                            "mt.keep.owner",   // the keepers of my copy and its generation (MTKeeping): the person's own
+                           "mt.twin.self",   // the moments of one's own name, face and words said to the twins (MTTwinSelf, 884 = a)
+                           "mt.twin.book",   // the moments of the person's choices said to the twins, entry by entry (MTTwinSelf, 886 = a)
         "scheduledMsgs", "recentOrder", "orderSeq", "readChats", "pinnedChatsList", "forcedUnread",
         "mutedChats", "archivedNames", "deletedChats", "peerAvatars", "peerNames", "peerSeenAt", "peerGoneAt",
         "userName", "userLastName", "userUsername", "userBio", "userBirthday", "profileBio", "profileLink", "peerAbout",

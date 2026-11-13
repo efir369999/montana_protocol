@@ -429,6 +429,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         MTTouchDiary.start()
         #endif
         MTTop.watch()   // the owner of the modal stack names what stands at every return, lets a system sheet go when the app leaves (25.09)
+        MTTwinSelf.watch()   // one's own name, face and words ride to the seed's other devices (decision 884 = a, OZ 1 p.2.4)
         MTVideoTrace.sink = { MontanaTelemetry.shared.event($0) }   // the video conveyor is visible in the metric
         MontanaDiagShip.kick()   // stage 8-N: beta telemetry to the node, anonymous by construction
         MontanaTrace.onFailure = { MontanaDiagShip.shipOnFailure() }   // an error does not wait the quarter hour

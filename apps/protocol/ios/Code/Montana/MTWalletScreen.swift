@@ -35,9 +35,9 @@ struct MTWalletPage: View {
     /// chain has spoken, the available it holds (MTCoinSplit.available) -- in this run, or its last word kept from a run before
     /// (MTCoinSplit.lastWord, the author's word 29.10.2026 09:28 UTC, link 11329); before it ever spoke, every coin the book holds, and
     /// before the seed's book lands, the balance a device of the same words told in its tip (04.10 16:34).
-    /// THE SECONDS BEFORE THE WINDOW IS FINALIZED RISE ON THE PAGE (the author's words 26.10.2026 09:2x UTC, links 8615 and 8617): the
-    /// Time Balance is the available and the person's seconds on their way to the chain (MTCoinSplit.growing), so it moves every second
-    /// while the person is here; the line Available beneath stays what the chain holds, and Send is weighed by that alone.
+    /// THE BALANCE IS THE CHAIN'S, THE SECONDS FOR THE CORE A LINE OF THEIR OWN (the author's decision 885 = b, OZ 1 p.14.4): the Time
+    /// Balance is what the chain holds (MTCoinSplit.growing), one on every device of the person; the seconds in the network this device
+    /// counted rise every second beneath it (MTCoinSplit.awaiting) while the person is here, and Send is weighed by the available alone.
     private var total: Int {
         if coinSplit.spoke { return coinSplit.growing }
         return vault.heard ? book.balance : max(book.balance, tipNet.seen ?? 0)
@@ -171,6 +171,11 @@ struct MTWalletPage: View {
                         // the one number every transfer page shows and weighs by (MTCoinSplit.available).
                         // USER-DATA: the coins the person's chain holds for its one owner, the spendable part of the total
                         Text("Available \(MTCoinText.count(coinSplit.available))").font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        // THE SECONDS WAITING FOR THE CORE (decision 885 = b): counted on this device, never in the balance above
+                        // USER-DATA: the person's seconds in the network the core has not confirmed yet
+                        if coinSplit.spoke, 0 < coinSplit.awaiting {
+                            Text("Awaiting the core \(MTCoinText.count(coinSplit.awaiting))").font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        }
                         // THE BALANCE IN THE PERSON'S CURRENCY (the author's word 04.10.2026 21:25 UTC: «under the line of the coins in
                         // Montana, above the level of π, the wallet's balance in the chosen currency at the person's rate»): the balance
                         // times one coin's worth by their own earning (MTPersonalRate), once that earning is told.
