@@ -49,7 +49,7 @@ enum MontanaTrace {
     /// THE SCREEN'S MEASURES, BY NAME (the author's word 21659; MontanaLog.Channel.measure): the lines that say what a motion, a
     /// step of the main thread or a stall cost go to the measures' own file; every other line stays in the trace.
     static let measures: Set<String> = ["motion", "frame_stack", "stall_tree", "feed_pass", "main_slow", "main_step", "main_probe",
-                                        "main_door", "chat_open", "chat_types"]
+                                        "main_door", "chat_open", "chat_types", "letter_box"]
     static func mark(_ event: String, mid: String? = nil, _ kv: String = "") {
         guard enabled else { return }
         let now = Date()

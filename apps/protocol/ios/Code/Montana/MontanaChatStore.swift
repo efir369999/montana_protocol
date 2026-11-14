@@ -7311,6 +7311,7 @@ enum SeedScope {
     ///   dead (a verdict of this network and this hour, not of the server), and the copy's own clock.
     static let deviceKeys: [String] = ["mt.keep.held",   // the parts this phone keeps for others (MTKeeping): never in this person's copy
                              "mt.birth.unfinished",   // the print of a making on this phone before its profile (MontanaBirth, link 14680): never a copy's
+                             "mt.search.face",   // the platform's search bar measured on this phone, under its system and language (MTSearchFace): never a copy's
                              MTKeeping.askedBackKey,   // the correspondences this phone asked to give back (MTKeeping): this device's own
                              "diagId", "diagHideRule", "diagWmTele", "diagWmTrace", "diagGenTele", "diagGenTrace",
         "mt.probe.at", "mt.probe.conf", "mt.probe.mode", "mt.probe.rot",

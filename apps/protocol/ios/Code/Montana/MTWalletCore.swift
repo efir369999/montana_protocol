@@ -2717,14 +2717,12 @@ enum MTCoinChainRules {
         let t0 = max(s.mintEnd, now - MTCoinChainRules.mintFresh + MTCoinTx.presentMargin, from)
         return Int(clamping: max(0, now - t0))
     }
-    /// What the wallet's Time Balance shows: the available and, before the coin chain's stop, the seconds a MINT would name.
-    /// THE BALANCE IS THE CHAIN'S, ONE ON EVERY DEVICE OF THE PERSON (the author's decision 885 = b, OZ 1 p.14.4: one person's
-    /// Protocol on the computer and on the phone showed two counts -- each device folded its own seconds in the network into the
-    /// balance, MTPresenceWait, and carried them nowhere): the seconds the core has not confirmed yet stand on a line of their own.
-    var growing: Int { available + (split == nil ? 0 : minting) }
-    /// The seconds in the network this device counted for the core (MTPresenceWait): beneath the balance, never in it (885 = b).
-    var awaiting: Int { MTPresenceWait.seconds }
-    private var shownAwaiting: Int?
+    /// What the wallet's Time Balance shows: the available and the seconds on their way to it -- before the coin chain's stop the
+    /// seconds a MINT would name, from it the seconds in the network the core has not confirmed yet (MTPresenceWait).
+    /// 1 COIN A SECOND, ON THE BALANCE, AS BEFORE (the author's words 21840 and 21842, 14.11.2026 12:13 UTC: «the minting stopped
+    /// crediting every second»; «as before it must show the minting, 1 coin 1 second, and credit it on the balance»): they take back
+    /// the line of its own of decision 885 = b (build 2391), under which the Time Balance stood still between the core's words.
+    var growing: Int { available + (split == nil ? 0 : minting) + MTPresenceWait.seconds }
     /// The number the readers off the main actor hear (MTCoinBalance): the available, told at every move of the book and the chain.
     /// Before the chain has spoken the available is the book's, so its views hear every move of the book here.
     private var shown: Int?
@@ -2740,9 +2738,6 @@ enum MTCoinChainRules {
     /// figure is told again without a rise.
     func beat() {
         guard spoke else { return }
-        // the line of the seconds waiting for the core moves every second while the person is here; the balance, with the chain
-        let wait = awaiting
-        if shownAwaiting != wait { shownAwaiting = wait; objectWillChange.send() }
         guard let before = shown else { shown = growing; objectWillChange.send(); return }
         let now = growing
         guard before != now else { return }
@@ -2757,8 +2752,8 @@ enum MTCoinChainRules {
 /// core's confirmation by the fact of finalization»; «the stop of minting was about everything except in the network»; links 13528 and
 /// 13531: build 2324 showed no crediting every second). From the coin chain's stop (MTCoinChainRules.mintStop) its nodes take no MINT,
 /// so the seconds the person is here -- the app in front of them or the living tunnel (MTCoinTx.here) -- are counted on this phone and
-/// rise on their own line beneath the Time Balance (MTCoinSplit.awaiting, decision 885 = b), never in the balance nor the available,
-/// and nothing spends them: only the core makes coins of them.
+/// rise in the Time Balance (MTCoinSplit.growing, the author's word 21842), never in the available, and nothing spends them: only
+/// the core makes coins of them.
 /// Kept in the person's folder (MTCoinPlace), folded at every beat of presence, so a stay that ends or a run that dies loses at most
 /// one beat, and a seat moved takes its own. The open stay lives in memory alone: a run killed never counts the time it was dead.
 @MainActor enum MTPresenceWait {

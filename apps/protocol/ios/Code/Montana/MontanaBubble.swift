@@ -747,6 +747,9 @@ struct MTSaveBeside<Badge: View>: ViewModifier {
             // where the link lies; everything else of the letter keeps the tap it had (MTLinkedText).
             MTLinkedText(text: MTRowLetter.words(s), font: font, color: UIColor(bubbleText),
                          linkColor: UIColor(MontanaNativeBubble.link(mine: drawnMine)))
+        } else if MTTiledLetter.isLong(s) {
+            // A LONG LETTER'S WORDS ARE DRAWN AWAY FROM THE MAIN THREAD (MTTiledLetter, 14.11): the same words, font and colour.
+            MTTiledLetterText(text: s, font: font, color: UIColor(bubbleText))
         } else {
             Text(s).montanaTextScale()   // the letters follow the person's size; nothing else does
         }

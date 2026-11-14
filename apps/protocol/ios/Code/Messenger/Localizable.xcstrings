@@ -18214,18 +18214,18 @@
         }
       }
     },
-    "An anonymous messenger. Your identity comes from your secret phrase, and your chats are encrypted on your device.": {
+    "No phone number, no e-mail. Your identity comes from your secret phrase, and your chats are encrypted on your device.": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Анонимный мессенджер. Личность — из вашей секретной фразы, переписка зашифрована на вашем устройстве."
+            "value": "Без номера телефона и почты. Личность — из вашей секретной фразы, переписка зашифрована на вашем устройстве."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "匿名通讯工具。您的身份源自您的助记词，聊天内容在您的设备上加密。"
+            "value": "无需手机号，无需邮箱。您的身份源自您的助记词，聊天内容在您的设备上加密。"
           }
         }
       }
