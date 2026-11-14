@@ -47,6 +47,9 @@ class ChatStore: ObservableObject {
     // the FIRST message of the chat, then the list repainted).
     @Published var listState: [String: [String: String]] = [:]
     private var listStateLoaded = false
+    /// THE TWIN'S SILENCE (OZ 1 p.1.4.2): the Saved Messages row whose file the seed's other device has not given -- the plaque says
+    /// where the file is instead of the tap doing nothing. Set by askKeptFile, cleared by the plaque's own button.
+    @Published var twinSilent: String?
     func loadListStateOnce() {
         guard !listStateLoaded else { return }
         listStateLoaded = true
@@ -1741,11 +1744,23 @@ class ChatStore: ObservableObject {
         // for the row by its archive key (MontanaArchive.askTwin) and gives the file by the cargo road (giveTwinRows, takeTwinRow).
         if hit.0 == savedMessagesKey {
             guard mayAskKeptFile("twin:" + sid) else {
-                MontanaTrace.mark("kept_file", mid: sid, "a Saved Messages row asked its twin within the span -- nothing sent")
+                MontanaTrace.mark("kept_file", mid: sid, "a Saved Messages row asked its twin within the span -- the plaque says where the file is")
+                Task { @MainActor in self.twinSilent = sid }
                 return
             }
             MontanaArchive.askTwin(chat: hit.0, items: [(Int(hit.1.createdAt), hit.1.isFromMe, MontanaArchive.rowHash(Self.archivedText(hit.1) ?? ""))])
             MontanaTrace.mark("kept_file", mid: sid, "a Saved Messages row asks the seed's other device for its file")
+            // The twin answers within seconds when it is awake; a file still missing after the wait is the twin's silence, and the
+            // person is told where the file is kept (the plaque), not left with a tap that did nothing.
+            let file = kept.file
+            Task { @MainActor [weak self] in
+                for _ in 0..<15 {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    if MontanaMediaStore.exists(file) { return }
+                }
+                self?.twinSilent = sid
+                MontanaTrace.mark("kept_file", mid: sid, "the seed's other device gave no file within the wait -- the plaque stands")
+            }
             return
         }
         // A RESTORED ROW ASKS BY ITS FILE'S SEAL (OZ 2 p.1.1, the author's words 22141, 22151): its arc: name lives on this phone
