@@ -1,11 +1,12 @@
-1.0 (2397) Release Notes
+1.0 (2398) Release Notes
 ========================
 
-MT Protocol for iPhone, iPad and Mac, build 1.0 (2397), from source commit `f2844b9786a0a7883a4cbc85de4ca82ce264edf4` of 2026-11-14. The folder `apps/protocol/ios` of this repository holds that tree as it is built.
+MT Protocol for iPhone, iPad and Mac, build 1.0 (2398), from source commit `bf8635d8fc386ed33a962349be73847781e82782` of 2026-11-14. The folder `apps/protocol/ios` of this repository holds that tree as it is built.
 
 Notable changes
 ---------------
 
+- A GIF in a chat no longer stands as a dark plate: the app's first look at its files now tells every picture that asked about its file while the look ran.
 - The input field no longer hangs when you open stickers or GIFs, and the app no longer closes on that page: the screen is laid out after the keyboard has changed, not in the middle of the change.
 - An app installed anew with no account signed in asks the notification servers to forget the address its last install left, and clears its old notifications.
 - A voice reply recorded at the ear keeps its buttons: the recording stands with its send, bin and pause from its first second, so nothing vanishes from the bar.
