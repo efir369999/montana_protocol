@@ -2,6 +2,17 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2401) - 2026-11-15
+
+Source commit `af603e08277f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2401.md).
+
+- A file in Saved Messages that your other device has not given yet no longer meets a silent tap: a note says where the file is kept and that it comes here when that device is online.
+- Please check: restore the account, open Saved Messages and tap a photo without its file while your other device is off -- the note appears.
+
+**Security and anonymity**
+
+- This build changes neither security nor anonymity: a note in Saved Messages says where a file is kept, and the store description says what the app is; nothing new leaves the phone.
+
 ## 1.0 (2400) - 2026-11-14
 
 Source commit `37a89b823a20`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2400.md).
