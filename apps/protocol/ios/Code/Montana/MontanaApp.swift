@@ -374,7 +374,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         DispatchQueue.global(qos: .utility).async { MontanaCard.keepLiveCardsUp() }   // the day's card turns on time, off the screen's thread
         MontanaWakePush.registerConvs()   // the door's standing map: only what changed leaves
         Task { await MontanaWakePush.flushPendingDrops() }   // the boxes a drop failed to empty are asked again
-        MontanaBlobUpload.sweepOrphanBodies()   // orphan handoff bodies mute the cargo check; a newborn body is spared
+        MontanaBlobUpload.sweepOrphanBodies()   // orphan handoff bodies mute the cargo check; a newborn body is spared (the sweep leaves the main thread by itself)
         // The tunnel is read at every return, not only when its page opens: a tunnel that stands is asked what its
         // reconnect says, and what the extension wrote while the app was away (a death, a raise by the system) rides.
         #if !MONTANA_MESSENGER

@@ -1176,13 +1176,21 @@ extension MontanaArchive {
     nonisolated static let twinCardPipe = "twin:card"   // NOT-UI: the mirror's name for the cards' words, never a conversation
     nonisolated static let twinRowMark = "\u{200B}\u{200B}TW:"   // NOT-UI: one row given back, to this seed's devices alone
     private static let askedKey = "mt.twin.asked"   // NOT-UI: the keys this device already asked (SeedScope names it)
+    /// THE ASKED KEYS LIE IN THE VAULT, NOT IN THE SETTINGS (OZ 1 p.1.3, the author's word 21671): 4724 of them stood 326 KB in the
+    /// settings' plist on T1 (2392, its settings copied 14.11.2026 00:30 UTC), the second load after board.owned that the system
+    /// parses whole at the first read of any setting. The vault seals the list and lays it in a file from 64 KB on, the settings
+    /// keep the 37 bytes that name it, and the plain list an earlier build left is sealed at its first read (getStringArray).
+    nonisolated static var askedKeys: [String] {
+        get { MontanaLocalVault.getStringArray(askedKey) ?? [] }
+        set { MontanaLocalVault.setStringArray(askedKey, newValue) }
+    }
     /// The archive's key of a row's words, the same on every device of the seed: a hash of the words as the archive writes them.
     nonisolated static func rowHash(_ archived: String) -> String {
         SHA256.hash(data: Data(archived.utf8)).prefix(8).map { b in String(format: "%02x", b) }.joined()
     }
     /// The rows of a conversation the archive holds and the feed does not: asked once, two hundred at most a round.
     nonisolated static func askTwin(chat: String, items: [(s: Int, m: Bool, h: String)]) {
-        var asked = Set(UserDefaults.standard.stringArray(forKey: askedKey) ?? [])
+        var asked = Set(askedKeys)
         let fresh = Array(items.filter { i in !asked.contains(chat + "/" + String(i.s) + "/" + i.h) }.prefix(200))
         guard !fresh.isEmpty, let d = try? JSONSerialization.data(withJSONObject: ["i": fresh.map { i in [i.s, i.m ? 1 : 0, i.h] as [Any] }]),
               let js = String(data: d, encoding: .utf8) else { return }
@@ -1190,15 +1198,15 @@ extension MontanaArchive {
         // A SLICE IS NO PROPERTY LIST (the author's word 18.10.2026 11:0x UTC: «check why the app crashes on T1 and fix it urgently»):
         // T1 on 2240 died on screen every half minute from 11:08:52Z -- NSInvalidArgumentException «Attempt to insert non-property list
         // object ArraySlice([...]) for key mt.twin.asked»: suffix hands back an ArraySlice, and the settings store takes only arrays.
-        UserDefaults.standard.set(Array(Array(asked).suffix(5000)), forKey: askedKey)
+        askedKeys = Array(Array(asked).suffix(5000))
         mirrorNote(TwinWord(c: chat, m: UUID().uuidString, x: twinAskMark + js, o: 1))
         MontanaTrace.mark("twin_ask", "chat=\(String(chat.prefix(10))) rows=\(fresh.count)")
     }
     /// A row whose file did not come whole is asked again the next time the gap is measured.
     nonisolated static func unaskTwin(chat: String, s: Int, h: String) {
-        var asked = UserDefaults.standard.stringArray(forKey: askedKey) ?? []
+        var asked = askedKeys
         asked.removeAll { k in k == chat + "/" + String(s) + "/" + h }
-        UserDefaults.standard.set(asked, forKey: askedKey)
+        askedKeys = asked
     }
     /// One row given back: its words, and a file by the cargo road -- the file's pieces sealed under a fresh key, the key inside the
     /// pipe only the seed's devices open.

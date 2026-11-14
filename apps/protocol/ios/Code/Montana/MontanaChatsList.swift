@@ -1972,7 +1972,9 @@ struct MTLetterThumb: View {
     private static var nudged = false
     private static var listening: AnyCancellable?
     private var poster: UIImage? { Self.picture(kind: kind, file: file) }
+    @State private var told = 0   // a picture made off the main thread for this file draws the thumb again (OZ 1 p.1.5)
     var body: some View {
+        let _ = told
         let shape = RoundedRectangle(cornerRadius: side * 0.22)
         Group {
             switch kind {
@@ -2005,6 +2007,7 @@ struct MTLetterThumb: View {
             }
         }
         .frame(width: side, height: side)
+        .onReceive(MTMediaPlace.moved) { n in if n == file { told &+= 1 } }
     }
     /// A glyph in the system's own gray (the author's word 16.09), on a quiet plate.
     private func plate(_ glyph: String, _ shape: RoundedRectangle) -> some View {

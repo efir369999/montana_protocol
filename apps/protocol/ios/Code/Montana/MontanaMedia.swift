@@ -1953,6 +1953,14 @@ enum MontanaSmallPicture {
         if let d = try? Data(contentsOf: smallURL(name)), let ui = UIImage(data: d) {
             cache.setObject(ui, forKey: name as NSString); return ui
         }
+        // THE SMALL COPY IS NEVER MADE ON THE MAIN THREAD (OZ 1 p.1.5, the author's word 21671; T1 13.11.2026 23:25 UTC, 2392: a frame
+        // of the chat list stood 224 ms in the system's thumbnailer and its encoder, for a row's picture): the main thread answers from
+        // memory or the small file, and a copy not yet made is made off it, by the one reader of missing pictures; the row, the reply
+        // bar and the face hear the name told (MTMediaPlace.moved) and draw again.
+        if Thread.isMainThread {
+            MTMediaPlace.fetch("small:" + name, name: name) { image(name) != nil }
+            return nil
+        }
         // The file on disk, or the legacy one moved out of the archive into the store on this ask.
         guard let src = mtMediaFileURL(name) ?? MontanaMediaVault.playableURL(name), let made = thumbnail(src) else { return nil }
         if let d = made.jpegData(compressionQuality: 0.85) { try? d.write(to: smallURL(name)) }

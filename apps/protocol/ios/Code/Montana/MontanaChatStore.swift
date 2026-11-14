@@ -3731,7 +3731,7 @@ class ChatStore: ObservableObject {
             // THE SAME ARCHIVE IS NOT READ TWICE (link 14244, MontanaArchive.face): a cold start whose archive, feed, pipe book and
             // asked rows stand as at the last whole reading would find the same gaps and build nothing, so it reads no log. Any
             // change (a block written, a chat born or emptied, a pipe, a row unasked) changes the face, and the archive is read.
-            let asked = (UserDefaults.standard.stringArray(forKey: "mt.twin.asked") ?? []).count
+            let asked = MontanaArchive.askedKeys.count
             let face = folders == nil ? MontanaArchive.face(["feed=" + occupied.sorted().joined(separator: ","),
                                                              "pipes=" + String(MTPipeBook.count), "asked=" + String(asked), "held=" + String(held.count)]) : nil
             if let face, face == UserDefaults.standard.string(forKey: ChatStore.archiveFaceKey) {
@@ -7736,7 +7736,10 @@ enum MontanaMainProbe {
     /// at every letter (what=rx:append), and the line named nothing inside it. A step run inside another reports its
     /// cost to the one around it, and the slow step's line carries its parts (a part under a millisecond is left out).
     nonisolated(unsafe) private static var parts: [String]?
-    nonisolated static func step(_ what: String, _ f: () -> Void) {
+    /// A STEP THAT ALWAYS SPEAKS (the author's word 21656, 13.11.2026: «make the telemetry cover every scenario and measurement»):
+    /// the line was written only past 40 ms, so an opening that cost 30 ms in each of three births said nothing. A step asked
+    /// with `always` writes its line at any cost -- main_step under the threshold, main_slow past it -- with its parts.
+    nonisolated static func step(_ what: String, always: Bool = false, _ f: () -> Void) {
         let was = crumb; crumb = what
         let outer = parts; parts = []
         let t0 = ProcessInfo.processInfo.systemUptime
@@ -7744,7 +7747,9 @@ enum MontanaMainProbe {
         let ms = Int((ProcessInfo.processInfo.systemUptime - t0) * 1000)
         let inner = parts ?? []
         parts = outer
-        if ms > 40 { MontanaTrace.mark("main_slow", "what=\(what) ms=\(ms)" + (inner.isEmpty ? "" : " parts=" + inner.joined(separator: ","))) }
+        if ms > 40 || always {
+            MontanaTrace.mark(ms > 40 ? "main_slow" : "main_step", "what=\(what) ms=\(ms)" + (inner.isEmpty ? "" : " parts=" + inner.joined(separator: ",")))
+        }
         if ms > 0 { parts?.append("\(what):\(ms)") }
         if ms > slowestMs { slowestMs = ms; slowest = what }
         crumb = was

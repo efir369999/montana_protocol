@@ -2658,6 +2658,7 @@ enum MTCoinChainRules {
     /// again by the chain's own word (send3), and no other road sends after the v2 cut (sendResult).
     private struct LastWord: Codable { let key: String; let coins: Int64; let height: Int; let at: TimeInterval }
     private static let lastName = "chain-last-word.json"   // NOT-UI: the file's name in the person's folder
+    nonisolated private static let keeper = DispatchQueue(label: "montana.coin.last-word", qos: .utility)
     private var last: (generation: Int, word: LastWord?)?
     private var lastWord: LastWord? {
         let g = MTCoinBook.generation
@@ -2674,7 +2675,9 @@ enum MTCoinChainRules {
         guard let key = MTCoinTx.myKeyTag, let u = MTCoinPlace.file(Self.lastName) else { return }
         let w = LastWord(key: key, coins: coins, height: height, at: Date().timeIntervalSince1970)
         guard let d = try? JSONEncoder().encode(w) else { return }
-        MTDiskDoor.write(d, to: u, "coin-last", options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+        // THE WORD IS KEPT OFF THE MAIN THREAD, IN ORDER (OZ 1 p.1.5, the author's word 21671; T1 13.11.2026 23:25 UTC, 2392: a frame of
+        // the chat list stood 99 ms in this file's atomic write): memory holds the word at once, the file follows on a queue of its own.
+        Self.keeper.async { MTDiskDoor.write(d, to: u, "coin-last", options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]) }
         last = (MTCoinBook.generation, w)
     }
     /// THE SENDS ON THEIR WAY TO THE CHAIN (fold-7; the author's words 23.10.2026 00:27 UTC: «the phone only mirrors the chain»): a SEND
