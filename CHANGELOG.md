@@ -2,9 +2,29 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2397) - 2026-11-14
+
+Source commit `f2844b9786a0`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2397.md).
+
+- The input field no longer hangs when you open stickers or GIFs, and the app no longer closes on that page: the screen is laid out after the keyboard has changed, not in the middle of the change.
+- An app installed anew with no account signed in asks the notification servers to forget the address its last install left, and clears its old notifications.
+- A voice reply recorded at the ear keeps its buttons: the recording stands with its send, bin and pause from its first second, so nothing vanishes from the bar.
+- Saved Messages reach your other devices: a note written on the phone appears on the Mac with the same account, and a note the other device missed is given back when it asks.
+- Notifications turned off no longer take the place of a button on the top panel: a small crossed-speaker badge stands over the logo and opens the notification settings.
+- The side panel closes with a sideways swipe from anywhere on it.
+- Replying at the ear starts with a short, soft two-note sound, like the start of a recording in Voice Memos.
+- The Protocol on the Mac no longer weighs down the computer: the queue of outgoing letters is written to disk at once only when a new letter is born, and the rest at most every ten seconds, instead of the whole file at every receipt.
+- The Protocol on the Mac no longer freezes: a write of the settings away from the screen's thread no longer waits for that thread, which was waiting for it in turn.
+- Please check: in a chat open the stickers, then GIFs, then the letters again, several times in a row -- the field answers at once.
+- Please check: listen to a voice message with the phone at your ear, reply after the tone, then take the phone away -- the recording waits with all its buttons.
+
+**Security and anonymity**
+
+- Nothing new leaves the device: a phone with no account only asks the notification servers to forget its own old address.
+
 ## 1.0 (2396) - 2026-11-14
 
-Source commit `785ae5898baa`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2396.md).
+Source commit `e41300b40747`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2396.md).
 
 - The Time Balance rises again by 1 coin every second you are here, as before: the seconds in the network are credited on the balance itself, not on a separate line.
 - A chat with very long letters opens and closes without a stall: a long letter is now drawn away from the screen's thread, piece by piece, only where the screen shows it -- it looks exactly as before.
