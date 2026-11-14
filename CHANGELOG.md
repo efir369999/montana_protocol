@@ -2,11 +2,14 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2395) - 2026-11-14
+## 1.0 (2396) - 2026-11-14
 
-Source commit `5c183c83a213`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2395.md).
+Source commit `785ae5898baa`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2396.md).
 
+- The Time Balance rises again by 1 coin every second you are here, as before: the seconds in the network are credited on the balance itself, not on a separate line.
 - A chat with very long letters opens and closes without a stall: a long letter is now drawn away from the screen's thread, piece by piece, only where the screen shows it -- it looks exactly as before.
+- The app opens faster: the search field no longer holds the first screen -- it stands as it was the moment the app opens, and comes alive right after.
+- Please check: open the Wallet and watch the Time Balance -- it rises every second.
 - Please check: open the chat with the longest letters and leave it several times in a row -- nothing stalls.
 
 **Security and anonymity**
