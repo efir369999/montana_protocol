@@ -2,9 +2,21 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2401) - 2026-11-15
+## 1.0 (2402) - 2026-11-15
 
-Source commit `af603e08277f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2401.md).
+Source commit `4bff00b38042`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2402.md).
+
+- A letter of yours that reached your other device without its signature, and stood there on the correspondent's side, moves to your side as soon as your own copy of it arrives.
+- Your other device now gives back every letter it is asked for, a pair's named letters too, and a file it could not hand over is tried again four times instead of being dropped; Saved Messages appears on a device that never wrote to itself.
+- Please check: write from the phone to a person and to Saved Messages, then open both on the Mac -- your letters stand on the right, theirs on the left, and the photo is in Saved Messages.
+
+**Security and anonymity**
+
+- This build changes neither security nor anonymity: the side of a row follows the seed's own sealed word, and the seed's devices give each other rows they already exchange; nothing new leaves the phone and no one else is told anything.
+
+## 1.0 (2401) - 2026-11-14
+
+Source commit `c0f725130f7a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2401.md).
 
 - A file in Saved Messages that your other device has not given yet no longer meets a silent tap: a note says where the file is kept and that it comes here when that device is online.
 - Please check: restore the account, open Saved Messages and tap a photo without its file while your other device is off -- the note appears.
