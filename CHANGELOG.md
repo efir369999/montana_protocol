@@ -2,6 +2,21 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2399) - 2026-11-14
+
+Source commit `f9cd02782b8e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2399.md).
+
+- Files of a chat restored from the seed phrase come back: a photo, video, GIF, voice or document received before the restore is asked of its sender by its file's seal, and the sender's phone lays it again into the same row -- no second row is born.
+- In groups, the file of a restored letter is asked on the group's own road and lands in the same row, with its speaker's name.
+- A voice message heard at the ear is only heard: when it ends, the playback stops -- no tone sounds and no recording starts.
+- A file that comes again for an old letter after a restore no longer rings a new-message banner.
+- Please check: restore an account from its seed phrase and open a photo or GIF received before the restore -- it loads from its sender.
+- Please check: listen to a voice message to its end with the phone at your ear -- it stops, and nothing starts recording.
+
+**Security and anonymity**
+
+- The ask for a restored file names only a 16-character seal of its letter's name; the file itself travels end-to-end encrypted, as before.
+
 ## 1.0 (2398) - 2026-11-14
 
 Source commit `bf8635d8fc38`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2398.md).
