@@ -1269,7 +1269,9 @@ class Msg(
     fun advance(next: Int): Boolean {
         val ok = when (next) {
             -1 -> state == 0 || state == 1
-            3 -> state == 2
+            // A STEP OF A GAME I SENT STOPS AT «DELIVERED» (iOS 27e6e671): the board reads it, not the person, and the moment of its
+            // delivery is where the correspondent's clock begins on my screen (ChessAnchor) -- a read word arriving later must not move it
+            3 -> state == 2 && !(mine && ChessLetter.isStep(text))
             else -> next > state
         }
         if (ok) { state = next; statusAt = System.currentTimeMillis() }
@@ -1367,6 +1369,10 @@ object Book {
     private var loaded = false
     private val listeners = mutableListOf<() -> Unit>()
     var openChat: String? = null   // the chat on the screen: its letters are read as they land
+        set(v) { val was = field; field = v; if (was != null && v == null) for (l in chatLeft) l() }
+    // THE CHAT'S CLOSING IS SAID (iOS UIState.closeChat -> MTChatListView.chatOver, f10468e7 (5)): a list that stood still under the
+    // chat applies what moved meanwhile, once
+    val chatLeft = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
     lateinit var ctx: Context
 
     fun listen(l: () -> Unit) { synchronized(listeners) { listeners.add(l) } }
@@ -1570,6 +1576,7 @@ object Book {
         if (!saveSecrets(m)) { m.remove(ref); return null }
         markErased(listOf(ref), false)   // the pipe born again (iOS: a scan clears the deletion)
         Archive.head(ref)   // the pipe is born: its folder and its secret's head are sealed now (iOS MTPipe 432)
+        touch(ref)   // a birth is a sign of life (iOS establish: touch)
         ref
     }
 
@@ -1580,6 +1587,71 @@ object Book {
      * still goes by edit.
      */
     private fun Chat.shot() = Chat(ref, name, perm, unread, ArrayList(msgs), pin, note).also { it.ans = ans; it.ansMine = ansMine; it.ansMid = ansMid; it.ansAt = ansAt }
+    // ── WHEN A PIPE LAST LIVED (iOS MTPipeBook.touch/aliveAt, MTPipe.swift 690-723): a sign is proof the other side exists -- the
+    // birth of a pipe, an opened word of theirs (a receipt is one). My own sending is no sign: one can write into emptiness too. ──
+    private const val TOUCHED = "pipeTouched"
+    private val touchMem = HashMap<String, Long>()   // no more than once an hour per pipe
+    private fun touchedLoad(): JSONObject =
+        DeviceVault.get(TOUCHED)?.let { runCatching { JSONObject(String(it, Charsets.UTF_8)) }.getOrNull() } ?: JSONObject()
+    /** True when the hour mark advanced -- the first sign of life in an hour. */
+    fun touch(ref: String): Boolean {
+        if (ref.isEmpty()) return false
+        val now = System.currentTimeMillis()
+        synchronized(touchMem) {
+            if (now - (touchMem[ref] ?: 0L) < 3_600_000L) return false
+            touchMem[ref] = now
+            DeviceVault.set(TOUCHED, touchedLoad().put(ref, now / 1000.0).toString().toByteArray())
+        }
+        return true
+    }
+
+    /**
+     * THE PIPE DIES WITH A WORD AND WITH ITS FOLDER (iOS E2E.sweepOrphanPipes, d38898f4, 24.09, the author's word «do it»): a pipe
+     * lives while its conversation lives in the book, or while it is fresh -- an introduction gets three days to become a
+     * conversation. A pipe with no conversation and no sign of life beyond that dies here: the other side is told over the pipe
+     * itself (PX:, which a folded pipe reads itself -- SamePair.speaksOfPipe), and the pipe leaves with its folder, its meeting
+     * and its card (Book.forget) once the word has left; a word no door took yet keeps the pipe to the next launch's sweep.
+     * Android's one difference: the book of signs is born with this build, so a pipe it never saw starts its three days now --
+     * judged by an empty book of signs, every quiet pipe would die at the first launch. The twin's own pipe is never swept.
+     */
+    fun sweepOrphans() {
+        val feed = held().toHashSet()
+        if (feed.isEmpty()) return   // the book is not up yet -- judging by an empty feed would bury the living
+        val now = System.currentTimeMillis() / 1000.0
+        val twin = MontanaSeed.twin
+        val dying = ArrayList<String>()
+        synchronized(touchMem) {
+            val t = touchedLoad()
+            var seen = 0
+            for (ref in refs()) {
+                if (ref in feed || isLocal(ref) || ref == twin || Groups.isKey(ref)) continue
+                val alive = t.optDouble(ref, Double.NaN)
+                if (alive.isNaN()) { t.put(ref, now); seen++; continue }
+                if (now - alive > ORPHAN_GRACE_S) dying.add(ref)
+            }
+            if (seen > 0) { DeviceVault.set(TOUCHED, t.toString().toByteArray()); Log.d("Montana", "pipes_seen first=$seen") }
+        }
+        if (dying.isEmpty()) return
+        val words = dying.associateWith { ref -> Prefs.str("pxMid.$ref", "").ifEmpty { Marks.mintMid().also { Prefs.setStr("pxMid.$ref", it) } } }
+        words.forEach { (ref, mid) -> Post.send(ref, mid, Marks.PIPE_CLOSED, quiet = true) }
+        Post.flush()
+        val waiting = Post.queued()
+        var closed = 0
+        for ((ref, mid) in words) {
+            if (mid in waiting) continue   // no door took the word yet: the pipe stays to carry it
+            Prefs.remove("pxMid.$ref")
+            forget(ref)
+            synchronized(touchMem) { touchMem.remove(ref); DeviceVault.set(TOUCHED, touchedLoad().apply { remove(ref) }.toString().toByteArray()) }
+            closed++
+        }
+        Log.d("Montana", "pipes_swept closed=$closed held=" + (dying.size - closed) + " feed=" + feed.size)
+    }
+    private const val ORPHAN_GRACE_S = 3 * 24 * 3600.0
+
+    /** A feed's stamp without its copy (iOS f10468e7, the call log): how many letters, the first's and the last's name. */
+    fun feedStamp(ref: String): Triple<Int, String, String>? = synchronized(lock) {
+        ensure(); chats[ref]?.msgs?.let { Triple(it.size, it.firstOrNull()?.mid ?: "", it.lastOrNull()?.mid ?: "") }
+    }
     /** The correspondences: the local room stands apart, above them (iOS: its row is inserted first, never sorted with them). */
     fun all(): List<Chat> = synchronized(lock) { ensure(); chats.values.filter { !isLocal(it.ref) }.sortedByDescending { it.last?.at ?: 0 }.map { it.shot() } }
     /** Every feed this phone holds, the local room with them -- for the searches that find a file or a letter wherever it lies. */
@@ -1965,6 +2037,12 @@ object Book {
         if (any) changed()
     }
 
+    /** A NAME GIVEN BY HAND ON ANOTHER DEVICE OF THE SEED (TwinSelf, iOS MTNameBook.setManual from MTTwinSelf.lay): null or empty clears it. */
+    fun pinName(ref: String, name: String?) {
+        if (chat(ref) == null) return
+        edit(ref) { c -> c.pin = name?.trim()?.ifEmpty { null }?.takeIf { it != c.name.trim() } }
+    }
+
     /** A COPY LAID (iOS layCard «manualPhotos», a union): the picture my hand set on a person, where this phone holds none. */
     fun layMyFace(ref: String, src: File): Boolean {
         val dst = myFace(ref)
@@ -2034,7 +2112,7 @@ object Book {
         }
         FloorGuard.wipe(); Archive.forgetPurge()   // the clock guard and the purge's mark are this seat's, as the book (iOS SeedScope.seatKeys)
         File(ctx.filesDir, "faces").deleteRecursively()
-        DeviceVault.delete(Post.OUTBOX)
+        DeviceVault.delete(Post.OUTBOX); DeviceVault.delete(Post.RESTORED)
         Meeting.wipe(); SamePair.wipe(); Groups.wipe(); PeerLinks.wipe(); Retired.forget()
         CoinBook.setAside()   // the book of a person forgotten leaves with them (iOS MTCoinPlace.setAside)
         // NOTHING OF THE PERSON OUTLIVES THEM ON THIS PHONE BUT WHAT THE WORDS ALONE REOPEN (iOS SeedScope.forget; the absolute privacy,
@@ -2097,7 +2175,7 @@ object Post {
     fun send(to0: String, mid: String, text: String, qt: String? = null, qm: String? = null, lp: String? = null, quiet: Boolean = false) {
         if (Groups.isKey(to0)) return   // a group's feed has no pipe: nothing is ever queued to it (iOS: a group's key has no doors)
         // THE ROOM WITHOUT AN ADDRESS HAS NO WIRE (iOS isLocalRoom): its own letter is settled where it was written, never queued
-        if (Book.isLocal(to0)) { Book.edit(to0) { c -> c.msgs.find { it.mid == mid && it.mine }?.advance(2) }; return }
+        if (Book.isLocal(to0)) { Book.edit(to0) { c -> c.msgs.find { it.mid == mid && it.mine }?.advance(2) }; Twin.born(to0, mid); return }
         val to = if (SamePair.speaksOfPipe(text)) to0 else SamePair.root(to0)   // a folded pipe's words go by its conversation's pipe
         var refused = false
         synchronized(outLock) {
@@ -2168,6 +2246,67 @@ object Post {
             for (i in 0 until a.length()) a.getJSONObject(i).let { if (it.optString("m") != mid) keep.put(it) }
             if (keep.length() != a.length()) keepOutbox(keep)
         }
+    }
+    /**
+     * THE LETTERS ON THEIR WAY TRAVEL IN THE COPY (iOS SeedScope.outboxNow, MontanaBackup outboxTag «q:outbox», cc147308): a restore
+     * turned every row «sending» red, the queue stayed behind. The copy carries it in iOS's own form (MTOutbox.Item: to, chat, mid,
+     * text, silent, since, tries, lastTry, kind), so an iPhone's copy and ours read each other; null when nothing waits.
+     */
+    fun carried(): ByteArray? {
+        val a = synchronized(outLock) { outbox() }
+        if (a.length() == 0) return null
+        val now = System.currentTimeMillis() / 1000.0
+        val out = JSONArray()
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i) ?: continue
+            val to = o.optString("to"); val mid = o.optString("m")
+            if (to.isEmpty() || mid.isEmpty()) continue
+            out.put(JSONObject().put("to", to).put("chat", SamePair.root(to)).put("mid", mid).put("text", o.optString("t"))
+                .put("silent", o.optBoolean("q", false)).put("since", now).put("tries", 0).put("lastTry", 0.0).put("kind", "letter")
+                .apply { for (f in listOf("qt", "qm", "lp")) o.optString(f).takeIf { it.isNotEmpty() }?.let { put(f, it) } })
+        }
+        return if (out.length() == 0) null else out.toString().toByteArray()
+    }
+    /** A copy's letters, held until the archive's heads stand their pipes again (iOS restoredOutbox / mt.restore.outbox). */
+    const val RESTORED = "mt.restore.outbox"   // NOT-UI
+    /**
+     * THE QUEUE WAITS FOR ITS CHANNELS (iOS takeStored, cc147308): to the drain a letter whose pipe this device does not hold yet has no
+     * road and turns red. A laid copy's letters are kept aside, in either form (iOS mid/text/silent, an older Android m/t/q), and join
+     * the queue only once the archive's heads have re-established the pipes (adoptRestored).
+     */
+    fun holdRestored(raw: ByteArray) {
+        val a = runCatching { JSONArray(String(raw, Charsets.UTF_8)) }.getOrNull() ?: return
+        val held = DeviceVault.get(RESTORED)?.let { runCatching { JSONArray(String(it, Charsets.UTF_8)) }.getOrNull() } ?: JSONArray()
+        val have = HashSet<String>()
+        for (i in 0 until held.length()) held.optJSONObject(i)?.optString("m")?.let { have.add(it) }
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i) ?: continue
+            val to = o.optString("to"); val mid = o.optString("mid").ifEmpty { o.optString("m") }
+            val text = if (o.has("text")) o.optString("text") else o.optString("t")
+            if (to.isEmpty() || mid.isEmpty() || text.isEmpty() || !have.add(mid)) continue
+            held.put(JSONObject().put("to", to).put("m", mid).put("t", text).put("qt", o.optString("qt")).put("qm", o.optString("qm"))
+                .put("lp", o.optString("lp")).apply { if (o.optBoolean("silent", false) || o.optBoolean("q", false)) put("q", true) })
+        }
+        if (held.length() > 0) DeviceVault.set(RESTORED, held.toString().toByteArray())
+        Log.i("Montana", "queue_held letters=" + held.length())
+    }
+    /** The pipes stand (Archive.restore): the copy's letters join the queue, one place per letter, and ride at once (iOS adoptRestored). */
+    fun adoptRestored() {
+        val raw = DeviceVault.get(RESTORED) ?: return
+        val items = runCatching { JSONArray(String(raw, Charsets.UTF_8)) }.getOrNull()
+        var fresh = 0
+        val kept = synchronized(outLock) {
+            val a = outbox()
+            val have = HashSet<String>()
+            for (i in 0 until a.length()) a.optJSONObject(i)?.optString("m")?.let { have.add(it) }
+            if (items != null) for (i in 0 until items.length()) items.optJSONObject(i)?.let { if (have.add(it.optString("m"))) { a.put(it); fresh++ } }
+            fresh == 0 || keepOutbox(a)
+        }
+        if (!kept) return   // the stored queue does not open: the copy's letters wait for a read that does
+        DeviceVault.delete(RESTORED)
+        if (fresh == 0) return
+        Log.i("Montana", "queue_restored letters=$fresh")
+        Thread { flush() }.start()
     }
     /**
      * «CANNOT READ» IS NOT «EMPTY» (iOS storeUnreadable, MontanaDeliveryEngine 602-609, 662-700; atom e6cb9251482f): a stored queue
@@ -2802,6 +2941,22 @@ object Post {
     }
 
     /**
+     * A BURIED LETTER LEAVES THE BOX (iOS ChatStore.forgetInBox, 11c34ed7 at 2389, OZ 1 p.1.7, decision 913 = a): the grave answered
+     * the sender and marked the letter taken by this device, and the node keeps that mark a day while the sender's knocks keep the
+     * letter's row alive -- the next whole read yielded it again (T1 13.11.2026, 31 hours after its deletion for everyone). Deleted
+     * for everyone is deleted for every device of the person: the box forgets it («mids», the burial), once per name in a run.
+     */
+    private val boxForgotten: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+    private fun forgetInBox(mid: String) {
+        if (mid.isEmpty() || !boxForgotten.add(mid)) return
+        val body = JSONObject().put("mids", JSONArray(listOf(mid)))
+        val doors = Doors.ordered("box")
+        val awake = doors.filter { Signal.doorAlive(it) }
+        for (door in (awake.ifEmpty { doors })) Thread { Wire.post(door, "/box-del", body, 5000) }.start()
+        Log.d("Montana", "box_forget m=" + mid.take(8) + " a buried letter came again -- the box forgets it")
+    }
+
+    /**
      * THE FIRST LETTER OF A MEETING (iOS drainInbox «rdv» + MontanaCard.accept): ct[1088] ‖ mid‖0 text‖0 name‖0 glyph‖0 conf‖0.
      * The pipe is born from it, the chat stands with the scanner's name, the face laid beside the pipe is read, and the letter
      * is answered «delivered» — the scanner's proof that the pipe stands at both ends.
@@ -2857,6 +3012,24 @@ object Post {
      * (iOS settleRefused → MTGroup.copyRefused).
      */
     private fun cargoReported(ref: String, lost: String) {
+        // A RESTORED PHONE ASKS BY A SEAL (iOS 6549e6c6 serveKeptFile, OZ 2 p.1.1): the letter of mine whose wire name seals to it;
+        // the file goes again under that letter's own name, and the restored row takes the name there (Media.nameRestored)
+        Media.sealOf(lost)?.let { seal ->
+            val m = listOf(ref, SamePair.root(ref)).distinct()
+                .firstNotNullOfOrNull { r -> Book.chat(r)?.msgs?.find { it.mine && it.text.startsWith(Marks.MEDIA) && Media.seal(it.mid) == seal } }
+                ?: return Log.d("Montana", "kept_file seal=$seal no letter of mine with a file by this seal -- nothing to lay").let {}
+            Media.serveKept(Book.ctx, ref, m)
+            return
+        }
+        // A RESTORED PHONE ASKS FOR ITS OWN FILE (iOS b06f5362 serveKeptFile, OZ 2 p.1.1(d)): the letter it sent me, of its kind, born
+        // in its second or within two minutes after it, the place-th of them; my copy goes again under that letter's own name, and its
+        // restored row takes the name there (Media.nameOwnRestored)
+        Media.ownOf(lost)?.let { own ->
+            val m = listOf(ref, SamePair.root(ref)).distinct().firstNotNullOfOrNull { r -> Book.chat(r)?.msgs?.let { Media.ownLetter(it, own) } }
+                ?: return Log.d("Montana", "kept_file m=" + lost.take(24) + " no letter of theirs with a file by this second -- nothing to lay").let {}
+            Media.serveKept(Book.ctx, ref, m)
+            return
+        }
         val copy = Groups.copyRow(lost)
         val m = copy ?: Book.chat(ref)?.msgs?.find { it.mid == lost && it.mine } ?: return
         // A RESTORED PHONE ASKS FOR A DELIVERED LETTER'S FILE (iOS 8d68358c, OZ 1 p.10.1): no letter of this name rides any more, the
@@ -2928,6 +3101,7 @@ object Post {
         if (!own) {
             Meeting.firstDone(ref)   // a word sealed under the pipe by the other side: the introduction is over
             Channels.heard(ref)   // the pipe lives: the moment to name my own address when no road of mine reaches them (iOS ChatStore 3976-3986)
+            Book.touch(ref)   // an opened word of theirs is a sign of life, a receipt among them (iOS MontanaPhoneNode 1343, Delivery 1160)
         }
         var text = f[1]
         if (text.startsWith(Marks.LONG)) {
@@ -3182,7 +3356,7 @@ object Post {
             PeerSafety.isBlocked(ref) -> {}
             // A LETTER BORN BEFORE ITS CONVERSATION'S FUNERAL IS THE DEAD CONVERSATION'S (iOS append diedBefore, 876ab288): it lands
             // nowhere and revives nothing, and the grave answers it as it answers a buried one
-            Book.diedBefore(ref, mid) -> { Log.d("Montana", "rx_funeral m=" + mid.take(16) + " — born before the conversation's funeral"); receipt(ref, sid) }
+            Book.diedBefore(ref, mid) -> { Log.d("Montana", "rx_funeral m=" + mid.take(16) + " — born before the conversation's funeral"); receipt(ref, sid); forgetInBox(mid) }
             else -> {
                 var isNew = false
                 val quiet = OldRecordings.notice(text)   // an old build's recording notice lands hidden: no count, no banner
@@ -3191,7 +3365,12 @@ object Post {
                 // A LETTER CARRYING A SET'S LINK NAMES ITS GIVER (iOS ChatStore 4597-4601): the hand that passed it is whom it is asked of
                 if (text.contains("montana://pack/", ignoreCase = true)) StickerWire.noteLink(text, ref)
                 Book.edit(ref) { c ->
-                    val had = c.msgs.find { it.mid == mid }
+                    var had = c.msgs.find { it.mid == mid }
+                    // A RESTORED ROW TAKES THIS LETTER'S NAME FIRST (iOS 6549e6c6 DeliveryEngine, OZ 2 p.1.1): its sender laid the file
+                    // again for a seal it was asked by; the row stood before its file came, so it is no news and rings nothing (P-218)
+                    if (had == null && text.startsWith(Marks.MEDIA)) had = Media.nameRestored(c.msgs, mid)
+                    // MY OWN RESTORED ROW TAKES MY LETTER'S NAME (iOS b06f5362, OZ 2 p.1.1(d)): the correspondent laid my file again
+                    if (had == null && text.startsWith(Marks.MEDIA)) had = Media.nameOwnRestored(c.msgs, mid, Media.manifest(text)?.optString("k")?.ifEmpty { null })
                     // THE SAME LETTER AGAIN, NOW WITH ITS CARD (iOS attachPreview's copy): the card joins the row, nothing else moves
                     // THE PICTURE CATCHES UP TOO (iOS enrichLinkPreview, MontanaChatStore.swift at 2155, the critic 22.09): the
                     // envelope leg rides without the picture, so a card that came by it carried no face until the mesh copy
@@ -3204,7 +3383,7 @@ object Post {
                         had.text = text; had.meta = null; Media.liftGone(mid)
                         Log.d("Montana", "rx_refill m=" + mid.take(8) + " the row stands without its file — the copy's cargo is taken")
                     }
-                    if (had == null && Book.isBuried(ref, mid)) Log.d("Montana", "rx_buried m=" + mid.take(8) + " — a deleted letter's copy stays out of the feed")
+                    if (had == null && Book.isBuried(ref, mid)) { Log.d("Montana", "rx_buried m=" + mid.take(8) + " — a deleted letter's copy stays out of the feed"); forgetInBox(mid) }
                     else if (had == null) {
                         val at = Marks.birthMs(mid) ?: System.currentTimeMillis()
                         c.msgs.add(Msg(mid, text, false, at, qt = qt, qm = qm, lp = lp?.takeIf { LinkCard.parse(it) != null })); c.msgs.sortBy { it.at }

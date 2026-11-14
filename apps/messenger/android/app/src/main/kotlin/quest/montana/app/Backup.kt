@@ -641,8 +641,8 @@ object Card {
         // the field (MontanaBubble.swift 2361-2362, MontanaConversation.swift 661), the panes (ContentView.swift 226-227, 4296;
         // MontanaChatsList.swift 454), the mesh switch (MontanaNetworkView.swift 123), the daily copies to one's own node
         // (MontanaHomeNode.swift 23, 39-40)
-        "composeOpen" to Form.SWITCH, "composeMediaMode" to Form.WORD, "lastMediaPane" to Form.WORD, "cardKind" to Form.WORD,
-        "timePanelOpen" to Form.SWITCH, Mesh.KEY to Form.SWITCH, "mt.home.node.on" to Form.SWITCH,
+        "composeOpen" to Form.SWITCH, "composeMediaMode" to Form.WORD, "cardKind" to Form.WORD,
+        "timePanelOpen" to Form.SWITCH, BarPlace.KEY to Form.SWITCH, Mesh.KEY to Form.SWITCH, "mt.home.node.on" to Form.SWITCH,
         // the person's term and ceiling of the cache their node backs (MontanaChatStore.swift settingKeys 6913, 18.10.2026)
         HomeKeep.KEEP_DAYS to Form.WHOLE_WORD, HomeKeep.LIMIT to Form.WHOLE_WORD,
         // the wall's rules (MontanaBoard.swift 44-49, 64-77): the rule a word, the people a list
@@ -651,7 +651,9 @@ object Card {
         // the posts already named to their walls as seen (MontanaBoard.swift 1186-1203: a list of «wall#post», the copy's word)
         "board.viewed" to Form.LINES,
         // the person's own words (MontanaProfile.swift 623-625)
-        "userName" to Form.WORD, "profileBio" to Form.WORD, "profileLink" to Form.WORD)
+        "userName" to Form.WORD, "profileBio" to Form.WORD, "profileLink" to Form.WORD,
+        // the training game's level (iOS MTChessAppDoor.settingKeys, 86ebc472: MTChessComputer.levelKey, a whole number)
+        ChessComputer.LEVEL_KEY to Form.WHOLE)
 
     /**
      * What a correspondent said of themselves, kept per conversation (iOS SeedScope.dataPrefixes 6170-6171): hiding the exact
@@ -680,6 +682,7 @@ object Card {
      * longer meets its print is stamped now. This phone's alone, never in a copy; it leaves with the words (MontanaSeed.clear).
      */
     const val MOMENTS = "mt.card.moments"   // NOT-UI: iOS MontanaBackup.momentsKey
+    private const val OUTBOX_TAG = "q:outbox"   // NOT-UI: iOS outboxTag, the letters on their way
     private const val MOMENTS_TAG = "t:moments"   // NOT-UI: iOS momentsTag; a build before 0be1c720 passes it by
     /** The card's shape (iOS MontanaBackup.cardEngine): 2 -- each plain value carries its moment; a light copy laid in an older shape is laid anew. */
     const val ENGINE = 2
@@ -795,9 +798,12 @@ object Card {
         // The records sealed in the same JSON on both phones (iOS SeedScope.dataKeys 6132-6133): the peers' read marks (ChatStore
         // notePeerRead 2872-2879), the name held in the network (MontanaNames.swift 113-132), the permanent link, its keys and the
         // day's cards (MontanaFirstContact.swift 626-868)
-        val records = listOf("peerReadMap" to Post.PeerRead.carried(), "mt.name" to DeviceVault.get("mt.name")) +
+        val records = listOf("peerReadMap" to Post.PeerRead.carried(), "mt.name" to DeviceVault.get("mt.name"),
+            TwinSelf.HELD to DeviceVault.get(TwinSelf.HELD), TwinSelf.BOOK to DeviceVault.get(TwinSelf.BOOK)) +
             MontanaCard.RECORDS.map { it to MontanaCard.record(it) }
         for ((k, v) in records) if (v == null) out.remove("d:$k") else out.put("d:$k", b64(v))
+        // The letters still on their way (iOS SeedScope.outboxNow, cc147308): laid back into the queue once their pipes stand again
+        Post.carried()?.let { out.put(OUTBOX_TAG, b64(it)) } ?: out.remove(OUTBOX_TAG)
         // What each correspondent said of themselves (iOS MTPeerAbout, MontanaE2E.swift 74-125: one sealed map of conversation to bio,
         // link and moment) and the daily links they handed us with their births (MTPeerLinks 45-68: two sealed maps by conversation)
         PeerAbout.all().takeIf { it.isNotEmpty() }?.let { m ->
@@ -856,6 +862,12 @@ object Card {
         }?.let { out.put("d:" + Groups.STORE, b64(it)) }
         // The answers counted (iOS MTReactions, MontanaMessageMenu.swift 94-100: a map of answer to count, a property list on the card)
         QuickReactions.counts().takeIf { it.isNotEmpty() }?.let { out.put("p:reactionUse", b64(plist(it))) } ?: out.remove("p:reactionUse")
+        // WHERE A LONG LISTEN STOPPED (iOS SeedScope.dataKeys "playPlaces", MTPlayPlaces: one dictionary of a file to its moment and
+        // the moment it was kept), the XML property list an iPhone reads too; a file is named by this phone's own path
+        PlayPlaces.carried().takeIf { it.isNotEmpty() }?.let { out.put("p:playPlaces", b64(placesPlist(it))) } ?: out.remove("p:playPlaces")
+        // THE TRAINING GAME (iOS MTChessAppDoor.dataKeys, 86ebc472: MTChessComputer.gameKey): its letters and whose each was, the
+        // iPhone's own JSON
+        ChessComputer.carried()?.let { out.put("d:" + ChessComputer.GAME_KEY, b64(it)) } ?: out.remove("d:" + ChessComputer.GAME_KEY)
         // The moment the calls page was last seen (iOS ChatStore.loadCallsSeenAt 593-603: a sealed word of seconds)
         CallsSeen.kept()?.let { out.put("d:callsSeenAt", b64(secs(it))) } ?: out.remove("d:callsSeenAt")
         val before = Prefs.str(MIRRORED, "").split('\n').filter { it.isNotEmpty() }
@@ -896,6 +908,7 @@ object Card {
         var mesh: Boolean? = null
         var readMarks: Map<String, Long>? = null
         var nameRecord: ByteArray? = null
+        val twinRecords = HashMap<String, ByteArray>()
         val cards = HashMap<String, ByteArray>()
         var about: Map<String, PeerAbout.About>? = null
         var links: Map<String, String>? = null
@@ -905,7 +918,9 @@ object Card {
         var pins: Map<String, List<String>>? = null
         var stickers: List<String>? = null
         var reactions: Map<String, Int>? = null
+        var places: Map<String, Pair<Double, Double>>? = null
         var callsSeen: Long? = null
+        var training: String? = null
         var groups: ByteArray? = null
         var laid = 0
         fun one(tagged: String) {
@@ -942,6 +957,7 @@ object Card {
                 tag == "b:" && k == "avatarData" -> face = unb64(v)
                 tag == "d:" && k == "peerReadMap" -> readMarks = json(v)?.let { o -> o.keys().asSequence().associateWith { o.getLong(it) } }
                 tag == "d:" && k == "mt.name" -> nameRecord = unb64(v)
+                tag == "d:" && (k == TwinSelf.HELD || k == TwinSelf.BOOK) -> unb64(v)?.let { twinRecords[k] = it }
                 tag == "d:" && k in MontanaCard.RECORDS -> unb64(v)?.let { cards[k] = it }
                 tag == "d:" && k == "peerAbout" -> about = json(v)?.let { o ->
                     o.keys().asSequence().associateWith { r -> o.getJSONObject(r).let { a -> PeerAbout.About(a.getString("bio"), a.getString("link"), a.getDouble("at")) } }
@@ -955,6 +971,8 @@ object Card {
                 }
                 tag == "a:" && k == "montana.stickers.mine" -> stickers = words(v)
                 tag == "p:" && k == "reactionUse" -> reactions = unb64(v)?.let { counts(it) }
+                tag == "p:" && k == "playPlaces" -> places = unb64(v)?.let { placesOf(it) }
+                tag == "d:" && k == ChessComputer.GAME_KEY -> training = unb64(v)?.toString(Charsets.UTF_8)
                 tag == "d:" && k == "callsSeenAt" -> callsSeen = unb64(v)?.let { ms(String(it, Charsets.UTF_8)) }
                 tag == "d:" && k == Groups.STORE -> groups = unb64(v)
             }
@@ -977,7 +995,9 @@ object Card {
             { face?.let { SelfFace.set(c, it) } },
             { mesh?.let { if (it != Mesh.discoverable) Mesh.setDiscoverable(it) } },
             { readMarks?.let { Post.PeerRead.lay(it) } },
-            { nameRecord?.let { DeviceVault.set("mt.name", it) } },   // iOS keeps the key in SeedScope.dataKeys at 2361: a copy carries it unread
+            { nameRecord?.let { DeviceVault.set("mt.name", it) } },
+            { map.optString(OUTBOX_TAG).takeIf { it.isNotEmpty() }?.let { unb64(it) }?.let { Post.holdRestored(it) } },   // iOS cardOutbox → takeStored
+            { for ((k, d) in twinRecords) DeviceVault.set(k, d) },   // iOS SeedScope.dataKeys «mt.twin.self», «mt.twin.book» (56177404)   // iOS keeps the key in SeedScope.dataKeys at 2361: a copy carries it unread
             { for ((k, d) in cards) MontanaCard.lay(k, d) },
             { about?.let { PeerAbout.lay(it) } },
             { links?.let { PeerLinks.lay(it, born ?: emptyMap()) } },
@@ -986,7 +1006,9 @@ object Card {
             { pins?.let { MsgPins.lay(it) } },
             { stickers?.let { Stickers.lay(c, it, MontanaPaths.store(c)) } },
             { reactions?.let { QuickReactions.lay(it) } },
+            { places?.let { PlayPlaces.lay(it) } },
             { callsSeen?.let { CallsSeen.lay(it) } },
+            { training?.let { ChessComputer.lay(it) } },
             { groups?.let { Groups.lay(it, avatars) } }
         ).forEach { runCatching(it) }
         // Each value laid takes the copy's moment, as this phone now holds it (iOS layCard: the print of the value read back)
@@ -1128,6 +1150,21 @@ object Card {
         for ((k, v) in m) append("<key>").append(xml(k)).append("</key><integer>").append(v).append("</integer>")
         append("</dict></plist>")
     }
+    /** The long listens' places as the XML property list (iOS MTPlayPlaces' dictionary of a file to [moment, kept at]). */
+    private fun placesPlist(m: Map<String, Pair<Double, Double>>): String = buildString {
+        append("""<?xml version="1.0" encoding="UTF-8"?>""").append('\n')
+        append("""<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">""").append('\n')
+        append("""<plist version="1.0"><dict>""")
+        for ((k, v) in m) append("<key>").append(xml(k)).append("</key><array><real>").append(v.first).append("</real><real>").append(v.second).append("</real></array>")
+        append("</dict></plist>")
+    }
+    /** The places read back from the XML form this phone writes; an iPhone's binary list names its own files' paths, none of ours. */
+    private fun placesOf(b: ByteArray): Map<String, Pair<Double, Double>>? = runCatching {
+        if (b.size >= 8 && String(b, 0, 8, Charsets.US_ASCII) == "bplist00") return@runCatching null
+        Regex("""<key>(.*?)</key>\s*<array>\s*<real>([^<]+)</real>\s*<real>([^<]+)</real>\s*</array>""").findAll(String(b, Charsets.UTF_8))
+            .mapNotNull { r -> val t = r.groupValues[2].toDoubleOrNull(); val at = r.groupValues[3].toDoubleOrNull()
+                if (t == null || at == null) null else unxml(r.groupValues[1]) to (t to at) }.toMap()
+    }.getOrNull()
     private fun xml(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     private fun unxml(s: String) = s.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
 
@@ -1147,7 +1184,7 @@ object Card {
             // a left-out group leaves the groups held with its conversation: the map names it by its id, the conversation by its key
             if (k == "d:" + Groups.STORE) { out.put(k, json(v)?.let { g -> g.keys().asSequence().toList().filter { Groups.key(it) in people }.forEach { g.remove(it) }; b64(g.toString()) } ?: v); continue }
             if (k == MOMENTS_TAG) continue   // laid below, naming only the values still on the card
-            out.put(k, if (tag == "d:" || tag == "a:" || tag == "m:" || tag == "k:") unb64(v)?.let { without(people, it) }?.let { b64(it) } ?: v else v)
+            out.put(k, if (tag == "d:" || tag == "a:" || tag == "m:" || tag == "k:" || tag == "q:") unb64(v)?.let { without(people, it) }?.let { b64(it) } ?: v else v)
         }
         json(o.optString(MOMENTS_TAG))?.let { m ->
             m.keys().asSequence().toList().filter { !out.has("s:$it") && !out.has("n:$it") }.forEach { m.remove(it) }

@@ -188,6 +188,7 @@ object Media {
         val mid = named ?: Marks.mintMid()   // a sticker names its letter first: its passport rides under the same name (iOS letterMidFor)
         val local = file(c, mid, p.ext)
         local.writeBytes(p.bytes)
+        MediaPlace.told(local.path, true)
         val provisional = Marks.MEDIA + JSONObject().put("k", p.kind).put("e", p.ext).put("sz", p.bytes.size).apply {
             p.name?.let { put("n", it) }; if (caption.isNotEmpty()) put("cap", caption); p.du?.let { put("du", it) }
             if (p.round) put("r", true)
@@ -224,7 +225,7 @@ object Media {
                 Book.edit(ref) { ch -> ch.msgs.find { it.mid == mid && it.file == local.path }?.let { it.text = told } }
             }
             // THE LOCAL ROOM KEEPS ITS FILE (iOS isLocalRoom): nothing is sealed or laid -- the letter is settled with the file beside it
-            if (Book.isLocal(ref)) { Book.edit(ref) { ch -> ch.msgs.find { it.mid == mid }?.advance(2) }; return@work }
+            if (Book.isLocal(ref)) { Book.edit(ref) { ch -> ch.msgs.find { it.mid == mid }?.advance(2) }; Twin.born(ref, mid); return@work }
             if (deliver(c, ref, mid, pw, caption, local, qt, group)) return@work
             // THE INTENT SURVIVES ITS BROKEN UPLOAD (iOS 1675, 1677): the bubble stands at the clock and the upload waits for the drain
             keepIntent(ref, mid, local, told, caption, qt)
@@ -252,6 +253,7 @@ object Media {
     fun wipe(c: Context) {
         synchronized(intentLock) { DeviceVault.delete(INTENTS) }
         File(c.filesDir, "media").deleteRecursively()
+        MediaPlace.forgetAll()
     }
     private fun intents(): JSONArray = DeviceVault.get(INTENTS)?.let { runCatching { JSONArray(String(it, Charsets.UTF_8)) }.getOrNull() } ?: JSONArray()
     private fun keepIntent(ref: String, mid: String, local: File, provisional: String, caption: String, qt: String?) = synchronized(intentLock) {
@@ -501,6 +503,8 @@ object Media {
         // A FILE YOUR NODE KEEPS (iOS MTHomeKeep.want, 6f24f091): the cache cleared it, a look brings it back by the download
         // setting, else it waits for a tap as a letter's attachment does -- mine as well as theirs
         if (HomeKeep.kept(m.file)) { HomeKeep.want(c, m); return !autoAllowed(c) }
+        // a restored row without its file has no pieces to fetch by itself: it waits for the tap that asks its sender (iOS 6549e6c6)
+        if (Archive.isRestored(m.mid)) return !m.mine && m.file?.let { File(it).exists() } != true
         return !m.mine && m.file?.let { File(it).exists() } != true && (!autoAllowed(c) || cargoGone(m.mid))
     }
     /**
@@ -518,6 +522,7 @@ object Media {
     fun tapped(c: Context, m: Msg) {
         if (HomeKeep.kept(m.file)) return HomeKeep.bring(c, m, force = true)   // iOS retryOneMedia: a file your node keeps comes back from it
         val ref = Book.rooms().firstOrNull { ch -> ch.msgs.any { it.mid == m.mid } }?.ref ?: return
+        if (Archive.holds(m.mid)) return askRestored(ref, m)   // its pieces were never known here: only its sender holds the file
         askKept(ref, m)
         fetch(c, ref, m.mid, m.text, manual = true)
     }
@@ -529,7 +534,7 @@ object Media {
     private const val KEPT_ASKS = "keptFileAsks"   // NOT-UI: a key's name
     private const val KEPT_SPAN = 6 * 3600_000L
     /** THE ONE CLOCK OF A KEPT FILE'S ASK AND ANSWER: true with the moment kept, false while the last one is younger than the span. */
-    private fun mayKept(name: String): Boolean = synchronized(KEPT_ASKS) {
+    fun mayKept(name: String): Boolean = synchronized(KEPT_ASKS) {
         val now = System.currentTimeMillis()
         val old = runCatching { JSONObject(Prefs.str(KEPT_ASKS, "{}")) }.getOrNull() ?: JSONObject()
         val book = JSONObject()
@@ -538,12 +543,123 @@ object Media {
         Prefs.setStr(KEPT_ASKS, book.put(name, now).toString())
         true
     }
-    /** The receiver's half: their letter's row stands without its file and every store called its pieces gone -- its sender is asked.
-     *  A group's letter is not asked here (iOS: the group's road has its own half). */
+    // A RESTORED ROW ASKS BY ITS FILE'S SEAL (iOS 6549e6c6, OZ 2 p.1.1-1.2, P-215/P-216, the author's words 22141, 22151): a row laid
+    // back from the archive is named «arc:» on this phone alone, and its sender holds no letter by that name. Its file keeps its
+    // letter's name: an iOS file is named by the seal of the letter's wire name (att_/voice_/vnote_ + 16 hex, ChatStore.fileSeal), this
+    // build's by the letter's name itself. So the restored row asks by «seal:» and the 16 hex (or by the bare letter name, a word every
+    // build reads), the sender finds its letter whose name seals to it and lays the file again under the letter's own name, and the
+    // restored row takes that name (nameRestored) -- the copy refills it and no second row is born.
+    const val SEAL = "seal:"   // NOT-UI: a restored row's ask on the wire, never a row's name
+    private val SENT_PREFIXES = listOf("att_", "voice_", "vnote_")   // NOT-UI: an iOS received file's name
+    private fun hex16(s: String) = s.length == 16 && s.all { it in '0'..'9' || it in 'a'..'f' }
+    /** THE ONE SEAL OF A LETTER'S NAME (iOS ChatStore.fileSeal): the 16 hex of sha256 over its wire name, «mid:» and the bare name. */
+    fun seal(name: String): String = Wire.hex(Wire.sha(("mid:" + name.removePrefix("mid:")).toByteArray())).take(16)
+    /** The seal an ask names (seal: and 16 hex), null for any other word (iOS MTRestoredMid.sealOf). */
+    fun sealOf(word: String): String? = word.takeIf { it.startsWith(SEAL) }?.removePrefix(SEAL)?.takeIf(::hex16)
+    // MY OWN RESTORED ROW ASKS ITS CORRESPONDENT (iOS b06f5362, 2c0498fd, OZ 2 p.1.1(d), p.1.2.4): an iPhone names a file it sent by a
+    // fresh UUID and the archive kept neither that name nor the file, so a seal ties nothing. Both sides still share the letter's
+    // second and kind: the ask names them and this row's place among my restored rows of that second and kind, and the holder lays
+    // its copy again under my letter's own name; my row takes that name (nameOwnRestored) and the refill lays the file into it.
+    const val OWN = "own:"   // NOT-UI: a restored row of mine asks -- own:SECOND.KIND.PLACE
+    class Own(val at: Long, val kind: String, val k: Int)
+    /** A restored own row's ask (own:SECOND.KIND.PLACE), null for any other word -- the one reader of it (iOS MTRestoredMid.ownOf). */
+    fun ownOf(word: String): Own? {
+        if (!word.startsWith(OWN)) return null
+        val p = word.removePrefix(OWN).split('.')
+        val at = p.getOrNull(0)?.toLongOrNull(); val k = p.getOrNull(2)?.toIntOrNull()
+        if (p.size != 3 || at == null || p[1] !in listOf("img", "vid", "aud", "doc") || k == null || k !in 0 until 64) return null
+        return Own(at, p[1], k)
+    }
+    /** A media row's kind (img, vid, aud, doc) from its manifest, null for a row that names none. */
+    fun kindOf(m: Msg): String? = manifestOf(m)?.optString("k")?.ifEmpty { null }
+    /** The letter of another's that an own: ask names (iOS serveKeptFile): of its kind, born in the asked second or within two minutes
+     *  after it (a name is minted after its row is born), the place-th of them; in a group, the asker's own letters alone. */
+    fun ownLetter(rows: List<Msg>, own: Own, speaker: String? = null): Msg? = rows.filter { m ->
+        val born = (Marks.birthMs(m.mid) ?: m.at) / 1000
+        !m.mine && Groups.isLetterName(m.mid) && m.text.startsWith(Marks.MEDIA) && kindOf(m) == own.kind && born in own.at..(own.at + 120) &&
+            (speaker == null || m.from == speaker)
+    }.sortedBy { Marks.birthMs(it.mid) ?: it.at }.getOrNull(own.k)
+    /** The file name a restored row was laid back with: its file if it stayed, else the record's name kept in its text (Archive.KEPT_FILE). */
+    fun restoredFile(m: Msg): String? = m.file?.let { File(it).name }
+        ?: runCatching { JSONObject(m.text.removePrefix(Marks.MEDIA)).optString(Archive.KEPT_FILE) }.getOrNull()?.ifEmpty { null }
+    /** The word a restored row asks by: an iOS file's seal (seal:…), this build's letter name, null for a name that carries neither. */
+    fun restoredAsk(name: String): String? {
+        val base = name.substringBeforeLast('.')
+        if (SENT_PREFIXES.any { name.startsWith(it) }) return base.takeLast(16).takeIf(::hex16)?.let { SEAL + it }
+        return base.takeIf { Groups.isLetterName(it) && Marks.birthMs(it) != null }
+    }
+    /** THE RESTORED ROW TAKES ITS LETTER'S NAME (iOS ChatStore.nameRestoredRow): a letter with a file comes under a name no row here
+     *  holds, and a row laid back without its file wears a file of that letter -- it is the same letter. The row is laid again under
+     *  the wire name (a group's with its speaker: the archive kept none, and the group's refill lays cargo only into its speaker's row);
+     *  null -- no restored row is this letter's. */
+    fun nameRestored(rows: MutableList<Msg>, mid: String, speaker: String? = null): Msg? {
+        val s = seal(mid)
+        val i = rows.indexOfFirst { m ->
+            if (m.mine || !Archive.holds(m.mid) || m.file?.let { File(it).exists() } == true) return@indexOfFirst false
+            val ask = restoredFile(m)?.let(::restoredAsk) ?: return@indexOfFirst false
+            ask == mid || sealOf(ask) == s
+        }
+        if (i < 0) return null
+        val o = rows[i]
+        val n = Msg(mid, o.text, o.mine, o.at, o.state, o.edited, o.qt, o.qm, o.reactions, o.myReact, o.file, o.meta, o.statusAt,
+            o.heard, o.lp, o.from ?: speaker, o.peerReact)
+        rows[i] = n
+        Log.d("Montana", "kept_file m=" + mid.take(8) + " a restored row takes its letter's name -- the copy refills it")
+        return n
+    }
+    /** MY OWN RESTORED ROW TAKES MY LETTER'S NAME (iOS ChatStore.nameOwnRestoredRow): a letter under a name no row here holds is its
+     *  holder's copy of a file I sent when this phone asked by own: for a second within two minutes before the letter's birth. My row
+     *  laid back without its file, born in that span, of the manifest's kind when it names one (a big file's stub names none), the
+     *  latest of them, takes the name; the refill lays the file under the letter's own name (fetch). Null -- no row of mine asked. */
+    fun nameOwnRestored(rows: MutableList<Msg>, mid: String, kind: String?): Msg? {
+        val born = (Marks.birthMs(mid) ?: return null) / 1000
+        val asked = synchronized(KEPT_ASKS) { runCatching { JSONObject(Prefs.str(KEPT_ASKS, "{}")) }.getOrNull()?.keys()?.asSequence()?.toList() }
+            .orEmpty().filter { it.startsWith("ask:" + OWN) }
+        val open = rows.indices.filter { j ->
+            val m = rows[j]; val at = m.at / 1000; val f = kindOf(m)
+            m.mine && Archive.isRestored(m.mid) && m.file?.let { File(it).exists() } != true && f != null && (kind == null || f == kind) &&
+                at <= born && born - at <= 120 && asked.any { it.startsWith("ask:$OWN$at.$f.") }
+        }
+        val i = open.maxByOrNull { rows[it].at } ?: return null
+        val o = rows[i]
+        val n = Msg(mid, o.text, o.mine, o.at, o.state, o.edited, o.qt, o.qm, o.reactions, o.myReact, o.file, o.meta, o.statusAt,
+            o.heard, o.lp, o.from, o.peerReact)
+        rows[i] = n
+        Log.d("Montana", "kept_file m=" + mid.take(8) + " my restored row takes my letter's name -- its correspondent laid my file again")
+        return n
+    }
+    /** A restored row's ask (iOS askKeptFile for an «arc:» row): by its file's seal, on the group's own road for a group's row. */
+    private fun askRestored(ref: String, m: Msg) {
+        if (m.file?.let { File(it).exists() } == true) return
+        // A SAVED MESSAGES ROW HAS NO SENDER TO ASK (iOS 598cb6cf, OZ 1 p.1.4.2): its file is the seed's other device's alone -- that
+        // device is asked for the row by its archive key (Twin.ask) and gives the file by the cargo road (Twin.giveRows, takeRow).
+        if (ref == Book.SAVED) {
+            if (!mayKept("twin:" + m.mid)) { Log.d("Montana", "kept_file m=" + m.mid.take(16) + " a Saved Messages row asked its twin within the span -- nothing sent"); return }
+            val t = Archive.archivedText(m) ?: return
+            Twin.ask(ref, listOf(Triple(m.at / 1000, m.mine, Archive.rowHash(t))), again = true)
+            Log.d("Montana", "kept_file m=" + m.mid.take(16) + " a Saved Messages row asks the seed's other device for its file")
+            return
+        }
+        val word = (if (m.mine) ownAsk(ref, m) else restoredFile(m)?.let(::restoredAsk))
+            ?: run { Log.d("Montana", "kept_file m=" + m.mid.take(16) + " a restored row's file carries no seal -- nobody to ask by it"); return }
+        if (!mayKept("ask:" + word)) { Log.d("Montana", "kept_file m=" + word.take(21) + " asked within the span -- nothing sent"); return }
+        if (Groups.isKey(ref)) Groups.askKeptFile(ref, word) else Post.askKept(ref, word)
+        Log.d("Montana", "kept_file m=" + word.take(21) + " a restored row stands without its file -- its sender is asked")
+    }
+    /** My restored row's word (iOS askKeptFile, OZ 2 p.1.1(d)): its second, kind and place among my restored rows of that second and
+     *  kind -- in a group too, on the group's own road (p.1.2.4: a member asks the owner, the owner every member). */
+    private fun ownAsk(ref: String, m: Msg): String? {
+        val kind = kindOf(m) ?: return null
+        val at = m.at / 1000
+        val same = Book.chat(ref)?.msgs?.filter { it.mine && Archive.isRestored(it.mid) && it.at / 1000 == at && kindOf(it) == kind }.orEmpty()
+        return "$OWN$at.$kind." + same.indexOfFirst { it.mid == m.mid }.coerceAtLeast(0)
+    }
+    /** The receiver's half: their letter's row stands without its file and every store called its pieces gone -- its sender is asked;
+     *  a group's letter on the group's own road (iOS ChatStore.tellCargoLost, 11c34ed7 at 2389). */
     private fun askKept(ref: String, m: Msg) {
-        if (m.mine || Groups.isKey(ref) || m.file?.let { File(it).exists() } == true || !cargoGone(m.mid)) return
+        if (m.mine || m.file?.let { File(it).exists() } == true || !cargoGone(m.mid)) return
         if (!mayKept("ask:" + m.mid)) { Log.d("Montana", "kept_file m=" + m.mid.take(8) + " asked within the span -- nothing sent"); return }
-        Post.askKept(ref, m.mid)
+        if (Groups.isKey(ref)) Groups.askKeptFile(ref, m.mid) else Post.askKept(ref, m.mid)
         Log.d("Montana", "kept_file m=" + m.mid.take(8) + " the row stands without its file -- its sender is asked")
     }
     /** The holder's half: a cargo-lost word about a letter already delivered is a restored phone asking; the file still on this disk is
@@ -585,6 +701,8 @@ object Media {
                     if (chunks != null && (0 until chunks.length()).any { Wire.isGone(chunks.getJSONObject(it).optString("bid")) }) {
                         markGone(mid); Book.edit(ref) { }   // the row's spinner gives way to the tap's arrow
                         if (!own && !Groups.isKey(ref)) Post.cargoLost(ref, mid)
+                        // a group's key is no pipe: the group's own road asks the letter's author (iOS tellCargoLost, OZ 1 p.1.1)
+                        else if (!own && mayKept("ask:" + mid)) Groups.askKeptFile(ref, mid)
                     }
                     return@Thread
                 }
@@ -599,6 +717,7 @@ object Media {
      * once -- the row takes its file, a sticker is kept, the receipt and the drop follow.
      */
     fun landed(c: Context, ref: String, mid: String, man: JSONObject, dest: File, own: Boolean) {
+        MediaPlace.told(dest.path, true)
         var fresh = false
         synchronized(landing) {
             Book.edit(ref) { ch -> ch.msgs.find { it.mid == mid }?.let { fresh = it.file != dest.path; it.file = dest.path; it.meta = man.toString() } }
@@ -941,4 +1060,52 @@ object Waveform {
         val loud = maxOf(sorted[((sorted.size - 1) * 0.92).toInt()], 1e-6f)
         FloatArray(BARS) { Math.pow(minOf(1f, raw[it] / loud).toDouble(), 0.7).toFloat() }
     }.getOrNull()
+}
+
+/**
+ * WHERE A MEDIA FILE STANDS, IN MEMORY (iOS MTMediaPlace, MontanaMedia.swift, f10468e7 p.1): a bubble asks this, never the disk.
+ * The store's folder is listed once off the main thread at the launch; a name found is held as standing until a remover says
+ * it left (Media.wipe, the home shelf's clearing and trim); a name missed is asked of the disk again only three seconds later.
+ * The writers (a letter sent, a file landed) tell it at once, so the bubble that wears the name stands with it at its next
+ * draw. Deeds (play, open, save) still ask the disk.
+ */
+object MediaPlace {
+    private val standing = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val missedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val REST_MS = 3_000L
+
+    /**
+     * THE LOOK TELLS WHOM IT ANSWERS (iOS 31d48a28, P-213, the author's words 22009, 22055-22064: a GIF stood as a dark plate while
+     * its file lay whole): a bubble asked while the launch's look was on its way was answered «not there» and rested three seconds;
+     * nothing drew it again, so it stood on that first answer. A name the look learns while someone had asked it is told: the rows
+     * draw again once.
+     */
+    fun warm(c: Context) = Thread {
+        var asked = 0
+        runCatching {
+            Media.dir(c).listFiles()?.forEach {
+                if (it.isFile && !it.name.endsWith(".part") && standing.putIfAbsent(it.path, true) == null && missedAt.remove(it.path) != null) asked++
+            }
+        }
+        if (asked > 0) { Log.d("Montana", "media_place told=$asked"); Book.redraw() }
+    }.start()
+
+    fun has(path: String?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        if (standing[path] == true) return true
+        val now = android.os.SystemClock.uptimeMillis()
+        missedAt[path]?.let { if (now - it < REST_MS) return false }
+        val lies = File(path).exists()
+        if (lies) { standing[path] = true; missedAt.remove(path) } else missedAt[path] = now
+        return lies
+    }
+
+    fun file(path: String?): File? = if (has(path)) File(path!!) else null
+
+    fun told(path: String, lies: Boolean) {
+        missedAt.remove(path)
+        if (lies) standing[path] = true else standing.remove(path)
+    }
+
+    fun forgetAll() { standing.clear(); missedAt.clear() }
 }

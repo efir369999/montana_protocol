@@ -95,7 +95,7 @@ private val AUDIO_NAMES = setOf("mp3", "m4a", "aac", "wav", "flac", "ogg", "opus
 fun rowKind(m: Msg): String? {
     Calls.info(m.text)?.let { return if (it.video) "vcall" else "acall" }
     if (!m.text.startsWith(Marks.MEDIA)) return if (LinkPreview.webURLs(m.text).isNotEmpty()) "link" else null
-    val f = m.file?.let { java.io.File(it) }?.takeIf { it.exists() } ?: return null
+    val f = MediaPlace.file(m.file) ?: return null
     val man = m.meta?.let { runCatching { JSONObject(it) }.getOrNull() } ?: Media.inline(m.text)
     return when (man?.optString("k")) {
         "aud" -> "aud"
@@ -108,14 +108,25 @@ fun rowKind(m: Msg): String? {
 
 private val rowPosters = Caches.kept("row_posters", android.util.LruCache<String, android.graphics.Bitmap>(48))
 
-/** The small picture of a letter: the face its manifest carries, else the file's own first frame, kept while the list lives. */
-private fun rowPoster(c: Context, m: Msg, kind: String): android.graphics.Bitmap? {
+/**
+ * The small picture of a letter: the face its manifest carries, else the file's own first frame, kept while the list lives.
+ * A ROW MAKES NOTHING ON THE MAIN THREAD (iOS MontanaSmallPicture, 205dc1c2, OZ 1 p.1.5 -- a frame of the list stood 224 ms in the
+ * thumbnailer on T1): the file's frame not yet made is made on one worker, and the row that asked wears it when it comes (came).
+ */
+private val rowPosterWorker = java.util.concurrent.Executors.newSingleThreadExecutor()
+private val rowPosterAsked = java.util.Collections.synchronizedSet(HashSet<String>())
+private fun rowPoster(c: Context, m: Msg, kind: String, came: ((android.graphics.Bitmap) -> Unit)? = null): android.graphics.Bitmap? {
     rowPosters.get(m.mid)?.let { return it }
     val man = m.meta?.let { runCatching { JSONObject(it) }.getOrNull() } ?: Media.inline(m.text)
-    val pic = Media.thumbOf(man)
-        ?: m.file?.let { java.io.File(it) }?.takeIf { it.exists() }?.let { Media.preview(c, it, if (kind == "img") "img" else "vid", 96) }
-    pic?.let { rowPosters.put(m.mid, it) }
-    return pic
+    Media.thumbOf(man)?.let { rowPosters.put(m.mid, it); return it }
+    val f = MediaPlace.file(m.file) ?: return null
+    if (came != null && rowPosterAsked.add(m.mid)) rowPosterWorker.execute {
+        val pic = Media.preview(c, f, if (kind == "img") "img" else "vid", 96)
+        if (pic != null) rowPosters.put(m.mid, pic)
+        rowPosterAsked.remove(m.mid)
+        if (pic != null) MainThread.post { came(pic) }
+    }
+    return null
 }
 
 /**
@@ -144,9 +155,7 @@ fun Context.letterThumb(m: Msg, kind: String, sideDp: Int = 20): View {
             addView(icon(R.drawable.ic_play_fill, Color.WHITE), FrameLayout.LayoutParams(side * 2 / 5, side * 2 / 5, Gravity.CENTER))
         }
         "vnote", "img", "vid" -> {
-            val pic = rowPoster(this, m, kind)
-            if (pic == null && kind != "vnote") plate(if (kind == "img") R.drawable.ic_photo else R.drawable.ic_peer_video)
-            else ImageView(this).apply {
+            fun picView(pic: android.graphics.Bitmap?) = ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 if (pic != null) setImageBitmap(pic) else setBackgroundColor(Color.BLACK)
                 outlineProvider = object : android.view.ViewOutlineProvider() {
@@ -154,6 +163,14 @@ fun Context.letterThumb(m: Msg, kind: String, sideDp: Int = 20): View {
                         if (kind == "vnote") o.setOval(0, 0, v.width, v.height) else o.setRoundRect(0, 0, v.width, v.height, v.width * 0.22f)
                 }
                 clipToOutline = true
+            }
+            // the frame not yet made stands as its plate and is laid over it when the worker brings it (iOS 205dc1c2)
+            var holder: FrameLayout? = null
+            val pic = rowPoster(this, m, kind) { b -> holder?.addView(picView(b), FrameLayout.LayoutParams(MATCH, MATCH)) }
+            if (pic != null) picView(pic)
+            else FrameLayout(this).apply {
+                holder = this
+                addView(if (kind == "vnote") picView(null) else plate(if (kind == "img") R.drawable.ic_photo else R.drawable.ic_peer_video), FrameLayout.LayoutParams(MATCH, MATCH))
             }
         }
         "music" -> plate(R.drawable.ic_play_fill)
@@ -352,6 +369,15 @@ object Notify {
             if (!sound) { setSound(null, null); enableVibration(false) }
         })
         val chat = Book.chat(ref)
+        // THE BANNER IS THE SHADOW OF A STANDING ROW (iOS MontanaNotify.present, 11c34ed7, OZ 1 p.1.7, decision 913 = a: T1 rang a
+        // letter deleted for everyone 31 hours before): a letter's banner rings only while its row stands in the chat
+        if (mid != null) {
+            val key = mid.removePrefix("mid:")
+            if (!runCatching { chat?.msgs?.any { it.mid.removePrefix("mid:") == key } == true }.getOrDefault(true)) {   // a list read mid-change rings, as before
+                android.util.Log.i("Montana", "notify_skip mid=$key why=no-row")
+                return
+            }
+        }
         // SHOW SENDER OFF NAMES NOBODY (iOS MontanaNotify.showsSender, 245f03f5): the title reads Montana and a group's letter says
         // no speaker -- the switch reached personal letters only, and «who: words» still named who wrote in a group
         val sender = Prefs.bool("notifSender", true)
@@ -952,6 +978,14 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     // holds; the rest follow once the first frame stands, above the reader, who stays where the first pass put them
     val firstScreenRows = 12
     var restPending = false
+    // THE REST COMES AFTER THE RISE, IN PARTS (iOS applyRest, f10468e7 (4), decision 925 = a): the rest was laid whole on the frame
+    // after the first screen -- inside the page's slide -- and cost 270 ms of one frame on T1 for a chat of 87 letters. It waits now
+    // while the page still slides in (at most 40 frames), then comes 24 rows a frame from the newest end; a whole pass (an arrival,
+    // a change) lays everything and ends the parts.
+    var restLaid = 0
+    var restWaits = 0
+    var partPass = false
+    var partQueued = false   // one chain of parts at a time: a whole pass during the parts does not start a second
     // the chat a row reads at a tap (the next round note, the voice's sender): one object every pass refreshes, so a kept row never
     // reads the letters of the pass that built it
     val feedChat = Chat(ref, "")
@@ -1044,6 +1078,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
     }
     if (group) scroll.setOnScrollChangeListener { _, _, _, _, _ -> showPosts() }   // a channel's posts the finger brings into the window are told
     fun redraw() {
+        val passBegan = System.nanoTime()
         val chat = Book.chat(ref) ?: return
         feedChat.name = chat.name; feedChat.pin = chat.pin
         feedChat.msgs.clear(); feedChat.msgs.addAll(chat.msgs)
@@ -1264,8 +1299,15 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 letterRow(m, row, head, tail).let { if (asked.isEmpty()) it else searchHit(it, m.mid) }
             }
         }
-        if (!laid && jump == null && !searching && firstScreenRows < want.size) {
-            val cut = want.size - firstScreenRows
+        // A WHOLE PASS DURING THE PARTS KEEPS TO WHAT THEY LAID (iOS 77ff8b0d, OZ 1 p.1): an arrival or a change while the rest still
+        // comes lays only the newest rows the parts have laid, and the parts go on -- it no longer lays the whole feed in one frame
+        // (on T1 a chat of 87 letters: one frame of 571-637 ms, three passes of 141 ms).
+        val partsGoing = laid && restPending
+        val limit = if (!laid) firstScreenRows else if (partPass || partsGoing) restLaid else Int.MAX_VALUE
+        if (!partPass && !partsGoing) { restLaid = firstScreenRows; restWaits = 0 }
+        restPending = false
+        if (jump == null && !searching && limit < want.size) {
+            val cut = want.size - limit
             want.subList(0, cut).clear(); makers.subList(0, cut).clear()
             restPending = true
         }
@@ -1325,10 +1367,15 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         }
         laid = true
         if (restPending) {
-            restPending = false
-            // after the first frame (its animation phase, then the queue): the older rows come in above, and the scroll moves by
-            // what they added, so the rows on the screen stay where they stood (iOS feed-rest: no birth, the reader held)
-            scroll.postOnAnimation { scroll.post {
+            // after the frame (its animation phase, then the queue): the older rows come in above, and the scroll moves by what they
+            // added, so the rows on the screen stay where they stood (iOS feed-rest: no birth, the reader held). A whole pass laid
+            // meanwhile ends the parts (restPending false); the page still sliding in waits a frame.
+            fun sliding(): Boolean { var v: View? = scroll; while (v != null) { if (v.translationX != 0f) return true; v = v.parent as? View }; return false }
+            fun restPart() {
+                partQueued = false
+                if (!restPending || !scroll.isAttachedToWindow) return
+                if (sliding() && restWaits < 40) { restWaits++; partQueued = true; scroll.postOnAnimation { restPart() }; return }
+                restLaid += firstScreenRows * 2
                 val before = column.height
                 column.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
                     override fun onLayoutChange(v: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or2: Int, ob: Int) {
@@ -1336,9 +1383,13 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                         scroll.scrollTo(0, scroll.scrollY + (b - t) - before)
                     }
                 })
-                redraw()
-            } }
+                partPass = true
+                try { redraw() } finally { partPass = false }
+            }
+            if (!partQueued) { partQueued = true; scroll.postOnAnimation { scroll.post { restPart() } } }
         }
+        // every pass past 4 ms names itself (iOS feed_pass, 77ff8b0d)
+        ((System.nanoTime() - passBegan) / 1_000_000L).let { ms -> if (ms > 4) android.util.Log.i("Montana", "feed_pass ms=$ms rows=${feed.size} part=$partPass going=$restPending") }
         drawEmpty(column.childCount == 0, asked.isNotEmpty())
         // the other side closed it: read, not answered (iOS closedChats) — the note where the field stood
         if (Post.closed(ref)) { hideBar(); closedNote.visibility = View.VISIBLE }
@@ -1910,40 +1961,6 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
         }
         on
     }
-    // THE REPLY AT THE EAR (iOS beginEarReply/endEarReply, MontanaConversation.swift:1263-1286 and 3516-3519 at 2155, the author's
-    // word 14.09): the peer's last voice ended at the ear -- the ear tone, the sensor stays with the chat, and after 0.6 s, the phone
-    // still at the ear, the reply records there with no finger; the phone leaves the ear -- a rolling tape pauses and stands locked
-    // (the arrow sends it, the bin drops it, the pause resumes it), no tape -- nothing stays
-    var earReply = false
-    fun endEarReply() {
-        if (!earReply) return
-        earReply = false
-        Proximity.onChange = null
-        Proximity.hold("ear-reply", false)
-        android.util.Log.d("Montana", "voice_ear_reply " + if (VoiceTape.rolling) "paused len=" + VoiceTape.seconds.toInt() else "nothing")
-        if (!bar.earLock()) { bar.cancelRecording(); return }   // no tape rolled (permission, or the phone left before the start)
-        if (!VoiceTape.paused) VoiceTape.togglePause()
-        paint(voicePause, VoiceTape.paused)
-    }
-    fun beginEarReply() {
-        // EVERY WAY OUT IS A LINE (iOS 51fca1bf, T1 09.11): a reply that did not come names its reason in the diary
-        if (earReply) return android.util.Log.d("Montana", "voice_ear_reply busy -- a reply already stands").let {}
-        if (VoiceTape.rolling) return android.util.Log.d("Montana", "voice_ear_reply busy -- a tape already rolls").let {}
-        earReply = true
-        Proximity.hold("ear-reply", true)
-        Proximity.onChange = { near -> if (!near) endEarReply() }
-        EarTone.play()
-        android.util.Log.d("Montana", "voice_ear_reply tone")
-        MainThread.later(600) {
-            if (!earReply) return@later android.util.Log.d("Montana", "voice_ear_reply left before the tone ended").let {}
-            when {
-                !Proximity.isNear -> { android.util.Log.d("Montana", "voice_ear_reply far after the tone"); endEarReply() }
-                bar.earStart() -> android.util.Log.d("Montana", "voice_ear_reply record")
-                else -> { android.util.Log.d("Montana", "voice_ear_reply the tape did not start"); endEarReply() }
-            }
-        }
-    }
-    val earHook: () -> Unit = { beginEarReply() }
     // THE ROUND NOTE UNDER THE FINGER (iOS MontanaVideoNoteHold): the window over the feed, the ring for the time; a tap turns
     // the camera; let go to send, slide left to drop. What the window shows is the file itself.
     var note: NoteRecorder? = null
@@ -2617,7 +2634,6 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 LinkCompose.listen(linkListener); drawLink()
                 CoinBook.listen(coinListener); Thread { CoinBook.warm(); MainThread.post { coinListener() } }.start()
                 if (!local) { Presence.sayChat(ref, true); MainThread.later(Presence.BEAT, chatBeat); Signal.hold(ref, "chat") }
-                VoicePlayer.endedAtEar = earHook   // the open chat answers its peer's voice at the ear
                 if (!group && !local) LiveDraft.sayLink(ref)   // our daily link, to hand on (iOS sendLinkWord on a chat's opening)
                 if ((Book.chat(ref)?.unread ?: 0) > 0) Thread { Post.markRead(ref) }.start()
             }
@@ -2626,9 +2642,7 @@ fun conversationPage(act: MainActivity, ref: String, onClose: () -> Unit, jump: 
                 // MontanaConversation.swift:1666 at 2155: «if rec.isRecording { rec.cancel(why: "chat-left") }»): a note left rolling
                 // behind a closed chat rolled on and the next one was refused. The recorder's own page lies over the chat, so it
                 // never detaches it; with nothing held the cancel does nothing.
-                if (VoicePlayer.endedAtEar === earHook) VoicePlayer.endedAtEar = null
                 if (Stickers.answering === takeAnswer) Stickers.answering = null
-                endEarReply()
                 bar.cancelRecording()
                 VoiceTape.standDown()   // a tape readied by a hold that never began goes with the chat (iOS MontanaConversation.swift:1667)
                 if (Book.openChat == ref) Book.openChat = null; Book.unlisten(listener); ChannelComments.unlisten(listener); ChannelViews.unlisten(listener)
@@ -3045,7 +3059,7 @@ private fun letterBubble(c: Context, m: Msg, chat: Chat, members: List<Msg> = li
             }
             // THE VOICE'S WORDS UNDER ITS CAPSULE (iOS voiceTranscript, b2fe4814 at 2315): read on this phone, between the capsule
             // and its pills, where the person opened them; the glyph that opens them stands after the stamp's pill (below)
-            val voiceFile = if (voice && VoiceText.canRead(c)) m.file?.takeIf { java.io.File(it).exists() } else null
+            val voiceFile = if (voice && VoiceText.canRead(c)) m.file?.takeIf(MediaPlace::has) else null
             if (voiceFile != null) addView(voiceWordsView(c, voiceFile, mine, bubbleCeiling(c, chat.ref)), lp(WRAP, WRAP).apply { topMargin = dp(6); if (!mine) gravity = Gravity.START })
             // THE FOLD (iOS MontanaBubble 815-835, MTFilterFold): nothing of the letter is read by surprise, its speaker, quote and link card
             // included; the person's own tap gives it back whole, with its time and the bubble's own room
@@ -3309,7 +3323,7 @@ private const val SPEAKER_FACE = 30
 private fun edgePlate(m: Msg): Boolean {
     if (!m.text.startsWith(Marks.MEDIA) || Stickers.bare(m)) return false
     val man = Media.manifestOf(m)
-    val f = m.file?.let { java.io.File(it) }?.takeIf { it.exists() }
+    val f = MediaPlace.file(m.file)
     val ext = (f?.extension ?: man?.optString("e") ?: "").lowercase()
     val byExt = when (ext) { "jpg", "jpeg", "png", "gif", "webp", "heic", "heif" -> "img"; "mp4", "mov", "m4v", "webm", "3gp" -> "vid"; else -> "doc" }
     return when (man?.optString("k")?.ifEmpty { null } ?: byExt) {
@@ -3629,7 +3643,7 @@ private fun mediaPlateOffset(v: View, ancestor: View): Int {
  */
 private fun mediaBody(c: Context, m: Msg, into: LinearLayout, chat: Chat? = null) {
     val man = m.meta?.let { runCatching { JSONObject(it) }.getOrNull() } ?: Media.inline(m.text)
-    val f = m.file?.let { java.io.File(it) }?.takeIf { it.exists() }
+    val f = MediaPlace.file(m.file)   // the place in memory, never the disk; a press still asks the disk (iOS MTMediaPlace, f10468e7)
     val byExt = when (f?.extension?.lowercase()) { "jpg", "jpeg", "png", "gif", "webp", "heic", "heif" -> "img"; "mp4", "mov", "m4v", "webm", "3gp" -> "vid"; else -> "doc" }
     val kind = man?.optString("k")?.ifEmpty { null } ?: byExt
     val tint = BubbleStyle.text(m.mine)
@@ -3731,7 +3745,7 @@ internal fun captionView(c: Context, words: String, tint: Int, maxW: Int): TextV
 private fun saveMediaFile(m: Msg): Pair<java.io.File, Boolean>? {
     if (m.mine || !m.text.startsWith(Marks.MEDIA)) return null
     val man = m.meta?.let { runCatching { JSONObject(it) }.getOrNull() } ?: Media.inline(m.text)
-    val f = m.file?.let { java.io.File(it) }?.takeIf { it.exists() } ?: return null
+    val f = MediaPlace.file(m.file) ?: return null
     val byExt = when (f.extension.lowercase()) { "jpg", "jpeg", "png", "gif", "webp", "heic", "heif" -> "img"; "mp4", "mov", "m4v", "webm", "3gp" -> "vid"; else -> "doc" }
     val kind = man?.optString("k")?.ifEmpty { null } ?: byExt
     if (kind != "img" && kind != "vid") return null
@@ -4039,7 +4053,13 @@ private fun gifBody(c: Context, m: Msg, f: java.io.File?, into: LinearLayout): I
                     setPadding(c.dp(10), c.dp(10), c.dp(10), c.dp(10))
                 }, FrameLayout.LayoutParams(c.dp(52), c.dp(52), Gravity.CENTER))
                 setOnClickListener { Media.tapped(c, m) }
-            } else addView(android.widget.ProgressBar(c).also { spinner = it }, FrameLayout.LayoutParams(c.dp(36), c.dp(36), Gravity.CENTER))
+            } else {
+                addView(android.widget.ProgressBar(c).also { spinner = it }, FrameLayout.LayoutParams(c.dp(36), c.dp(36), Gravity.CENTER))
+                // A GIF WITHOUT ITS FILE TAKES THE DOCUMENT'S ROAD ON A TAP (iOS 31d48a28, P-214, the author's word 22098: every phone
+                // is a keeper): a phone installed anew holds the letter and no file, and its keeper was never asked -- the tap asks
+                // the letter's keeper again and fetches, as every other kind does
+                setOnClickListener { Media.tapped(c, m) }
+            }
         }
         // ONE INDICATOR ON THE PLATE (iOS gifBubble .overlay { mediaProgressOverlay }): the pill top-left over the dim, going or coming
         addView(TransferMark(c, m.mid, null, spinner), FrameLayout.LayoutParams(MATCH, MATCH))
@@ -4055,6 +4075,27 @@ private fun captionWidth(c: Context, words: String, paint: android.text.TextPain
     return Math.ceil(w.toDouble()).toInt() + c.dp(20)
 }
 
+/**
+ * THE PHOTOS OF ONE CONVERSATION ON THIS PHONE (iOS ChatStore.pictures(in:), 11c34ed7 at 2389): what a tapped picture of it pages
+ * through -- the open conversation's, or the one whose letter holds the file; oldest first, one file once; empty -- the one picture.
+ */
+internal fun chatPictures(f: java.io.File): List<java.io.File> {
+    fun of(ref: String): List<java.io.File>? {
+        val msgs = runCatching { Book.chat(ref)?.msgs?.toList() }.getOrNull() ?: return null
+        if (msgs.none { m -> m.file?.let { java.io.File(it).path } == f.path }) return null
+        val seen = HashSet<String>()
+        return msgs.mapNotNull { m ->
+            if (!m.text.startsWith(Marks.MEDIA)) return@mapNotNull null
+            val man = m.meta?.let { j -> runCatching { JSONObject(j) }.getOrNull() } ?: Media.inline(m.text)
+            if (man?.optString("k") != "img") return@mapNotNull null
+            m.file?.let { java.io.File(it) }?.takeIf { it.exists() && seen.add(it.path) }
+        }
+    }
+    Book.openChat?.let { open -> of(open)?.let { return it } }
+    for (ref in Book.refs()) of(ref)?.let { return it }
+    return emptyList()
+}
+
 /** THE FILE WHOLE: a picture on black, a film in the platform's own player; any other file to the system's viewer. */
 internal fun openMedia(act: MainActivity, f: java.io.File, kind: String) {
     val c: Context = act
@@ -4065,8 +4106,9 @@ internal fun openMedia(act: MainActivity, f: java.io.File, kind: String) {
         runCatching { act.startActivity(Intent.createChooser(view, null)) }
         return
     }
-    // A PICTURE OPENS AMONG THE CONVERSATION'S PICTURES (iOS PhotoPresenter): pages, pinch, a pull down to close (Viewer.kt)
-    if (kind == "img") { openPictures(act, f); return }
+    // A PICTURE OPENS AMONG THE CONVERSATION'S PICTURES (iOS PhotoPresenter.present(_:among:), 11c34ed7 at 2389): pages, pinch, a pull
+    // down to close (Viewer.kt)
+    if (kind == "img") { openPictures(act, f, chatPictures(f)); return }
     // A FILM OPENS IN ITS OWN PLAYER THAT FOLDS INTO A WINDOW OVER THE CHAT (iOS VideoPresenter, picture in picture): FilmActivity
     if (kind == "vid") { FilmActivity.open(act, f); return }
     lateinit var close: () -> Unit

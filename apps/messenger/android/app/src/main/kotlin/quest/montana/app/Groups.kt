@@ -39,6 +39,8 @@ object Groups {
     private const val NAME_LIMIT = 64
     private const val FACE_LIMIT = 24_000
     private const val FACE_SIDE = 160   // iOS faceSide
+    private const val FULL_FACE_SIDE = 1024   // iOS fullFaceSide (06c8eaf1)
+    private const val FULL_FACE_LIMIT = 1_048_576   // iOS fullFaceLimit
     /** A speaker's face on its letter (iOS speakerFaceSide, MTGroupWord.sf): the feed's face at three pixels a point. */
     private const val SPEAKER_FACE_SIDE = 96
     /** A speaker gives its face again a day after it last did (iOS faceAgain): one who came in since is not left with an initial. */
@@ -124,6 +126,11 @@ object Groups {
         val cards: MutableMap<String, String> = mutableMapOf(),
         /** The seat and the name this phone last laid its own card under (iOS cardGiven, giveCards): a new seat or a new name lays it again. */
         var cardGiven: String? = null,
+        /** THE FULL FACE THIS PHONE WEARS (iOS faceFull, 06c8eaf1, OZ 1 p.1): the invitation's «blob.key» it came by -- the same word is
+         *  not fetched again. */
+        var faceFull: String? = null,
+        /** The owner told every member its full face once (iOS fullFaced, 06c8eaf1): a face given before rode the small one alone. */
+        var fullFaced: Boolean = false,
     ) {
         val mine: Boolean get() = owner.isEmpty()
         fun json(): JSONObject = JSONObject().put("id", id).put("k", kind).put("ti", title).put("ds", about).put("ow", owner).put("me", me)
@@ -141,6 +148,7 @@ object Groups {
             .apply { faceGiven?.let { put("fg", JSONObject().put("t", it.tag).put("c", it.count).put("at", it.at)) } }
             .apply { seats?.let { put("ps", JSONArray(it)) } }.apply { round?.let { put("rr", it) } }
             .put("pc", JSONObject(cards.toMap())).put("cg", cardGiven ?: "")
+            .put("fu", faceFull ?: "").put("fd", fullFaced)
         companion object {
             fun of(o: JSONObject) = State(o.getString("id"), o.getString("k"), o.optString("ti"), o.optString("ds"), o.optString("ow"),
                 o.getString("me"),
@@ -164,7 +172,7 @@ object Groups {
                 o.optJSONObject("fg")?.let { FaceGiven(it.optString("t"), it.optInt("c"), it.optLong("at")) },
                 o.optJSONArray("ps")?.let { a -> List(a.length()) { a.getString(it) } }, if (o.has("rr")) o.optInt("rr") else null,
                 o.optJSONObject("pc")?.let { f -> f.keys().asSequence().associateWith { f.getString(it) }.toMutableMap() } ?: mutableMapOf(),
-                o.optString("cg").ifEmpty { null })
+                o.optString("cg").ifEmpty { null }, o.optString("fu").ifEmpty { null }, o.optBoolean("fd"))
         }
     }
 
@@ -259,7 +267,8 @@ object Groups {
                 .put("adminTaken", JSONObject().apply { g.taken.forEach { (k, v) -> put(k, JSONArray(v)) } }).put("ranks", JSONObject(g.ranks.toMap()))
                 .put("approval", g.approval).put("history", g.history).put("banned", seats(g.banned))
                 .put("requests", JSONArray().apply { g.requests.forEach { put(JSONObject().put("pipe", it.pipe).put("name", it.name).put("at", it.at / 1000.0)) } })
-            for ((k, v) in listOf("faceTag" to g.faceTag, "invite" to g.invite, "cardGiven" to g.cardGiven)) if (v == null) o.remove(k) else o.put(k, v)
+            for ((k, v) in listOf("faceTag" to g.faceTag, "invite" to g.invite, "cardGiven" to g.cardGiven, "faceFull" to g.faceFull)) if (v == null) o.remove(k) else o.put(k, v)
+            if (g.fullFaced) o.put("fullFaced", true) else o.remove("fullFaced")
             // the seats, the roster told and the cards ride as iOS MTGroupState keeps them (07d5fc70, OZ 1 p.1, p.8)
             g.seats?.let { o.put("seats", JSONArray(it)) } ?: o.remove("seats")
             o.remove("rostered")   // iOS d28805b6 keeps the owner's round instead
@@ -326,7 +335,8 @@ object Groups {
             seats = if (kind == GROUP) s.optJSONArray("seats")?.let { a -> words(a).filter(::isSeat) } else null,
             round = if (s.has("round")) s.optInt("round") else null,
             cards = if (kind == GROUP) map(s.optJSONObject("cards")).filterValues(::isCard).toMutableMap() else mutableMapOf(),
-            cardGiven = s.optString("cardGiven").ifEmpty { null })
+            cardGiven = s.optString("cardGiven").ifEmpty { null },
+            faceFull = s.optString("faceFull").ifEmpty { null }, fullFaced = s.optBoolean("fullFaced"))
     }
 
     /**
@@ -367,8 +377,16 @@ object Groups {
     /** A GROUP'S NUMBER IS ITS PAGE'S LIST AND THIS PHONE, ONE OWNER (iOS people, 07d5fc70, OZ 1 p.1: the head said 11 and the list 6);
      *  a channel's is its owner's count. */
     private fun people(g: State): Int = if (g.kind != GROUP) g.count else synchronized(lock) {
-        if (g.mine) g.members.size + 1 else 2 + pageRest(g).size
+        if (g.mine) g.members.size + 1 else 2 + pageRest(g).size + unnamedOf(g)
     }
+    /**
+     * THE PEOPLE A MEMBER'S PHONE CANNOT LIST (iOS unnamed, 5ed85a6b, OZ 1 p.4, the author's word 21000): an owner that names no seats
+     * -- an older build -- counts its people (count) and names only whoever spoke; the rest are counted and never invented. None on the
+     * owner's phone, none where the owner named every seat.
+     */
+    fun unnamed(key: String): Int = state(key)?.let { g -> synchronized(lock) { unnamedOf(g) } } ?: 0
+    private fun unnamedOf(g: State): Int =
+        if (g.kind != GROUP || g.mine || g.seats != null) 0 else maxOf(0, g.count - 2 - pageRest(g).size)
     /** The seats of a member's page after the owner (iOS pagePeople): every seat the owner named, or everyone who spoke where it names none. */
     private fun pageRest(g: State): List<String> =
         (g.seats ?: g.names.keys.toList()).filter { it != OWNER_SEAT && it != g.me }.distinct()
@@ -684,11 +702,32 @@ object Groups {
     fun carryMedia(key: String, mid: String, letter: String): Boolean {
         synchronized(lock) {
             val g = state(key)
+            // ANOTHER'S LETTER LAID BACK TO ITS RESTORED AUTHOR (iOS 2c0498fd, OZ 2 p.1.2.4): the copy goes as «fo» under its author's
+            // seat to the pipe that asked, never to the group. Its row is another's: no answer of this send may paint it red, so the
+            // send says yes.
+            val theirs = runCatching { Book.chat(key)?.msgs?.firstOrNull { !it.mine && it.mid == mid } }.getOrNull()
+            if (g != null && theirs != null) {
+                val ref = theirs.from
+                val to = ref?.let { synchronized(ownLays) { ownLays[it] } }
+                val at = ref?.let { seatOf(it, key) }
+                if (to == null || at == null || !letter.startsWith(Marks.MEDIA) || !isLetterName(mid)) {
+                    Log.i("Montana", "kept_file m=" + mid.take(8) + " a copy of another's letter nobody asked for -- not carried")
+                    return true
+                }
+                val back = JSONObject().put("t", "fo").put("g", g.id).put("k", g.kind).put("id", mid).put("s", at).put("tx", letter)
+                val sent = carry(back, to, "", own = false) != null
+                Log.i("Montana", "kept_file m=" + mid.take(8) + " a copy laid back to its restored author sent=" + (if (sent) 1 else 0))
+                return true
+            }
             if (g == null || g.left || !posts(g, g.me) || !letter.startsWith(Marks.MEDIA) || !carries(letter) || !isLetterName(mid)) {
                 Log.i("Montana", "group_refused media -- group=" + (if (g == null) 0 else 1))
                 return false
             }
-            val n = spread(word("say", g).put("id", mid).put("s", g.me).put("tx", letter).also { dress(it, g) }, g, null, own = true)
+            val w = word("say", g).put("id", mid).put("s", g.me).put("tx", letter).also { dress(it, g) }
+            // A KEPT FILE LAID AGAIN UNDER ITS CARRIED LETTER (iOS carryMedia, 11c34ed7 at 2389, OZ 1 p.10.1): the row stands everywhere,
+            // nobody is rung
+            if (runCatching { Book.chat(key)?.msgs?.any { it.mine && it.mid == mid && 2 <= it.state } }.getOrNull() == true) w.put("hs", 1)
+            val n = spread(w, g, null, own = true)
             if (n == 0 && alone(g)) { Book.edit(key) { c -> c.msgs.find { it.mid == mid }?.advance(2) }; return true }   // held here (A.2)
             return n > 0
         }
@@ -998,6 +1037,7 @@ object Groups {
                 mutableMapOf(), System.currentTimeMillis())
             if (g.kind == GROUP) g.round = ownBuild()   // its invitations name the seats and the round (iOS d28805b6, OZ 1 p.1, p.8)
             if (g.kind == GROUP) g.history = true   // A NEW GROUP SHOWS ITS PAST TO NEW MEMBERS (iOS 99825581, the author's word 20455 p.2)
+            g.fullFaced = true   // its invitations carry the full face beside the small one (iOS 06c8eaf1, OZ 1 p.1)
             groups[id] = g
             save()
             stand(g, face, revive = true)   // the group is born here
@@ -1015,10 +1055,16 @@ object Groups {
     private fun tellAll(g: State, face: String?, only: Set<String>? = null, by: String = OWNER_SEAT) {
         // the group's link, minted once, for the administrators who may invite by it (iOS 1957-1958, G.6)
         val link = if (g.admins.any { adminCan(g, it, INVITE) }) standingLink(g) else null
+        // the picture itself beside the small face, laid once for every member it rides to (iOS 06c8eaf1, OZ 1 p.1)
+        val full = if (face == null) null else Book.face(key(g.id)).takeIf { it.isFile }?.let { f -> runCatching { f.readBytes() }.getOrNull() }
+            ?.let(::layFullFace)
         for (m in g.members) {
             val w = word("inv", g).put("k", g.kind).put("ti", g.title).put("c", g.count).put("me", m.seat)
             if (g.about.isNotEmpty()) w.put("ds", g.about)
-            if (face != null && (only == null || m.seat in only)) w.put("fc", face)
+            if (face != null && (only == null || m.seat in only)) {
+                w.put("fc", face)
+                full?.let { w.put("ff", it) }   // the full face rides with the small one alone (iOS 06c8eaf1)
+            }
             if (g.admins.isNotEmpty()) w.put("ad", JSONArray(g.admins))   // the administrators the owner named (iOS ad, stage R.6)
             // the administrators' rights left out and the custom titles (iOS ax, rk, G.6); an older build skips the keys
             if (g.taken.isNotEmpty()) w.put("ax", JSONObject().apply { g.taken.forEach { (k, v) -> put(k, JSONArray(v)) } })
@@ -1075,6 +1121,15 @@ object Groups {
             g.round = build
             save()
             if (g.members.isNotEmpty()) tellAll(g, null)
+        }
+        // THE FULL FACE ONCE TO THOSE WHO HOLD THE SMALL ONE (iOS 06c8eaf1, OZ 1 p.1): a face given before rode the small one alone.
+        for (id in groups.keys.sorted()) {
+            val g = groups[id] ?: continue
+            if (!g.mine || g.left || g.fullFaced || g.members.isEmpty()) continue
+            val d = Book.face(key(id)).takeIf { it.isFile }?.let { runCatching { it.readBytes() }.getOrNull() } ?: continue
+            tellAll(g, thumb(d))
+            g.fullFaced = true
+            save()
         }
         giveCards()
     }
@@ -2212,6 +2267,64 @@ object Groups {
         return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP).takeIf { it.length <= FACE_LIMIT }
     }
 
+    /**
+     * A GROUP'S FULL FACE (iOS layFullFace, 06c8eaf1, OZ 1 p.1, the author's word 20586: the group's picture was blurred when opened --
+     * a member held the invitation's small face alone and drew it large): the invitation keeps the small face so the word stays a
+     * letter; the picture goes up to the node once, sealed under a fresh key, named by its content, and the invitation hands the name
+     * and the key over the pipe as «blob.key». The node holds it a week and reads nothing.
+     */
+    private fun layFullFace(face: ByteArray): String? {
+        val b = BitmapFactory.decodeByteArray(face, 0, face.size) ?: return null
+        val scale = minOf(FULL_FACE_SIDE.toFloat() / b.width, FULL_FACE_SIDE.toFloat() / b.height, 1f)   // iOS avatarResized: fit, never grow
+        val fit = if (scale < 1f) Bitmap.createScaledBitmap(b, maxOf(1, (b.width * scale).toInt()), maxOf(1, (b.height * scale).toInt()), true) else b
+        val full = ByteArrayOutputStream().also { fit.compress(Bitmap.CompressFormat.JPEG, 80, it) }.toByteArray()
+        if (full.size > FULL_FACE_LIMIT) return null
+        val key = MtBindings.nativeRandom(32) ?: return null
+        val nonce = MtBindings.nativeRandom(12) ?: return null
+        val sealed = MtBindings.nativeSealBlob(key, nonce, full) ?: return null
+        val bid = Wire.hex(Wire.sha(sealed))
+        Thread {
+            val ok = runCatching { Wire.putBlob(bid, sealed, assumeAbsent = true) }.getOrDefault(false)
+            Log.i("Montana", "group_face_up " + (if (ok) "ok" else "FAIL") + " bytes=" + full.size)
+        }.start()
+        return bid + "." + Wire.hex(key)
+    }
+
+    /**
+     * A MEMBER WEARS THE GROUP'S FULL FACE (iOS wearFullFace, 06c8eaf1): asked of the node at once and twice more across half a minute
+     * (the owner's put may still be on its way up); the small face stays until it comes, and a face given since leaves it unworn.
+     */
+    private fun wearFullFace(w: JSONObject) {
+        val ff = w.optString("ff").ifEmpty { return }
+        val tag = w.optString("fc").ifEmpty { return }.let(::tagOfFace)
+        val id = w.optString("g")
+        if (groups[id]?.faceFull == ff) return
+        val part = ff.split(".")
+        if (part.size != 2 || part[0].length != 64 || !part[0].all { it in "0123456789abcdefABCDEF" }) return
+        if (part[1].length != 64 || !part[1].all { it in "0123456789abcdefABCDEF" }) return
+        val key = ByteArray(32) { part[1].substring(2 * it, 2 * it + 2).toInt(16).toByte() }
+        Thread {
+            for (pause in longArrayOf(0, 5, 25)) {
+                if (pause != 0L) Thread.sleep(pause * 1000)
+                val sealed = runCatching { Wire.getBlob(part[0]) }.getOrNull() ?: continue
+                val full = MtBindings.nativeOpenBlob(key, sealed)
+                if (full == null || full.size > FULL_FACE_LIMIT || BitmapFactory.decodeByteArray(full, 0, full.size) == null) {
+                    Log.i("Montana", "group_face unreadable"); return@Thread
+                }
+                synchronized(lock) {
+                    val g = groups[id]
+                    if (g == null || g.faceTag != tag) { Log.i("Montana", "group_face a newer face stands"); return@Thread }
+                    g.faceFull = ff
+                    save()
+                    stand(g, full, revive = false)
+                }
+                Log.i("Montana", "group_face full bytes=" + full.size)
+                return@Thread
+            }
+            Log.i("Montana", "group_face absent")
+        }.start()
+    }
+
     // ── the receipts of the copies ──
 
     /** The node holds a copy (Post.flush): my row has left this phone. True when the name was a group's copy. */
@@ -2504,6 +2617,7 @@ object Groups {
         groups[id] = g
         save()
         stand(g, if (newFace) face(fc) else null, revive = fresh)   // the sibling's birth of a group, never its renewal
+        wearFullFace(w)
         if (fresh) lay(g, event("made", OWNER_SEAT, t = title))
         if (renamed) lay(g, event("named", OWNER_SEAT, t = title))
         return true
@@ -2554,6 +2668,8 @@ object Groups {
             "sp" -> passported(w, pipe)   // COMPAT-GATED: a sticker's passport (iOS 17.10, 2df34a13), an older build buries it
             "lp" -> carded(w, pipe)   // COMPAT-GATED: a letter's link card (iOS 17.10, 89dfd51d), an older build buries it
             "pc" -> cardLaid(w, pipe)   // COMPAT-GATED: a member's card (iOS 07d5fc70, OZ 1 p.8), laid only where the owner names seats
+            "fo" -> keptLaid(w, pipe)   // COMPAT-GATED: my own letter's copy laid back after a restore (iOS 2c0498fd, OZ 2 p.1.2.4)
+            "fk" -> keptAsked(w, pipe)   // COMPAT-GATED: a restored phone asks a group letter's file again (iOS 11c34ed7, OZ 1 p.10.1)
             "kp" -> Verdict.HELD   // an older build's «kept» word: taken, told to nobody (iOS 2358, 16165 p.5)
             "cm" -> commented(w, pipe)   // COMPAT-GATED: a comment under a channel's post (iOS MTChannelComments, 2315)
             "vw" -> seen(w, pipe)   // COMPAT-GATED: a subscriber's posts shown, to a channel's owner (iOS 17.10)
@@ -2615,6 +2731,7 @@ object Groups {
             if (newFace) had.faceTag = tag
             save()
             stand(had, if (newFace) face(fc) else null, revive = back)   // a renewal leaves a row put away; being added again brings it
+            wearFullFace(w)
             // the reference folder's rows: added again, a new name, a new face -- each the owner's deed
             if (back) lay(had, event("added", OWNER_SEAT, listOf(seat)))
             // a member's renewal is named by the owner (iOS w.s, G.5); else the owner's own deed
@@ -2638,6 +2755,7 @@ object Groups {
         groups[id] = g
         save()
         stand(g, face(fc), revive = true)   // the group is born here
+        wearFullFace(w)
         lay(g, event("added", OWNER_SEAT, listOf(seat)))   // «X added you»
         giveCards()   // this phone's own card, where the owner names seats (iOS 07d5fc70, OZ 1 p.8)
         Log.i("Montana", "group_rx invitation kind=$kind people=$count from=${pipe.take(10)}")
@@ -2728,7 +2846,12 @@ object Groups {
         if (told) save()
         if (id in gone) return Verdict.HELD
         val key = key(g.id)
-        if (Book.chat(key)?.msgs?.any { it.mid == id } == true) return Verdict.HELD   // a repeat: the row stands
+        // A RESTORED ROW TAKES ITS LETTER'S NAME AND ITS SPEAKER (iOS 6549e6c6, OZ 2 p.1.2): the file laid again for a seal lands in
+        // the row the archive laid back -- its file's seal is this letter's name -- and no second row is born
+        if (words.startsWith(Marks.MEDIA) && Book.chat(key)?.msgs?.none { it.mid == id } == true)
+            Book.edit(key) { c -> if (c.msgs.none { it.mid == id }) Media.nameRestored(c.msgs, id, speaker(g.id, seat)) }
+        // a repeat: the row stands -- with new cargo, the row's file comes (iOS refill, 11c34ed7 at 2389, OZ 1 p.10.1)
+        runCatching { Book.chat(key)?.msgs?.firstOrNull { it.mid == id } }.getOrNull()?.let { row -> refill(row, words, id, seat, g, key); return Verdict.HELD }
         if (g.mine) {
             // THE GROUP'S PERMISSIONS AT THE DOOR (iOS heard, G.5): the owner carries every letter, so the owner refuses what the members
             // may not send -- whatever a member's build shows -- and holds a letter that came inside its slow mode's interval: it knocks again
@@ -2769,6 +2892,106 @@ object Groups {
             spread(on, g, seat, own = false)
         }
         return Verdict.HELD
+    }
+
+    // A GROUP LETTER'S FILE ASKED FOR AGAIN (iOS MTGroup askKeptFile / keptAsked / refill, 11c34ed7 at 2389, OZ 1 p.10.1; decisions
+    // 875 = a, 883 = a): a phone restored from the light copy holds the group's rows and none of their files, and a delivered letter's
+    // pieces have left the nodes. It asks by «fk» on the group's own road -- a member the owner, the owner every member; the letter's
+    // author lays the file again under the same name (Media.serveKept, carryMedia), the owner carries the new cargo on, and the row
+    // without its file takes it. Each side keeps the one clock of a kept file (Media.mayKept).
+    /** The asker's half (Media holds its clock): one word to everyone this phone carries to; its receipts move no row. */
+    fun askKeptFile(key: String, id: String) {
+        synchronized(lock) {
+            val g = state(key) ?: return
+            // a restored row asks by its file's seal (iOS 6549e6c6, OZ 2 p.1.2): «seal:» is no letter name and was dropped here
+            if (g.left || !isLetterName(id) && Media.sealOf(id) == null && Media.ownOf(id) == null) {
+                Log.i("Montana", "kept_file m=" + id.take(21) + " a group letter's file is not asked -- no group held or no name to ask by"); return
+            }
+            val w = JSONObject().put("t", "fk").put("g", g.id).put("k", g.kind).put("id", id)
+            val targets = if (g.mine) g.members.map { it.pipe } else listOf(g.owner)
+            val n = targets.mapNotNull { carry(w, it, "", own = false) }.size
+            Log.i("Montana", "kept_file m=" + id.take(8) + " a group letter's file is asked n=" + n)
+        }
+    }
+    /** The holder's half: the letter's author lays its file again; the owner, not its author, passes the ask to the author's seat
+     *  once in the span; anyone else holds the word. Only the group's own road asks. */
+    private fun keptAsked(w: JSONObject, pipe: String): Verdict {
+        val g = groups[w.optString("g")] ?: return Verdict.REFUSED
+        val id = w.optString("id")
+        val own = Media.ownOf(id)
+        if (g.left || !isLetterName(id) && Media.sealOf(id) == null && own == null) return Verdict.REFUSED
+        val root = SamePair.root(pipe)
+        val road = if (g.mine) g.members.any { SamePair.root(it.pipe) == root } else SamePair.root(g.owner) == root
+        if (!road) return Verdict.REFUSED
+        val key = key(g.id)
+        // A RESTORED AUTHOR ASKS FOR ITS OWN LETTER'S FILE (iOS 2c0498fd, OZ 2 p.1.2.4, the author's words 22141, 22151): its row of
+        // mine there is named by a UUID, mine here by the letter's name. The asker's seat is the one its pipe holds -- a member on the
+        // owner's phone, the owner on a member's; its letter of that kind born in [second, second+120], the place-th, goes back to it
+        // alone (carryMedia «fo»).
+        if (own != null) {
+            val asker = (if (g.mine) g.members.firstOrNull { SamePair.root(it.pipe) == root }?.seat else OWNER_SEAT) ?: return Verdict.REFUSED
+            val who = speaker(g.id, asker)
+            val row = runCatching { Book.chat(key)?.msgs?.let { Media.ownLetter(it, own, who) } }.getOrNull()
+                ?: return Verdict.HELD.also { Log.i("Montana", "kept_file m=" + id.take(24) + " no letter of that seat by this second -- nothing to lay") }
+            synchronized(ownLays) { ownLays[who] = pipe }
+            Media.serveKept(Book.ctx, key, row)
+            return Verdict.HELD
+        }
+        // a seal finds the letter whose wire name seals to it (iOS 6549e6c6, OZ 2 p.1.2); a letter name finds its own row
+        val seal = Media.sealOf(id)
+        val row = runCatching { Book.chat(key)?.msgs?.firstOrNull { if (seal != null) Media.seal(it.mid) == seal else it.mid == id } }.getOrNull()
+            ?.takeIf { it.text.startsWith(Marks.MEDIA) } ?: return Verdict.HELD
+        if (row.mine) { Media.serveKept(Book.ctx, key, row); return Verdict.HELD }
+        if (!g.mine) return Verdict.HELD
+        val to = speakerPipe(row.from) ?: return Verdict.HELD
+        if (SamePair.root(to) == root || !Media.mayKept("pass:" + id)) return Verdict.HELD
+        carry(JSONObject().put("t", "fk").put("g", g.id).put("k", g.kind).put("id", id), to, "", own = false)
+        Log.i("Montana", "kept_file m=" + id.take(8) + " the ask passes to the letter's author")
+        return Verdict.HELD
+    }
+    /** MY COPY OF ANOTHER'S LETTER GOES BACK TO ITS RESTORED AUTHOR ALONE (iOS MTGroup.ownLays): the asker's pipe by its speaker, kept
+     *  for this run while the copy uploads (keptAsked to carryMedia); a copy nobody asked for is never carried. */
+    private val ownLays = HashMap<String, String>()
+    /** MY OWN GROUP LETTER'S FILE LAID BACK (iOS MTGroup.keptLaid, OZ 2 p.1.2.4): a copy of my letter from the group's own road -- the
+     *  owner's pipe on a member's phone, a member's on the owner's -- under my own seat, for a row of mine this phone asked by own:. My
+     *  restored row takes the letter's name (Media.nameOwnRestored) and the copy fills it; no second row is born, nothing rings. */
+    private fun keptLaid(w: JSONObject, pipe: String): Verdict {
+        val g = groups[w.optString("g")] ?: return Verdict.REFUSED
+        val id = w.optString("id"); val words = w.optString("tx")
+        if (g.left || !isLetterName(id) || !carries(words) || !words.startsWith(Marks.MEDIA) || w.optString("s") != g.me) return Verdict.REFUSED
+        val root = SamePair.root(pipe)
+        val laid = if (g.mine) g.members.any { SamePair.root(it.pipe) == root } else SamePair.root(g.owner) == root
+        if (!laid) return Verdict.REFUSED   // only the group's own road lays
+        val key = key(g.id)
+        val kind = Media.manifest(words)?.optString("k")?.ifEmpty { null }
+        var mine = false
+        Book.edit(key) { c ->
+            if (c.msgs.none { it.mid == id }) Media.nameOwnRestored(c.msgs, id, kind)
+            c.msgs.find { it.mid == id && it.mine }?.let { r ->
+                mine = true
+                if (r.file?.let { java.io.File(it).exists() } != true) { r.text = words; r.meta = null }
+            }
+        }
+        if (!mine) { Log.i("Montana", "kept_file m=" + id.take(8) + " a copy of my letter for no row of mine this phone asked by -- not taken"); return Verdict.HELD }
+        Media.liftGone(id)
+        Media.fetch(Book.ctx, key, id, words)
+        Log.i("Montana", "kept_file m=" + id.take(8) + " my restored group row takes my letter's copy")
+        return Verdict.HELD
+    }
+    /** A REPEAT WITH NEW CARGO: the author laid a letter's file again under its name. The row without its file takes it; the owner
+     *  carries the new cargo on once in the span, silent -- the row stands everywhere already. Only the row's own speaker lays it. */
+    private fun refill(row: Msg, words: String, id: String, seat: String, g: State, key: String) {
+        if (!words.startsWith(Marks.MEDIA) || words == row.text || row.mine || row.from != speaker(g.id, seat)) return
+        if (row.file?.let { java.io.File(it).exists() } != true) {
+            Book.edit(key) { c -> c.msgs.find { it.mid == id }?.let { it.text = words; it.meta = null } }
+            Media.liftGone(id)
+            Log.i("Montana", "rx_refill m=" + id.take(8) + " a group row stands without its file -- the new cargo is taken")
+            Media.fetch(Book.ctx, key, id, words)
+        }
+        if (!g.mine || !Media.mayKept("carry:" + id)) return
+        val on = JSONObject().put("t", "say").put("g", g.id).put("k", g.kind).put("ti", g.title).put("id", id).put("s", seat).put("tx", words)
+            .put("hs", 1)   // the row stands everywhere: the new cargo rings nobody
+        spread(on, g, seat, own = false)
     }
 
     /**

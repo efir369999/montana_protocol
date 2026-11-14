@@ -107,7 +107,7 @@ object Twin {
     private val ex = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "twin").apply { isDaemon = true } }
     private val lock = Any()
 
-    fun forget() = synchronized(lock) { listOf(MIRROR, SEEN, ASKED).forEach { DeviceVault.delete(it) }; given.clear() }
+    fun forget() = synchronized(lock) { listOf(MIRROR, SEEN, ASKED, TwinSelf.HELD, TwinSelf.BOOK).forEach { DeviceVault.delete(it) }; given.clear() }
 
     fun secret(): ByteArray? = Archive.historyKey()?.let { hk ->
         Wire.sha("mt-twin-box".toByteArray(), byteArrayOf(0), APP.toByteArray(), byteArrayOf(0), hk)
@@ -295,6 +295,8 @@ object Twin {
         if (c.isEmpty() || m.isEmpty() || x.isEmpty()) return
         when {
             x.startsWith(READ) -> readByTwin(c, x.removePrefix(READ).toLongOrNull())
+            // one's own name, face or words, or the person's choices, the seed's other device changed (iOS landMirrored, 56177404)
+            x.startsWith(TwinSelf.MARK) -> TwinSelf.take(x.removePrefix(TwinSelf.MARK))
             x.startsWith(ASK) -> giveRows(c, x.removePrefix(ASK))
             // a card the other device gave birth to: this device opens the introductions it brings (iOS MontanaCard.takeTwin)
             x.startsWith(CARD) -> MontanaCard.takeTwin(x.removePrefix(CARD))
@@ -373,14 +375,14 @@ object Twin {
 
     // ── the twin's past (iOS askTwin / giveTwinRows / takeTwinRow, f376b4ef) ──
     /** The rows of a conversation the archive holds and the feed does not: asked once, two hundred at most a round. */
-    fun ask(chat: String, items: List<Triple<Long, Boolean, String>>) {
+    fun ask(chat: String, items: List<Triple<Long, Boolean, String>>, again: Boolean = false) {
         if (MontanaSeed.twin == null) return
         val fresh = synchronized(lock) {
             val asked = strings(ASKED)
-            val have = asked.toHashSet()
-            val f = items.filter { (s, _, h) -> "$chat/$s/$h" !in have }.take(200)
+            val have = if (again) emptySet() else asked.toHashSet()   // a tap asks a row once more (its clock is Media.mayKept's)
+            val f = items.filter { (s, _, h) -> askedName(chat, s, h) !in have }.take(200)
             if (f.isEmpty()) return
-            keepStrings(ASKED, (asked + f.map { (s, _, h) -> "$chat/$s/$h" }).takeLast(5000))
+            keepStrings(ASKED, (asked + f.map { (s, _, h) -> askedName(chat, s, h) }).takeLast(5000))
             f
         }
         val js = JSONObject().put("i", JSONArray(fresh.map { (s, mine, h) -> JSONArray().put(s).put(if (mine) 1 else 0).put(h) }))
@@ -390,7 +392,13 @@ object Twin {
     /** How many rows stand asked (iOS mt.twin.asked count): a row unasked changes the archive's face, so the gap is measured again. */
     fun askedCount(): Int = synchronized(lock) { strings(ASKED).size }
     /** A row whose file did not come whole is asked again the next time the gap is measured. */
-    private fun unask(chat: String, s: Long, h: String) = synchronized(lock) { keepStrings(ASKED, strings(ASKED).filter { it != "$chat/$s/$h" }) }
+    private fun unask(chat: String, s: Long, h: String) = synchronized(lock) { keepStrings(ASKED, strings(ASKED).filter { it != askedName(chat, s, h) }) }
+    /**
+     * THE NAME OF ONE ASK, ONE OWNER (iOS askedName, 93023210, the author's word 21972): Saved Messages asks under a name of its own
+     * since iOS 2397 -- before it an iPhone gave back no named row of Saved Messages, and the rows asked then stood «asked» for ever;
+     * a new name asks them once more of a device that now answers.
+     */
+    private fun askedName(chat: String, s: Long, h: String) = (if (chat == Book.SAVED) "$chat#2397" else chat) + "/$s/$h"
 
     /**
      * THE OTHER DEVICE ASKS FOR ROWS ITS ARCHIVE HOLDS AND ITS FEED DOES NOT (iOS ChatStore.giveTwinRows): each row held here under the
@@ -413,6 +421,15 @@ object Twin {
             n++
         }
         Log.d("Montana", "twin_answer chat=" + chat.take(10) + " asked=" + want.size + " given=" + n)
+    }
+    /**
+     * SAVED MESSAGES REACH THE SEED'S OTHER DEVICES AT THEIR BIRTH (iOS 93023210, giveToTwin, P-207, the author's word 21972: «sent to
+     * Saved from T1, nothing on the Mac»): the room has no wire, so no queue and no mirror carried its letter. A row born there -- a
+     * text where it is written, a file where it settles -- is given to the twin by its name, as the answer to the twin's ask gives it.
+     */
+    fun born(chat: String, mid: String) {
+        if (chat != Book.SAVED || MontanaSeed.twin == null) return
+        ex.execute { Book.chat(chat)?.msgs?.firstOrNull { it.mid == mid && it.mine }?.let { m -> give(chat, m); Log.d("Montana", "twin_give saved") } }
     }
     private fun give(chat: String, m: Msg) {
         val o = JSONObject()
@@ -462,9 +479,21 @@ object Twin {
         o.optDouble("d", 0.0).takeIf { it > 0 }?.let { man.put("du", it) }
         val dest = File(Media.dir(Book.ctx), name)
         val row = { file: String? -> Msg(mid, Marks.MEDIA + man.toString(), own, ms, state = if (own) 2 else 3, file = file, meta = man.toString(), from = sr) }
-        if (dest.isFile) { lay(chat, row(dest.path)); return }
-        val road = o.optJSONObject("road") ?: return
         val h = Archive.rowHash(Archive.archivedText(row(dest.path)) ?: "")
+        // A ROW STANDING WITHOUT ITS FILE TAKES THE FILE ALONE (iOS 598cb6cf, OZ 1 p.1.4.2): a restored row stands from the archive by
+        // the same key (second, side, words and file name) and holds no file; the twin's copy fills it and lays no second row.
+        val sig = Archive.rowSig(ms / 1000, own, h)
+        val standing = rows.firstOrNull { m -> Archive.archivedText(m)?.let { Archive.rowSig(m.at / 1000, m.mine, Archive.rowHash(it)) } == sig }
+        if (standing != null && standing.file?.let { File(it).isFile } != false) return
+        val put = { file: String ->
+            if (standing == null) lay(chat, row(file))
+            else {
+                Book.edit(chat) { c -> c.msgs.find { it.mid == standing.mid }?.let { it.text = Marks.MEDIA + man.toString(); it.meta = man.toString(); it.file = file } }
+                Log.d("Montana", "twin_row chat=" + chat.take(10) + " a standing row only wears its file now")
+            }
+        }
+        if (dest.isFile) { put(dest.path); return }
+        val road = o.optJSONObject("road") ?: return
         ex.execute {
             val tmp = scratch()
             try {
@@ -473,7 +502,7 @@ object Twin {
                     Log.d("Montana", "twin_row a file did not come whole -- asked again at the next gap"); return@execute
                 }
             } finally { tmp.delete() }
-            lay(chat, row(dest.path))
+            put(dest.path)
         }
     }
     private fun lay(chat: String, m: Msg) {

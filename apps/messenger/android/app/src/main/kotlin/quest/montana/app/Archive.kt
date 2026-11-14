@@ -29,12 +29,16 @@ object Archive {
     fun isTranscript(ref: String) = ref.startsWith(TRANSCRIPT_HEAD)
     /** A ROW THE ARCHIVE GAVE BACK, ONE OWNER (iOS MTRestoredMid.archive): its mid's head. */
     private const val RESTORED_MID = "arc:"
+    /** NOT-UI: a restored row's file name kept in its text while the file is not on this phone -- its seal asks its sender (Media.restoredFile). */
+    const val KEPT_FILE = "kf"
     fun isRestored(mid: String) = mid.startsWith(RESTORED_MID)
     /** A ROW A CORRESPONDENT GAVE BACK, ONE OWNER (iOS MTRestoredMid.given and wire, bb0ba721): its mid's head, and the one unwrap of
      *  the wire name inside it -- the keeping and the restore read it. */
     const val GIVEN_MID = "given:"
     fun isGiven(mid: String) = mid.startsWith(GIVEN_MID)
     fun wire(mid: String) = mid.removePrefix(GIVEN_MID)
+    /** A row laid back without its letter's name -- the archive's or a correspondent's (iOS MTRestoredMid.holds). */
+    fun holds(mid: String) = isRestored(mid) || isGiven(mid)
     /** THE ONE NAME OF A LETTER BY ITS SECOND, ITS SIDE AND ITS WORDS (iOS ChatStore.rowSig, bb0ba721): the archive's rows, the feed
      *  measured against them and the letters a correspondent gave back are known by it. An «arc:» name hashes these bytes: they
      *  never change. */
@@ -118,8 +122,9 @@ object Archive {
      */
     fun archivedText(m: Msg): String? {
         if (!m.text.startsWith(Marks.MEDIA)) return m.text
-        val f = m.file?.let { File(it).name } ?: return null
         val j = runCatching { JSONObject(m.text.removePrefix(Marks.MEDIA)) }.getOrNull() ?: return null
+        // a restored row without its file keeps the record's name (KEPT_FILE): its archive key is the one the twin is asked by
+        val f = m.file?.let { File(it).name } ?: j.optString(KEPT_FILE).ifEmpty { null } ?: return null
         val rec = JSONObject()
         j.optString("cap").takeIf { it.isNotEmpty() }?.let { rec.put("cap", it) }
         j.optDouble("du", 0.0).takeIf { it > 0 }?.let { rec.put("d", it) }
@@ -259,6 +264,7 @@ object Archive {
             rec.optString("cap").takeIf { c -> c.isNotEmpty() }?.let { c -> man.put("cap", c) }
             rec.optDouble("d", 0.0).takeIf { d -> d > 0 }?.let { d -> man.put("du", d) }
             val file = File(Media.dir(Book.ctx), f).takeIf { x -> x.isFile }?.path
+            if (file == null) man.put(KEPT_FILE, f)   // iOS keeps the row's attachment name: it is the one tie to its letter (6549e6c6)
             out.add(Msg(mid, Marks.MEDIA + man.toString(), it.mine, it.at * 1000, state = state, file = file))
         }
         return out
@@ -301,7 +307,7 @@ object Archive {
         // and asked rows stand as at the last whole reading would find the same gaps and build nothing, so it reads no log; any change
         // (a block written, a chat born or emptied, a pipe, a row unasked) changes the face, and the archive is read
         val face = if (only == null) face(chatsDir, folders) else null
-        if (face != null && face == Prefs.str(FACE_KEY, "")) { Log.d("Montana", "archive_same chats=" + Book.held().size); return }
+        if (face != null && face == Prefs.str(FACE_KEY, "")) { Log.d("Montana", "archive_same chats=" + Book.held().size); Post.adoptRestored(); return }
         val book = convBook()
         val pipesBefore = Book.refs().size
         var chats = 0; var added = 0; var headed = 0; var hs = 0; var ha = 0; var hn = 0; var faces = 0; var gapChats = 0; var gapRows = 0; var retired = 0
@@ -411,6 +417,7 @@ object Archive {
         if (0 < faces) Book.dropSharedFaces()
         if (0 < retired) Log.d("Montana", "archive_named transcripts=" + retired)
         if (0 < gapRows) Log.d("Montana", "archive_gap total chats=" + gapChats + " rows=" + gapRows)
+        Post.adoptRestored()   // the pipes stand: a laid copy's letters join the queue only now (iOS afterPipes → adoptRestored, cc147308)
         if (Book.refs().size > pipesBefore) Presence.peersGrew()   // the grown book is greeted and asked for its faces at once (iOS 3ed661fa)
         Log.d("Montana", "archive_restore chats=" + chats + " rows=" + added + " headed=" + headed + " heads=s" + hs + "/a" + ha + "/n" + hn + " faces=" + faces)
         if (face != null) Prefs.setStr(FACE_KEY, face)
