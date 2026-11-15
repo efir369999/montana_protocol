@@ -5,8 +5,8 @@
    the system's title above it already does, by the name under the icon (Code/Names.xcconfig). */
 
 "NSBluetoothAlwaysUsageDescription" = "Bluetooth соединяет телефоны напрямую, чтобы они обменивались сообщениями рядом.";
-"NSCameraUsageDescription" = "Камера снимает фото и видео для чатов, видеосообщений и видеозвонков и сканирует QR-код человека.";
-"NSFaceIDUsageDescription" = "Face ID показывает 24 слова восстановления.";
+"NSCameraUsageDescription" = "Камера снимает фото и видео для чатов, видеосообщений и видеозвонков, сканирует QR-код человека и код вашего устройства, которое вы подключаете.";
+"NSFaceIDUsageDescription" = "Face ID показывает 24 слова восстановления и подтверждает подключение вашего устройства.";
 "NSLocalNetworkUsageDescription" = "Ваше устройство и устройство собеседника соединяются напрямую по Wi-Fi. Разрешение нужно только чтобы телефоны нашли друг друга в одной сети.";
 "NSLocationWhenInUseUsageDescription" = "Геопозиция нужна только чтобы вы могли отправить своё местоположение в чат.";
 "NSMicrophoneUsageDescription" = "Микрофон записывает голосовые сообщения, видео и звонки.";

@@ -5,8 +5,8 @@
    the system's title above it already does, by the name under the icon (Code/Names.xcconfig). */
 
 "NSBluetoothAlwaysUsageDescription" = "蓝牙让手机直接互联，在附近交换消息。";
-"NSCameraUsageDescription" = "相机用于在聊天中拍摄照片和视频、录制视频消息、进行视频通话，以及扫描他人的二维码。";
-"NSFaceIDUsageDescription" = "面容 ID 用于显示你的 24 个恢复词。";
+"NSCameraUsageDescription" = "相机用于在聊天中拍摄照片和视频、录制视频消息、进行视频通话，扫描他人的二维码，以及扫描你要连接的自己设备的二维码。";
+"NSFaceIDUsageDescription" = "面容 ID 用于显示你的 24 个恢复词，并确认连接你自己的设备。";
 "NSLocalNetworkUsageDescription" = "你的设备与对方的设备通过 Wi-Fi 直接连接。该权限仅用于让手机在同一网络中找到彼此。";
 "NSLocationWhenInUseUsageDescription" = "你的位置仅用于让你在聊天中发送它。";
 "NSMicrophoneUsageDescription" = "麦克风用于录制语音消息、视频和通话。";
