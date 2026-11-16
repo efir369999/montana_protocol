@@ -2,9 +2,9 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2419) - 2026-11-16
+## 1.0 (2420) - 2026-11-16
 
-Source commit `0565507c7f8a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2419.md).
+Source commit `0564a18c1e17`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2420.md).
 
 - A message you write in Saved Messages now goes to your other devices the moment it is written, in a letter of its own, and stands in the open chat at once; its photo or file follows right behind it.
 - Your other devices now hear a new message the same second even when they listen at another machine of the network than the one the writing device chose.
