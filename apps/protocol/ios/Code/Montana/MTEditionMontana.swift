@@ -13,10 +13,11 @@ enum MTEdition {
     /// NO ROW OF ONE'S OWN NODE (the author's word 16428, 04.11.2026: «the item YOUR NODE -- delete it too»): Settings draw none and the
     /// node sends nothing -- a function the person cannot see never acts for them; a file it already holds still comes back.
     static let ownNode = false
-    /// The Protocol's site, the general one (decision 711 = a): its page and its privacy policy, montana.xxx/privacy/.
+    /// THE PROTOCOL'S ONE DOMAIN (decision 711 = a; the author's word 22847, 16.11.2026 10:59 UTC: «only montana.xxx for every link
+    /// of invitations, groups, channels and so on -- the Protocol's domain; montana.quest replaced completely»): its page, its privacy
+    /// policy montana.xxx/privacy/ and every card it writes (/r/ /perp/ /temp/, MontanaFirstContact); montana.xxx's association file
+    /// names this bundle.
     static let site = "https://montana.xxx"
-    /// THE PROTOCOL'S CARDS stay on montana.quest: its association file names quest.montana.app with /n/, montana.xxx's names none.
-    static let cards = "https://montana.quest"
     /// MONTANA PROTOCOL'S FACE (the author's word 15590, 03.11.2026: his coin is this app's icon): the glass icon on the first
     /// screen, the room's face and the icon chooser's first place, and the flat picture a track without a cover wears.
     static let face = "IconGlassPreview"
