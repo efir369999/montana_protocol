@@ -4265,7 +4265,18 @@ enum MontanaWakePush {
     private static func fetchSignals(_ conv: String) {
         for door in signalReadDoors(conv) { fetchSignals(conv, door: door) }
     }
+    /// THE SEED'S OWN LANE IS HELD AT EVERY NODE (OZ 1 p.4, the author's words 23266-23268, 23279: T1 wrote at 15:54:33, the Mac
+    /// took it at 15:56:02): each device elects a door of its own (chosenBase), and a letter is boxed -- and its hint told -- only
+    /// at the node whose door the writer knocked; the stores never talk to each other. A Mac holding its lane at another node
+    /// heard nothing until a push or a pickup. The seed's lane asks one living door of every node, so the hint reaches every
+    /// running device the same second whichever node the writer chose. Nil: not the seed's lane.
+    private static func seedLaneDoors(_ conv: String) -> [String]? {
+        guard conv == MontanaArchive.twinPipe else { return nil }
+        let every = oneDoorPerNode(orderedBases(for: "signal")).filter { b in doorAlive(b) }
+        return every.isEmpty ? [signalDoor(for: conv)] : every
+    }
     private static func signalReadDoors(_ conv: String) -> [String] {
+        if let every = seedLaneDoors(conv) { return every }   // the seed's own lane: one door of every node (OZ 1 p.4)
         let living = MontanaCall.epochSnapshot
         let routes = callRoutes.values.filter { $0.conv == conv && !($0.isEnding) && living.contains($0.epoch) }
         guard !routes.isEmpty else { return [callReadDoors[conv] ?? signalDoor(for: conv)] }

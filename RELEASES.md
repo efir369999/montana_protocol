@@ -15,7 +15,7 @@ does and does not establish is in [`AUDIT.md`](AUDIT.md), section 3.
 | Folder | Build | Source commit | Folder tree | Staged |
 |---|---|---|---|---|
 | `apps/protocol/android` | 552 | `e8e25d01c77e` | `af8316a93370d0a6bdafc3b74e58f2578e832839` | 2026-10-26 10:03 UTC |
-| `apps/protocol/ios` | 1.0 (2416) | `4b559de03d11` | `d20964d384fad3553f9fe425819ca36960f0f6b0` | 2026-11-16 15:49 UTC |
+| `apps/protocol/ios` | 1.0 (2421) | `b72b5ed28627` | `d2018e09dc11e9c14720ee4fb0730de923c3fa14` | 2026-11-16 18:20 UTC |
 | `protocol` | 1.0 (2379) | `52ec11998aa8` | `26d8a1076207d7e3ecdd9a93a4f23b792c63976f` | 2026-11-12 13:27 UTC |
 <!-- sources:end -->
 
