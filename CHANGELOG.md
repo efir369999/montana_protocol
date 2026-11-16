@@ -2,6 +2,19 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2424) - 2026-11-16
+
+Source commit `e451e027ed04`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2424.md).
+
+- What you put into Saved Messages on one of your devices now goes to your other devices at once over the live connection they already hold, instead of standing in a relay's queue; a device that sleeps still gets it the way it did.
+- Everything in Saved Messages now looks the same on all your devices: an edit, a reaction or a deletion on one device shows on the others, a forwarded photo or file arrives there too, and replies, link cards, forwards and albums keep their look.
+- When notifications are off, a small red badge now sits on the corner of the time symbol instead of a circle beside it.
+
+**Security and anonymity**
+
+- Security and anonymity are unchanged: the word travels sealed by a key only your own devices hold, in the same form and size as any letter, under a label that changes every minute and names nobody; whoever carries it sees neither what it says nor whose it is.
+- Security and anonymity are unchanged: the change travels sealed by a key only your own devices hold, by the same road a new entry already takes; nothing new is said to anyone else.
+
 ## 1.0 (2423) - 2026-11-16
 
 Source commit `712652daf35e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2423.md).
