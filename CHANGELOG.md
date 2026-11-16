@@ -2,17 +2,18 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2409) - 2026-11-16
+## 1.0 (2410) - 2026-11-16
 
-Source commit `6530bd18934d`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2409.md).
+Source commit `98d9c5873b86`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2410.md).
 
 - A video message no longer freezes while it records: when the camera stops under the tape, it starts again by itself and the stopped stretch stays out of the note.
-- The app's diagnostic diary reaches the developer even when its one diaries machine is out of the phone's reach: it goes through any other node of the network.
-- Please check: record several video messages in a row, long and short -- the picture moves the whole length of each.
+- With both cameras the big circle never waits for the small one after a flip or when both cameras turn on, and a small circle that stops starts again by itself.
+- The app's diagnostic diary can reach the developer through a node that says it carries diaries on, when the diaries machine itself is out of the phone's reach.
+- Please check: record several video messages in a row, long and short, with one camera and with both, flipping while recording -- the picture moves the whole length of each.
 
 **Security and anonymity**
 
-- The diagnostic diary, sent only with the person's consent, may now pass through any node of the network on its way to the diaries machine; the node forwards it in one hop and keeps nothing. The camera's session words are written into that diary. Nothing else of security or anonymity changes.
+- The diagnostic diary, sent only with the person's consent, may pass to the diaries machine through a node that says it forwards diaries; that node forwards it in one hop and keeps nothing. The camera's session words are written into that diary. Nothing else of security or anonymity changes.
 
 ## 1.0 (2408) - 2026-11-16
 
