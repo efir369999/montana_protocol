@@ -2,6 +2,20 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2411) - 2026-11-16
+
+Source commit `ecdc520b1d14`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2411.md).
+
+- Your own avatar no longer wears the coin balance: in Saved Messages and in the side panel it shows the level alone.
+- A Montana link to a group, a channel or a person tapped inside a chat opens right in the app, with no trip to the site and no question which app to open it in; a link from outside still goes through the site.
+- Sharing a link or a picture no longer waits for the slowest node: the message stands in the chat at once, and the nodes are chosen while it is prepared.
+- A Mac joined by QR takes the history from the phone: the phone lays a fresh copy for this joining, the Mac reads until that copy arrives, and it never lays an empty copy of its own.
+- Please check: send a group link from one phone to another and tap it in the chat; share a link through Share; join the Mac by QR and watch the chats arrive.
+
+**Security and anonymity**
+
+- A Montana link tapped inside the app no longer opens the site, so the site sees no request for it. A device joined by QR takes back only the copy its phone laid for that joining, never its own. The share sheet asks the same nodes as before, only without waiting for the slowest. Nothing else of security or anonymity changes.
+
 ## 1.0 (2410) - 2026-11-16
 
 Source commit `98d9c5873b86`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2410.md).
