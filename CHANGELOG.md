@@ -2,6 +2,21 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2408) - 2026-11-16
+
+Source commit `8a4ed08f0502`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2408.md).
+
+- A Mac signing in by the phone's QR stays signed in: it no longer stops at «Restoring the identity chain» at 0 % and is no longer thrown back to the sign-in, and its chats arrive from the phone.
+- Settings -- Devices: every session can be ended, not only a Mac's, and a new button «End all sessions» ends every other device at once.
+- Links to invitations, groups, channels and contact cards that Montana writes now open on montana.xxx.
+- Please check: sign in on the Mac by the phone's QR -- the restore goes past 0 %, the chats come, and the Mac is not signed out.
+- Please check: on the phone, Settings -- Devices -- «End all sessions» clears the list; each device has «End session».
+- Please check: share a group or channel invitation -- the link starts with montana.xxx and opens Montana.
+
+**Security and anonymity**
+
+- The QR box of a Mac's sign-in now carries only its key, no device tag before the words. The word «end» carries the moment it was said: a Mac signed in anew after it is not erased by an older end, and the phone lifts that older end. A device ended from the list gets no more history from the phone; a device that signed in with the seed phrase keeps its words. Universal links are claimed on montana.xxx instead of montana.quest. Nothing else of anonymity changes.
+
 ## 1.0 (2407) - 2026-11-16
 
 Source commit `6cd34af09f52`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2407.md).
