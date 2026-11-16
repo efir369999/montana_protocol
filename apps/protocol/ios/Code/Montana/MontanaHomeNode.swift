@@ -59,7 +59,7 @@ enum MontanaHomeNode {
     }
     static func token(_ k: SymmetricKey) -> Data { Data(HMAC<SHA256>.authenticationCode(for: tokenLabel, using: k)) }
     static func shelf(token t: Data) -> String { hex(Data(SHA256.hash(data: t))) }
-    static func hex(_ d: Data) -> String { d.map { String(format: "%02x", $0) }.joined() }
+    static func hex(_ d: Data) -> String { d.montanaHexString }
     /// This seed's token, or nil without a seed.
     static func tokenHex() -> String? {
         guard let m = MontanaSeed.mnemonic, let e = MontanaSeedKeys.entropyFrom(mnemonic: m), e.count == 32 else { return nil }
@@ -75,21 +75,6 @@ enum MontanaHomeNode {
         return hex(k.withUnsafeBytes { Data($0) }) == "aa75b0afc0c9b1b4e31a8fecf371ee72866865e7a77cf61f9f1f0ad457652097"
             && hex(t) == "0695b3db38b3c8525f8d8b7a270ae0bc5504c2d0d58634a937e52c2b9f7d2d28"
             && shelf(token: t) == "125ff41ffac97cae3ce9ba4ab20ae5586587f5c8960fee4055f6aaa8c219b49a"
-    }
-    /// SHA-256 of a file, a megabyte in hand at a time.
-    static func digest(of url: URL) -> String? {
-        guard let fh = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? fh.close() }
-        var h = SHA256()
-        while true {
-            let more: Bool = autoreleasepool {
-                guard let d = ((try? fh.read(upToCount: 1 << 20)) ?? nil), !d.isEmpty else { return false }
-                h.update(data: d)
-                return true
-            }
-            if !more { break }
-        }
-        return hex(Data(h.finalize()))
     }
 }
 
@@ -212,7 +197,7 @@ enum MontanaHomeNode {
         let name = made.url.lastPathComponent
         sending = 0
         Task {
-            let digest = await Task.detached { MontanaHomeNode.digest(of: made.url) }.value
+            let digest = await Task.detached { MontanaBackup.digest(of: made.url) }.value
             guard let digest, var req = Self.request("/vault-put?name=" + name + "&sha256=" + digest, token: token) else {
                 sending = nil; busy = false
                 MontanaBackup.discard(made)

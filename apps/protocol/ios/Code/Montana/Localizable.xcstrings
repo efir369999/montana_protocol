@@ -27683,6 +27683,22 @@
           }
         }
       }
+    },
+    "Copies a viewer was handed when you opened a file. They go back to your chats.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Копии, которые получал просмотр, когда вы открывали файл. Они возвращаются в ваши чаты."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开文件时查看器拿到的副本。它们会回到您的聊天中。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
