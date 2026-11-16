@@ -2,6 +2,16 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2423) - 2026-11-16
+
+Source commit `712652daf35e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2423.md).
+
+- A photo you put into Saved Messages on one of your devices now appears inside the chat on your other devices; before, only the small picture of the chat in the list changed and the photo itself stayed unseen.
+
+**Security and anonymity**
+
+- Nothing of security or anonymity changes: inside the same sealed channel between your own devices, a device now also tells the others that a Saved Messages row and its file have arrived.
+
 ## 1.0 (2422) - 2026-11-16
 
 Source commit `04df1e82d845`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2422.md).
