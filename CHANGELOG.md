@@ -2,22 +2,21 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
-## 1.0 (2418) - 2026-11-16
+## 1.0 (2419) - 2026-11-16
 
-Source commit `c22a497d5616`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2418.md).
+Source commit `0565507c7f8a`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2419.md).
 
-- Your devices now keep count of what they told each other: every word one device passes to your other devices carries its number, a device that missed one asks for it by that number, and the device that wrote it sends it again -- a word no longer goes missing because a device was away or the delivery box was full.
-- A word you save on one device now wakes your other devices at once, whichever machine they listen on.
-- The sign of muted sound now stands to the right of the coin, larger and easier to tap.
-- A chat's diary now names each row's kind by its file and writes one print of the whole chat, so two of your devices can be compared row for row.
-- Settings -- Devices now shows a device you connect as soon as it is heard, without a separate «connected» line, and the list stays current while it is open.
-- Your backup copy no longer piles up on the network's machines: each new copy takes the one before it off, and the relay machines keep nothing longer than a week.
-- Please check: write and send a photo to Saved Messages on one phone and watch it appear on the other device; then turn the other device off for a while, write again, and turn it back on.
+- A message you write in Saved Messages now goes to your other devices the moment it is written, in a letter of its own, and stands in the open chat at once; its photo or file follows right behind it.
+- Your other devices now hear a new message the same second even when they listen at another machine of the network than the one the writing device chose.
+- A photo in Saved Messages that arrived without its file now asks the device that wrote it again at once and appears in the chat, not only in the list.
+- A Mac joined by the phone's QR now goes on exactly from where the phone's copy stopped: messages written while the copy was on its way are no longer lost.
+- A device whose session you ended now learns of it from any letter of your other devices, even after days away, and it leaves the list of devices everywhere.
+- Your devices now compare every chat with each other every few minutes; when one of them lacks rows, they fill them in by themselves.
+- Please check: sign in on the Mac by the phone's QR, write a message and send a photo to Saved Messages on the phone and watch both appear in the open chat on the Mac within a second; then end the Mac's session from the phone.
 
 **Security and anonymity**
 
-- A word passed between your own devices still rides sealed in the pipe only your devices derive; the new number and run are inside that sealed letter, and the device keeps the roads of its own letters on its disk for six days at most. No new name, address or key leaves the device. Nothing of anonymity changes.
-- The phone now keeps on its own encrypted vault the names and keys of the lists of its own backup pieces, to take them off the machines later; no new name, address or key leaves the device. Backups rest on one machine of the network instead of three; their content stays sealed as before.
+- Every letter between your own devices still rides sealed in the pipe only your devices derive; the new Saved Messages letter, the list of ended sessions, the copy's cursors and each chat's print (a count of rows and a hash of their keys) all lie inside that sealed letter. No new name, address or key leaves the device. Nothing of anonymity changes.
 
 ## 1.0 (2416) - 2026-11-16
 
