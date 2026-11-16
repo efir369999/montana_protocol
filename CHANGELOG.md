@@ -2,6 +2,19 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2417) - 2026-11-16
+
+Source commit `d7672fe4e018`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2417.md).
+
+- Your devices now keep count of what they told each other: every word one device passes to your other devices carries its number, a device that missed one asks for it by that number, and the device that wrote it sends it again -- a word no longer goes missing because a device was away or the delivery box was full.
+- A word you save on one device now wakes your other devices at once, whichever machine they listen on.
+- The sign of muted sound now stands to the right of the coin, larger and easier to tap.
+- Please check: write and send a photo to Saved Messages on one phone and watch it appear on the other device; then turn the other device off for a while, write again, and turn it back on.
+
+**Security and anonymity**
+
+- A word passed between your own devices still rides sealed in the pipe only your devices derive; the new number and run are inside that sealed letter, and the device keeps the roads of its own letters on its disk for six days at most. No new name, address or key leaves the device. Nothing of anonymity changes.
+
 ## 1.0 (2416) - 2026-11-16
 
 Source commit `4b559de03d11`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2416.md).
