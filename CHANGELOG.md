@@ -2,6 +2,16 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2427) - 2026-11-17
+
+Source commit `fa789fa012e0`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2427.md).
+
+- The app's privacy manifest now also names the words of a GIF search: they leave the phone for a Montana node, which asks the picture service and passes on only the words, never your device or address.
+
+**Security and anonymity**
+
+- Security and anonymity are unchanged: the GIF search works as before; only the app's own declaration now names what it already sent.
+
 ## 1.0 (2426) - 2026-11-17
 
 Source commit `1f3181e852da`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2426.md).
