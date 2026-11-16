@@ -2,6 +2,20 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2414) - 2026-11-16
+
+Source commit `e72752ea956e`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2414.md).
+
+- On a slow connection -- through a tunnel or on weak cellular -- a photo or a file sent in a chat is no longer given up when the nodes take a moment longer to answer: a quiet node only calls the next one in, and a node is dropped only after its full wait.
+- While the backup of your history is uploading, its extra copies for the other nodes now go one at a time and only when nothing of yours is sending -- photos, links and calls go first; a copy that fails is written to the diary with its cause.
+- Please check: on cellular, send a photo right in a chat and watch it leave.
+
+**Security and anonymity**
+
+- The backup's copies reach the same nodes as before, sealed as before; only their moment and their road on the phone change.
+- The nodes a piece of a photo is offered to are the same, and in the same order; a node that has not answered is only waited for longer before it is passed over.
+- Nothing of security or anonymity changes.
+
 ## 1.0 (2413) - 2026-11-16
 
 Source commit `c0d7fe31f18f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2413.md).
