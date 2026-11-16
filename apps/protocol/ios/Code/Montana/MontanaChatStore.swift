@@ -7841,8 +7841,11 @@ enum SeedScope {
             if Thread.isMainThread { aside() } else { DispatchQueue.main.sync(execute: aside) }
         }
         #endif
+        // THE PERSON'S VALUES LEAVE WITH THEM, SEATED OR ALONE (OZ 1 p.11, the author's word 23183): alone, the device key
+        // goes below, and the seat's values sealed under it -- groups.copies, pipeKept, pipeSecrets -- stood on unreadable;
+        // the Mac's next person found its groups' store shut by them. Their items of the keychain leave only with others seated.
+        for k in ud.dictionaryRepresentation().keys where MTSeats.layerHolds(k) { ud.removeObject(forKey: k) }
         if seated {
-            for k in ud.dictionaryRepresentation().keys where MTSeats.layerHolds(k) { ud.removeObject(forKey: k) }
             for k in seatKeychain { MontanaKeychain.delete(k) }
         }
         MontanaSeed.clear(); if !seated { MontanaDeviceKey.reset() }; E2E.forgetDeviceTag()

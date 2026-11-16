@@ -412,8 +412,14 @@ final class MTGroup {
     private func load() {
         let held = MontanaLocalVault.getDecrypted(Self.stateKey).flatMap { try? JSONDecoder().decode([String: MTGroupState].self, from: $0) }
         let kept = MontanaLocalVault.getDecrypted(Self.copiesKey).flatMap { try? JSONDecoder().decode([String: MTGroupCopy].self, from: $0) }
-        unread = (held == nil && UserDefaults.standard.data(forKey: Self.stateKey) != nil)
-            || (kept == nil && UserDefaults.standard.data(forKey: Self.copiesKey) != nil)
+        // A STORE SEALED UNDER A KEY THAT IS GONE IS AN EMPTY ONE (OZ 1 p.11, the author's word 23183): the Mac after its
+        // session ended held groups.copies under the device key the ending erased; it never opened, every read named the
+        // store unread, and the groups a light copy laid stood without a row (standAll waits for ready). The next write lays
+        // the store anew under the key at hand.
+        let lost = [Self.stateKey, Self.copiesKey].filter { MontanaLocalVault.lost($0) }
+        unread = (held == nil && UserDefaults.standard.data(forKey: Self.stateKey) != nil && !lost.contains(Self.stateKey))
+            || (kept == nil && UserDefaults.standard.data(forKey: Self.copiesKey) != nil && !lost.contains(Self.copiesKey))
+        if !lost.isEmpty { MontanaTrace.mark("group_lost", "keys=" + lost.joined(separator: ",")) }
         if unread { MontanaTrace.mark("group_unread", "the groups' store did not open -- read again before use") }
         groups = held ?? [:]
         let edge = Date().timeIntervalSince1970 - Self.copyLife
