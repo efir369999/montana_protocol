@@ -2059,7 +2059,17 @@ enum MontanaWakePush {
                 // reached both machines a second before. A node's copy to its sibling rides that same broken road; only the
                 // sender, who has just reached a machine, can lay the piece on the others. A failed copy costs the redundancy
                 // alone -- the first machine still holds the piece -- and a drop already goes to every store (dropBids).
-                if bulk { MontanaBlobUpload.shared.mirror(bid: bid, body: payload, besides: w) }
+                // THE KEEPING'S COPIES RIDE ITS OWN QUIET LANE (OZ 3, record 995 = a; T1 16.11.2026 13:24 UTC: a copy of 1419 media
+                // laid 1.3 GB of pieces, and the system's session took two copies of each at once, beside the person's puts and a
+                // call; one stall of the link dropped 7183 of them). A quiet piece's copies go one machine at a time, each after
+                // the person, by the same hedged put and in the same place; a copy that fails costs the redundancy alone.
+                if bulk, quiet {
+                    for c in MontanaBlobUpload.shared.copies(of: bid, besides: w) {
+                        guard await yieldToPerson("copy") else { break }
+                        let (cc, cw) = await hedgedPut([(c.door, c.url.absoluteString)], payload: payload, bytes: data.count, bid: bid, bulk: true)
+                        if cc != 200 { MontanaTrace.mark("blob_copy", "FAIL id=\(String(bid.prefix(8))) to=\(c.name.split(separator: "-").last ?? "-") code=\(cc) \(cw)") }
+                    }
+                } else if bulk { MontanaBlobUpload.shared.mirror(bid: bid, body: payload, besides: w) }
                 return true
             }
             why = w
@@ -2137,7 +2147,8 @@ enum MontanaWakePush {
                     if next < doors.count {
                         // An in-flight door that died by any road's verdict, or moves no byte, calls the
                         // next one in. One extra door per second at most: never a storm.
-                        if !silent.isEmpty || flying.keys.contains(where: { doorResting($0) }) { launch() }
+                        // A door quiet past firstByteS calls the next one in; it stays in flight and is judged by silent.
+                        if !silent.isEmpty || flying.values.contains(where: { $0.quiet() }) || flying.keys.contains(where: { doorResting($0) }) { launch() }
                     } else if !flying.isEmpty, silent.count == flying.count {
                         for d in silent { baseFailed(d) }
                         let names = silent.map { URL(string: $0)?.host ?? "-" }.sorted().joined(separator: ",")
@@ -4779,7 +4790,14 @@ final class MontanaBlobUpload: NSObject, URLSessionDataDelegate {
     /// as the piece itself still riding (anyPending). The system carries it from the file: the sender waits for nothing,
     /// no body is held in memory, and it lands even after the process dies.
     func mirror(bid: String, body: Data, besides taken: String) {
+        for c in copies(of: bid, besides: taken) { ride(c.name, body: body, to: c.url) }
+    }
+    /// THE MACHINES A PIECE'S COPY IS OWED TO, ONE OWNER (OZ 3, record 995 = a): every machine but the one that took the piece,
+    /// each by its door. The system's session carries a letter's copies (mirror); the keeping's quiet cargo carries its own
+    /// in its lane (MontanaWakePush.putBlob), after the person.
+    func copies(of bid: String, besides taken: String) -> [(name: String, door: String, url: URL)] {
         let takenHost = URL(string: taken)?.host
+        var out: [(name: String, door: String, url: URL)] = []
         for m in MontanaNodes.machines() {
             let hosts = Set(m.doors.map { $0.host })
             if let takenHost, hosts.contains(takenHost) { continue }
@@ -4790,8 +4808,9 @@ final class MontanaBlobUpload: NSObject, URLSessionDataDelegate {
                   let url = URL(string: door + "/blob-put") else {   // SERVER-DEBT-ACK: the accelerator node (rung 4)
                 MontanaTrace.mark("blob_bgup", "no door \(Self.label(name))"); continue
             }
-            ride(name, body: body, to: url)
+            out.append((name, door, url))
         }
+        return out
     }
 
     private func ride(_ name: String, body: Data, to url: URL) {
@@ -4861,7 +4880,8 @@ final class MontanaBlobUpload: NSObject, URLSessionDataDelegate {
             // One honest retry for a node-side refusal; a transport error the system retried
             // already. Beyond that the receiver's pending-media re-fetch and the sender's
             // manual repeat stay the honest legs — nothing pretends the chunk made it.
-            MontanaTrace.mark("blob_bgup", "FAIL \(Self.label(name)) code=\(code)\(error == nil ? "" : " err")")
+            // The cause is named (OZ 3, record 995): T1 13:30:38 UTC wrote 7183 copies' FAIL with no cause at all.
+            MontanaTrace.mark("blob_bgup", "FAIL \(Self.label(name)) code=\(code)\(error.map { " err=\(($0 as NSError).code)" } ?? "")")
         }
     }
 
@@ -6113,6 +6133,10 @@ final class MTPutPulse: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     /// called only then, took each in 0.3 s. A door that answers hands its first bytes to the wire in a few hundred milliseconds;
     /// one that took none by firstByteS calls the next door in. A door that moves bytes keeps the whole post deadline, so a
     /// healthy slow link is still never uploaded twice.
+    /// THE HEDGE AND THE VERDICT ARE TWO CLOCKS (OZ 3, Agent 1236, 16.11.2026): firstByteS only calls the next door in (quiet);
+    /// a door is given up -- the death verdict, the attempt's end -- only past the post deadline (silent). In 2413 the same
+    /// 1.5 s was the verdict too: on a link whose first byte needs longer (a tunnel's handshake, a weak cellular) every door in
+    /// flight fell silent together, each was declared dead and the attempt ended, three attempts and the piece failed.
     static let firstByteS: TimeInterval = 1.5
     init(heard: (@Sendable () -> Void)?) { self.heard = heard }
     func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
@@ -6122,9 +6146,13 @@ final class MTPutPulse: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
         lock.unlock()
         heard?()
     }
+    func quiet() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return !spoke && Date().timeIntervalSince(at) > Self.firstByteS
+    }
     func silent(pieceDeadline: TimeInterval) -> Bool {
         lock.lock(); defer { lock.unlock() }
-        let patience = !spoke ? Self.firstByteS : whole ? max(MTNodeWire.postTimeoutS, pieceDeadline / 2) : MTNodeWire.postTimeoutS
+        let patience = whole ? max(MTNodeWire.postTimeoutS, pieceDeadline / 2) : MTNodeWire.postTimeoutS
         return Date().timeIntervalSince(at) > patience
     }
 }
