@@ -2,6 +2,16 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2422) - 2026-11-16
+
+Source commit `04df1e82d845`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2422.md).
+
+- Right after the app opens, your devices now tell each other at once what they hold and compare every chat within minutes; before, they stayed silent for the first ten minutes after each launch.
+
+**Security and anonymity**
+
+- Nothing of security or anonymity changes: the same sealed word between your own devices only goes sooner after the app opens.
+
 ## 1.0 (2421) - 2026-11-16
 
 Source commit `b72b5ed28627`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2421.md).
