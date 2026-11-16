@@ -355,7 +355,8 @@ enum MontanaArchive {
         if hk != nil { done(); return }
         ioQueue.async { _ = keys(); DispatchQueue.main.async(execute: done) }
     }
-    static func warm() { whenReady {} }
+    /// The mirror's words a run left on disk ride once the keys stand (OZ 1 p.9): before, they waited for a new word to call the lay.
+    static func warm() { whenReady { mirrorResume() } }
     /// Runs `done` on main once every write queued so far is on disk. The door out waits on
     /// it: a head still in the queue when the seed leaves is a head never written — and the
     /// main thread never blocks on the queue (the layout law, section 6).
@@ -1217,11 +1218,14 @@ extension MontanaArchive {
         var qm: String? = nil
         var lp: String? = nil
         var q: Int? = nil        // its place in this device's queue, never read by the other
+        var fl: String? = nil    // a row's file still to lay: the mirror lays it on the person's road before the word rides (OZ 1 p.9)
+        var ft: Int? = nil       // the tries of that file, never read by the other
     }
     nonisolated static let twinReadMark = "\u{200B}\u{200B}TR:"   // NOT-UI: a read mark for this seed's devices alone, never on a pair's wire
     private static var mirror: [TwinWord] = []   // the mirror's queue alone touches it
     private static var mirrorRead = false, mirrorNext = 0, mirrorLaying = false
     private static var mirrorDue: Double? = nil   // the moment the called lay runs, while one is called
+    private static var mirrorFiling = false   // a row's file is on its way to the nodes (layFile); the mirror's queue alone touches it
     private static var mirrorGiven: [String: Double] = [:]   // a name given within the hour: a later copy of it by another road stays
     private static let mirrorKept = 4000      // [I-14]: a device away for long is given the newest, the history road keeps the rest
     private static let mirrorRound = 500
@@ -1275,32 +1279,81 @@ extension MontanaArchive {
             Task.detached(priority: .utility) { await layMirror() }
         }
     }
+    /// The words a run left on disk ride at the next launch.
+    nonisolated static func mirrorResume() { mirrorQueue.async { readMirror(); if !mirror.isEmpty { mirrorSoon(1) } } }
+    /// A ROW'S FILE IS LAID BESIDE THE ROUND, NEVER IN FRONT OF IT (OZ 1 p.9): one file at a time, while the words ready ride.
+    private static func fileSoon(_ w: TwinWord) {
+        let go: Bool = mirrorQueue.sync {   // MAIN-SAFE-SYNC: a detached task waits on the mirror's queue, never the main thread
+            guard !mirrorFiling else { return false }
+            mirrorFiling = true
+            return true
+        }
+        guard go else { return }
+        Task.detached(priority: .userInitiated) {
+            let laid = await layFile(w)
+            mirrorQueue.async { mirrorFiling = false; mirrorSoon(laid ? 1 : 30) }
+        }
+    }
+    /// The file of a row given to the twin (giveTwin), laid on the cargo road as the person's own put and its road written into
+    /// the word on disk: a run that ends on the way lays it again at the next launch, and a road laid is never laid twice. A file
+    /// no longer here, or refused eight times, lets the word ride as words with its file's name, said.
+    private static func layFile(_ w: TwinWord) async -> Bool {
+        guard let name = w.fl, let q = w.q else { return true }
+        let url = MontanaMediaStore.url(name)
+        let here = FileManager.default.fileExists(atPath: url.path)
+        let t0 = Date()
+        var road: [String: Any]? = nil
+        if here { road = await MTKeeping.layOwn(url) }
+        let x = road.flatMap { r in rowWithRoad(w.x, r) }
+        let ms = Int(Date().timeIntervalSince(t0) * 1000)
+        let tries: Int = mirrorQueue.sync {   // MAIN-SAFE-SYNC: a detached task waits on the mirror's queue, never the main thread
+            guard let i = mirror.firstIndex(where: { e in e.q == q }) else { return 0 }
+            let n = (mirror[i].ft ?? 0) + 1
+            if let x { mirror[i].x = x; mirror[i].fl = nil; mirror[i].ft = nil }
+            else if !here || 8 <= n { mirror[i].fl = nil }
+            else { mirror[i].ft = n }   // a file the nodes refused is laid again at the next round
+            keepMirror()
+            return n
+        }
+        MontanaTrace.mark("twin_file", mid: w.m, x != nil ? "laid ms=\(ms)" : !here ? "no file here -- the row rides without it" : "a file did not reach the nodes try=\(tries)")
+        return x != nil || !here
+    }
+    /// A row's words with the road of its file: the one place a road is written into a row given to the twin.
+    private static func rowWithRoad(_ x: String, _ road: [String: Any]) -> String? {
+        guard x.hasPrefix(twinRowMark), let d = String(x.dropFirst(twinRowMark.count)).data(using: .utf8),
+              var o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return nil }
+        o["road"] = road
+        guard let all = try? JSONSerialization.data(withJSONObject: o), let js = String(data: all, encoding: .utf8) else { return nil }
+        return twinRowMark + js
+    }
     private static func layMirror() async {
         let batch: [TwinWord] = mirrorQueue.sync { readMirror(); return Array(mirror.prefix(mirrorRound)) }   // MAIN-SAFE-SYNC: a detached task waits on the mirror's queue, never the main thread
-        guard !batch.isEmpty, let secret = twinSecret(), let body = try? JSONEncoder().encode(batch),
+        if let w = batch.first(where: { w in w.fl != nil }) { fileSoon(w) }
+        let ready = batch.filter { w in w.fl == nil }
+        guard !ready.isEmpty, let secret = twinSecret(), let body = try? JSONEncoder().encode(ready),
               let dir = try? MontanaBackup.shelf() else { return mirrorQueue.async { mirrorLaying = false } }
         let url = dir.appendingPathComponent(UUID().uuidString + ".twin")
         defer { try? FileManager.default.removeItem(at: url) }
-        guard (try? body.write(to: url)) != nil, var road = await MTKeeping.lay(url) else {
+        guard (try? body.write(to: url)) != nil, var road = await MTKeeping.layOwn(url) else {
             mirrorQueue.async { mirrorLaying = false; mirrorSoon() }
-            return MontanaTrace.mark("twin_mirror", "the words did not reach the nodes n=\(batch.count)")
+            return MontanaTrace.mark("twin_mirror", "the words did not reach the nodes n=\(ready.count)")
         }
-        road["w"] = "lt"; road["n"] = batch.count; road["f"] = writerTagHex()
+        road["w"] = "lt"; road["n"] = ready.count; road["f"] = writerTagHex()
         if twinQuietHere { road["rq"] = 1 }   // this device's extension takes the read word quietly (MTTwinRead)
         MTLinkedDevices.stamp(&road)   // its kind, and the phone's term for its joined devices (OZ 1 p.4)
         guard await MTKeeping.knock(secret, road, silent: true, sender: twinDeviceRef) else {
             mirrorQueue.async { mirrorLaying = false; mirrorSoon() }
-            return MontanaTrace.mark("twin_mirror", "no door boxed the letter n=\(batch.count)")
+            return MontanaTrace.mark("twin_mirror", "no door boxed the letter n=\(ready.count)")
         }
-        let top = batch.compactMap(\.q).max() ?? -1
+        let sent = Set(ready.compactMap(\.q))   // a word whose file is still on its way stays in the queue
         let left: Int = mirrorQueue.sync {   // MAIN-SAFE-SYNC: a detached task waits on the mirror's queue, never the main thread
-            mirror.removeAll { e in (e.q ?? -1) <= top }
+            mirror.removeAll { e in sent.contains(e.q ?? -1) }
             keepMirror()
             mirrorLaying = false
             if !mirror.isEmpty { mirrorSoon(1) }
             return mirror.count
         }
-        MontanaTrace.mark("twin_mirror", "laid words=\(batch.count) left=\(left)")
+        MontanaTrace.mark("twin_mirror", "laid words=\(ready.count) left=\(left)")
     }
     // ── THE PAST THE TWIN MISSED (the author's words 18.10.2026 07:3x UTC: «on T1 there is no media of yesterday 14:33 in the chat, on
     // the Mac there is»; 09:1x «finish and close every item»): the mirror carries what lands from now on; what one device took before
@@ -1371,27 +1424,19 @@ extension MontanaArchive {
         if 0 < f.duration { o["d"] = f.duration }
         // NO ROW IS LOST IN SILENCE (OZ 1, the critic of 22541): a row whose file this device does not hold is given as words with
         // its file's name -- the twin lays it and says the file it has not been given (2401) -- and a file the nodes refused is laid
-        // again, four tries over twelve minutes, each said.
+        // again by the mirror itself from its queue on disk, eight tries, each said (layFile, OZ 1 p.9).
         let url = MontanaMediaStore.url(f.name)
         guard FileManager.default.fileExists(atPath: url.path) else {
             guard let d = try? JSONSerialization.data(withJSONObject: o), let js = String(data: d, encoding: .utf8) else { return }
             mirrorNote(TwinWord(c: chat, m: mid, x: twinRowMark + js, o: own ? 1 : nil, at: at))
             return MontanaTrace.mark("twin_answer", mid: mid, "no file here -- the row is given without it")
         }
-        let given = o
-        Task.detached(priority: .utility) {
-            for (n, wait) in ([0, 30, 120, 600] as [UInt64]).enumerated() {
-                if 0 < wait { try? await Task.sleep(nanoseconds: wait * 1_000_000_000) }
-                guard let road = await MTKeeping.lay(url) else {
-                    MontanaTrace.mark("twin_answer", mid: mid, "a file did not reach the nodes try=\(n + 1)")
-                    continue
-                }
-                var all = given
-                all["road"] = road
-                guard let d = try? JSONSerialization.data(withJSONObject: all), let js = String(data: d, encoding: .utf8) else { return }
-                return mirrorNote(TwinWord(c: chat, m: mid, x: twinRowMark + js, o: own ? 1 : nil, at: at))
-            }
-        }
+        // THE FILE RIDES WITH ITS WORD, ON DISK, ON THE PERSON'S ROAD (OZ 1 p.9, the author's word 23159: «in 2413 the media of
+        // Saved Messages still do not arrive»): the word used to wait in memory for its file, laid as the keeping's quiet cargo
+        // behind the copy's hundreds of pieces -- a run that ended on the way lost the row for good, while the text beside it rode
+        // within a second. The word is queued at once with its file named, and the mirror lays the file before it rides.
+        guard let d = try? JSONSerialization.data(withJSONObject: o), let js = String(data: d, encoding: .utf8) else { return }
+        mirrorNote(TwinWord(c: chat, m: mid, x: twinRowMark + js, o: own ? 1 : nil, at: at, fl: f.name))
     }
 
     /// The words of the seed's other device: each lands here by the one landing road, in the order that device heard them.

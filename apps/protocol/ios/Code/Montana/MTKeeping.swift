@@ -809,6 +809,13 @@ enum MTKeepDerive {
     nonisolated static func lay(_ url: URL) async -> [String: Any]? {
         await MontanaWakePush.$quietCargo.withValue(true) { await layPieces(url) }
     }
+    /// THE PERSON'S OWN FILE ON THE SAME ROAD, NOT QUIET (OZ 1 p.9, the author's word 23159: «in 2413 the media of Saved
+    /// Messages still do not arrive»): a file laid in Saved Messages rides to the seed's other devices as the person's own put,
+    /// and so do the mirror's words. Quiet, they stood in the service's places behind the keeping's copy -- the Mac,
+    /// 16.11.2026 14:34 UTC: a copy of 253 pieces in line, and the photo's word waiting in memory for its file.
+    nonisolated static func layOwn(_ url: URL) async -> [String: Any]? {
+        await MontanaWakePush.$quietCargo.withValue(false) { await layPieces(url) }
+    }
     nonisolated private static func layPieces(_ url: URL) async -> [String: Any]? {
         let size = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int) ?? 0
         guard size > 0, let up = await MontanaMedia.sealAndUpload(source: .file(url), progress: { _ in }) else { return nil }
