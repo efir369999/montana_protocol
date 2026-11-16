@@ -2,6 +2,19 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2407) - 2026-11-16
+
+Source commit `6cd34af09f52`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2407.md).
+
+- While a voice or a video message is being recorded, the screen no longer turns: the recording buttons stay in place under your finger.
+- Nothing else you see changes in Montana: this build separates the Messenger from the protocol core, and Montana keeps its node, its coins and the copies to your own node as before.
+- Please check: start a voice message and a video message, turn the phone during the recording -- the screen stays put and the buttons stay.
+- Please check: a backup and a restore from the 24 words, and the copy kept by the people you write to, work as before.
+
+**Security and anonymity**
+
+- This build changes nothing of security or anonymity in Montana: the screen's turn is held while a message is recorded, and the digest a kept copy and a node's file are checked by moved to one owner, the same SHA-256 byte for byte.
+
 ## 1.0 (2405) - 2026-11-15
 
 Source commit `a9c33f2776a5`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2405.md).
