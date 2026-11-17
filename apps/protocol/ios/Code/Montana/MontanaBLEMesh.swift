@@ -482,8 +482,10 @@ final class MontanaBLEMesh: NSObject {
                       let (mid, text, snm, sgl, qt, qm, _) = MontanaPhoneNode.openBody(sealed, conv: conv),
                       verifySender(env: env, pubkey: pubkey, sig: sig, ref: conv) else { return }
                 MontanaTrace.mark("ble_rx", mid: mid, "dir=in via=bluetooth owners=\(owners)")
+                let au = MontanaPhoneNode.author(of: sealed, conv: conv)   // mine or theirs is told at the one door (receive)
                 DispatchQueue.main.async {
                     var ui: [String: Any] = ["from": conv, "mid": mid, "text": text, "transport": MontanaTransport.bluetooth.rawValue]
+                    if let au { ui["author"] = au }
                     if let n = snm { ui["senderName"] = n }
                     if let g = sgl { ui["senderGlyph"] = g }
                     if let q = qt, !q.isEmpty { ui["quoteText"] = q }

@@ -255,7 +255,8 @@ enum MTTimeChain {
         recount(write: false)
     }
     private func keep() {
-        guard let u = Self.file, let d = try? JSONEncoder().encode(Kept(lane: lane.base64EncodedString(), spans: spans, away: away)) else { return }
+        // No person, nothing kept: after «Delete account» a node's answer wrote the seconds of the one who left back (OZ 1 p.5).
+        guard MontanaSeed.hasSeed, let u = Self.file, let d = try? JSONEncoder().encode(Kept(lane: lane.base64EncodedString(), spans: spans, away: away)) else { return }
         MTDiskDoor.write(d, to: u, "person-kept", options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
     private func keepSoon() {

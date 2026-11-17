@@ -1541,8 +1541,7 @@ enum MTCoinBook {
     @MainActor static func reread() {
         MTCoinVault.shared.forget()
         MTTimeChainTip.shared.reread()
-        MTTimeChain.forget()
-        MTPersonChain.shared.reread()
+        MTTimeChain.forget()   // the person's seconds left memory at the seat's turn itself (MTSeatTurn.seated)
         MTLocalCoinLedger.shared.reread()
         MTCoinBoard.shared.reread()
         MontanaTrace.mark("coin_book", "reread")
