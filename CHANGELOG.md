@@ -2,6 +2,19 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2446) - 2026-11-18
+
+Source commit `17b1f7c4143f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2446.md).
+
+- Restoring your account on a new device now takes your other device's current history and never an older copy.
+- A message you deleted stays deleted when you restore your account on another device, whichever way the history comes back.
+- A chat or group you delete leaves nothing behind on your device and no longer comes back on your other devices.
+- A new device of your account no longer keeps stray pieces of other devices' past, and each device's release-notes channel shows only its own build.
+
+**Security and anonymity**
+
+- Anonymity is unchanged. Security: a new device of your words takes its history only from the picture your own device names for it now, sealed by your seed as before; an older copy is never laid, and a deleted message is refused by every road that brings history back.
+
 ## 1.0 (2427) - 2026-11-17
 
 Source commit `fa789fa012e0`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2427.md).
