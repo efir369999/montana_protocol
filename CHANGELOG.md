@@ -2,6 +2,20 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2454) - 2026-11-19
+
+Source commit `9dc057b70600`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2454.md).
+
+- A link or text you share from another app now shows the time you sent it, not the time the app picked it up, and stands in its place in the chat.
+- Every message wears its own time everywhere -- in the chat, in the list and before the app opens -- so a late arrival no longer changes its time or its place.
+- In a video call your picture's quality now follows what the other person actually receives, not the losses on their own side of the line.
+- A video call whose picture had to stop on a weak network now tries again by itself and brings the picture back when the network allows.
+- After a hold, a reconnection or a screen share the other person's picture is shown again at once, instead of a black screen while the video arrives.
+
+**Security and anonymity**
+
+- Anonymity is unchanged. Security is unchanged: a message's time is read from its own name, as its order already was, and a correspondent's claimed time stays bounded by this phone's clock; a call's quality reads only that call's own reports.
+
 ## 1.0 (2446) - 2026-11-18
 
 Source commit `17b1f7c4143f`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2446.md).
