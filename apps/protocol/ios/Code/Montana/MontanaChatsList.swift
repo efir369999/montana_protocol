@@ -1223,7 +1223,7 @@ struct ChatsListView: View {
                             onSend: { text in
                                 store.seedIfNeeded(s.name)
                                 store.append(s.name, Message(text: text, isFromMe: true,
-                                                             time: nowHHMM(), replyText: "📷 Story",
+                                                             replyText: "📷 Story",
                                                              senderRef: nil))
                                 // reply/reaction to a story → automatically create a chat with the author
                                 ensureChatForStory(s, lastText: text)
@@ -2098,7 +2098,7 @@ extension ChatStore {
                             mediaFile: media?.file,
                             mediaMine: media?.mine ?? false,
                             picture: media.map { MTLetterThumb.stamp(kind: $0.kind, file: $0.file) } ?? -1,
-                            preview: rowPreview(c),
+                            preview: restoringLine(c) ?? rowPreview(c),
                             forced: forcedUnread.contains(c.name),
                             unread: unread(for: c.name),
                             pinned: pinnedChats.contains(c.name))

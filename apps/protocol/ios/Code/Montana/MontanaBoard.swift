@@ -2761,7 +2761,7 @@ enum MTChannelWallFold {
         var laid = 0
         for p in posts.sorted(by: { a, b in a.at < b.at }) {
             guard let mid = name(p), !held.contains(mid), !store.buried(mid, in: key) else { continue }
-            var row = Message(text: p.text, isFromMe: g.mine, time: hhmm(at: p.at), deliveryStatus: .delivered, msgId: mid,
+            var row = Message(text: p.text, isFromMe: g.mine, deliveryStatus: .delivered, msgId: mid,
                               senderRef: g.mine ? nil : MTGroup.speaker(g.id, MTGroup.ownerSeat), createdAt: p.at)
             if let f = file(p) {
                 if f.video { row.videoFile = f.name } else { row.imageFile = f.name }

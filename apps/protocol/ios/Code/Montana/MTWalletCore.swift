@@ -1991,7 +1991,7 @@ struct MTCoinCounts {
     /// receiver's credit stand at that one millisecond -- as a letter's coin does (earn) -- not at two clocks' readings of two moments.
     /// Every other move stands at the millisecond it is made.
     private static func moment(_ ref: String) -> Double {
-        (ref.hasPrefix("mid:t") ? ChatStore.birthMs(fromMid: ref) : nil) ?? MTTimeChain.now()
+        (ref.hasPrefix("mid:t") ? MTMid.birth(ref) : nil) ?? MTTimeChain.now()
     }
 
     func coins(on target: String) -> Int { onTarget[target] ?? 0 }
@@ -2262,7 +2262,7 @@ enum MTCoinSend {
         case .delivered, .read: return true
         case .failed: return false
         case .sending, .sent:
-            guard let born = ChatStore.birthMs(fromMid: m.mid) else { return true }   // a name without its birth: held as before
+            guard let born = MTMid.birth(m.mid) else { return true }   // a name without its birth: held as before
             return Date().timeIntervalSince1970 - born < day
         }
     }
@@ -2350,7 +2350,7 @@ enum MTCoinSend {
     /// under another name is a copy -- pasted, shared in, typed -- and credits nothing. A letter born before it, of a build that named
     /// none of its letters, stands as such letters always did.
     @MainActor static func credits(_ coin: MTCoinLetter, mid: String, from chat: String) -> Bool {
-        let born = ChatStore.birthMs(fromMid: mid) ?? Date().timeIntervalSince1970
+        let born = MTMid.birth(mid) ?? Date().timeIntervalSince1970
         let since = UserDefaults.standard.double(forKey: "coinBinds." + chat)   // 0: the pair never named a letter
         if coin.bound(to: mid) {
             if since == 0 || born < since { UserDefaults.standard.set(born, forKey: "coinBinds." + chat) }
@@ -2419,7 +2419,7 @@ enum MTAutoReact {
     /// A letter of the pair landed (ChatStore, beside a coin letter's credit): a chosen person's fresh letter is paid.
     @MainActor static func landed(_ m: Message, in chat: String, store: ChatStore) {
         guard !m.isFromMe, let r = rule(chat), m.coinLetter == nil, m.gameLetter == nil, !MTRowLetter.ownRow(m.text),
-              let born = ChatStore.birthMs(fromMid: m.mid), r.since <= born, Date().timeIntervalSince1970 - born <= MTCoinSend.fresh,
+              let born = MTMid.birth(m.mid), r.since <= born, Date().timeIntervalSince1970 - born <= MTCoinSend.fresh,
               let c = store.listChats().first(where: { c in c.name == chat }), MTCoinSend.canPay(c, store: store) else { return }
         let conv = c.convId ?? c.name
         Task { @MainActor in

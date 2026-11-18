@@ -1306,7 +1306,7 @@ extension MTMeshRoom {
             return
         }
         store.appendMediaPlaceholder(meshRoomKey, kind: m.kind, name: name, docName: m.fileName.isEmpty ? nil : m.fileName,
-                                     caption: w.text, isFromMe: false, time: "", msgId: mid, senderRef: ref,
+                                     caption: w.text, isFromMe: false, msgId: mid, senderRef: ref,
                                      audioDuration: Double(m.durMs) / 1000)
         store.fillMedia(meshRoomKey, name: name)
         MontanaTrace.mark("mesh_room", "laid item kind=\(m.kind) bytes=\(data.count)")

@@ -2425,6 +2425,8 @@ struct MainTabView: View {
     /// THE QUESTION OF THE COPY WITH CONTACTS (the author's word 08.10.2026 20:2x UTC: «on by default, and a question at the
     /// opening»): asked once, in the platform's own alert, after the system's question of the notifications is settled.
     @State private var keepAsk = false
+    /// THE QUESTION OF THE COPY IN iCLOUD, its own and asked once (OZ 1 p.1.3, the author's word 24571).
+    @State private var cloudAsk = false
     // THE TABS DO NOT WATCH THE CALL (22.09): the minimized pill watches it where it is drawn
     // (MTMinimizedCallLayer). Watched from here, every second of a call ran this body -- and this body
     // carries the chat list, the drawer, the open chat and every page over them.
@@ -2562,15 +2564,22 @@ struct MainTabView: View {
         }
         .onReceive(scheduleTick) { _ in store.fireDueScheduled() }
         .onChange(of: scenePhase) { _, p in   // the system's question answered and the app back: the copy's question follows
-            if p == .active, MontanaSeed.hasSeed, !MTKeeping.told {
-                MontanaNotifyGate.systemStatus { st in if st != .notDetermined { keepAsk = true } }
-            }
+            if p == .active, MontanaSeed.hasSeed { askBackup() }
         }
-        .alert("Keep your copy with your contacts?", isPresented: $keepAsk) {
-            Button("Keep") { MTKeeping.shared.answer(keep: true) }
-            Button("Not now", role: .cancel) { MTKeeping.shared.answer(keep: false) }
+        // TWO QUESTIONS OF A BACKUP, EACH ON ITS OWN AND EACH ASKED ONCE (OZ 1 p.1.3; the author's word 24571: the encrypted copy
+        // kept with the correspondents is one question, the copy in iCloud another): the contacts first, then iCloud; the nodes keep
+        // nothing. Each is in Settings, Data and Storage, as before.
+        .alert("Keep an encrypted copy with your contacts?", isPresented: $keepAsk) {
+            Button("Keep") { MTKeeping.shared.answer(keep: true); askCloudNext() }
+            Button("Not now", role: .cancel) { MTKeeping.shared.answer(keep: false); askCloudNext() }
         } message: {
-            Text("Your copy lives only on phones, never in a cloud: this is Montana's own way of keeping it. It is sealed with your 24 words and cut into parts, and the people you write to keep the parts for you: each sees only a size, never a word. On a new phone your 24 words bring the parts back, and your conversations with them. In the same way this phone keeps sealed parts for your contacts, up to 1 GB, and cannot open them. Both switches are in Settings → Data and Storage.")
+            Text("Your history is sealed with your 24 words and cut into parts; the people you write to keep the parts and see only their size, never a word. On a new phone your 24 words bring your conversations back from them. This phone also keeps sealed parts for your contacts, up to 1 GB, and cannot open them. Montana's nodes keep no copy. It is in Settings → Data and Storage.")
+        }
+        .alert("Keep a copy in iCloud?", isPresented: $cloudAsk) {
+            Button("Keep in iCloud") { MontanaBackupCloud.answered(); chooseCloud() }
+            Button("Not now", role: .cancel) { MontanaBackupCloud.answered() }
+        } message: {
+            Text("Once a day a copy sealed with your 24 words goes to the iCloud storage of your Apple Account; nobody else can open it, and on a new phone your 24 words bring it back. It is in Settings → Data and Storage.")
         }
     }
 
@@ -2604,6 +2613,17 @@ struct MainTabView: View {
         .onChange(of: ui.overlayChat?.id) { _, id in if id != nil { ui.overlayPage = nil } }
     }
 
+    /// THE BACKUP IN iCLOUD, CHOSEN AT ITS OWN QUESTION (OZ 1 p.1.3): the switch of Data and Storage turned on and the daily road
+    /// asked (CopyInventory.tickSoon, which never seals over a copy iCloud holds and this device has not met); where iCloud
+    /// Drive cannot take it, that page opens and its switch says why.
+    private func chooseCloud() {
+        MontanaBackupCloud.ready { r in
+            guard r else { ui.overlayPage = .keeping; return }
+            UserDefaults.standard.set(true, forKey: MontanaBackupCloud.switchKey)
+            CopyInventory.tickSoon()
+        }
+    }
+
     /// Two questions, one at a time, and each explained in our words before the system asks it.
     ///
     /// The direct link goes first because it is what the app is for; notifications wait for it to
@@ -2618,8 +2638,21 @@ struct MainTabView: View {
         MontanaPhoneNode.shared.autoStart()
         MTNotifyAllowed.shared.read("entry")   // asks again while the system holds no answer, not once for ever (06.10)
         // The copy with contacts is asked after the system's own question, never beside it (two windows explain each other away).
-        guard !MTKeeping.told else { return }
-        MontanaNotifyGate.systemStatus { st in if st != .notDetermined { keepAsk = true } }
+        askBackup()
+    }
+
+    /// THE NEXT UNASKED QUESTION OF A BACKUP, ONE AT A TIME (OZ 1 p.1.3): the copy with contacts first, then iCloud, and
+    /// neither beside the system's own question of the notifications.
+    private func askBackup() {
+        MontanaNotifyGate.systemStatus { st in
+            guard st != .notDetermined else { return }
+            if !MTKeeping.told { keepAsk = true } else if MontanaBackupCloud.unasked { cloudAsk = true }
+        }
+    }
+    /// The question of iCloud follows the answer of the contacts once its alert has left the screen.
+    private func askCloudNext() {
+        guard MontanaBackupCloud.unasked else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { cloudAsk = true }
     }
 
     // pick up attachments from the «Share» menu after warming up the E2E session
@@ -3743,7 +3776,12 @@ struct Message: Identifiable, Codable {
     var legacyReplyTo: String? = nil   // read from an old history only: a quote by that old UUID
     var text: String
     let isFromMe: Bool
-    let time: String
+    /// THE ROW'S CLOCK IS ITS BIRTH, ONE OWNER (constitution 15; OZ 1, the author's word 24670, the law of one witness, part 1:
+    /// «the birth time rides with the letter; the row is set everywhere by the envelope's born»). The face of the time used to be a
+    /// second field written by each caller from the clock of the moment it ran (nowHHMM): T1 18.11 01:51:59Z, a link shared at 04:42
+    /// from another app was taken by the app nine minutes later and wore 04:51, so the correspondent's reply of 04:43 stood above
+    /// it. The face is read from createdAt now, and nothing else can write it.
+    var time: String { hhmm(at: createdAt) }
     var reactions: [String] = []     // emoji reactions under the message (multiple allowed)
     // WHOSE REACTION IS WHOSE. The wire says only "add this emoji" / "drop this emoji", as it
     // always has, and old builds keep speaking it unchanged. These two live on this device only,
@@ -3829,16 +3867,17 @@ struct Message: Identifiable, Codable {
         return (a.file, a.kind == "vid")
     }
 
-    init(text: String, isFromMe: Bool, time: String, reactions: [String] = [],
+    init(text: String, isFromMe: Bool, reactions: [String] = [],
          replyText: String? = nil, isRead: Bool = false, imageFile: String? = nil,
          videoFile: String? = nil, audioFile: String? = nil, audioDuration: Double = 0,
          docFile: String? = nil, docName: String? = nil,
          deliveryStatus: DeliveryStatus = .sent, edited: Bool = false,
          msgId: String? = nil, senderRef: String? = nil,
-         createdAt: Double = Date().timeIntervalSince1970, replyToId: MID? = nil, transport: String? = nil,
+         createdAt: Double? = nil, replyToId: MID? = nil, transport: String? = nil,
          fwdFrom: String? = nil, forwarded: Bool = false) {
-        self.mid = msgId ?? ("mid:" + ChatStore.mintMid().mid)
-        self.text = text; self.isFromMe = isFromMe; self.time = time
+        let name = msgId ?? ("mid:" + ChatStore.mintMid().mid)
+        self.mid = name
+        self.text = text; self.isFromMe = isFromMe
         self.reactions = reactions; self.replyText = replyText
         self.isRead = isRead; self.imageFile = imageFile
         self.videoFile = videoFile
@@ -3846,7 +3885,9 @@ struct Message: Identifiable, Codable {
         self.docFile = docFile; self.docName = docName
         self.deliveryStatus = deliveryStatus; self.edited = edited
         self.senderRef = senderRef
-        self.createdAt = createdAt
+        // A moment not given is the letter's own birth, read from its name through the one door that clamps a correspondent's
+        // claim (MTMid.moment); a name minted here was born now.
+        self.createdAt = createdAt ?? MTMid.moment(name, sentAt: nil, own: isFromMe)
         self.replyToId = replyToId
         self.transport = transport
         self.fwdFrom = fwdFrom
@@ -3871,7 +3912,6 @@ struct Message: Identifiable, Codable {
         legacyId = (try? c.decode(UUID.self, forKey: .id))?.uuidString
         text = (try? c.decode(String.self, forKey: .text)) ?? ""
         isFromMe = (try? c.decode(Bool.self, forKey: .isFromMe)) ?? false
-        time = (try? c.decode(String.self, forKey: .time)) ?? ""
         reactions = (try? c.decode([String].self, forKey: .reactions)) ?? []
         replyText = try? c.decode(String.self, forKey: .replyText)
         isRead = (try? c.decode(Bool.self, forKey: .isRead)) ?? false

@@ -32,6 +32,24 @@ VAULT_DIR = os.environ.get("VAULT_DIR", "/var/lib/montana-vault")
 VAULT_SHELF_MAX = int(os.environ.get("VAULT_SHELF_GB", "64")) * (1024 ** 3)   # one shelf's ceiling
 VAULT_FLOOR = int(os.environ.get("VAULT_FLOOR_GB", "10")) * (1024 ** 3)       # the disk keeps this much free
 VAULT_KEEP = 2
+# NO COPY STANDS ON A NODE, AND NOTHING LONGER THAN HOLD (the author's decisions 1060 and 1062, his words 24394, 24402 and 24410,
+# 17.11.2026: «nodes -- blind relays only»; «only the local copy and iCloud»; «by construction they hold nothing longer than 7
+# days»). This node takes no copy any more -- /vault-put and /home-put are refused -- and gives back what an older build laid
+# (/vault-get, /home-get) until HOLD after its laying, when the sweep (hold_gc) takes it; the box, the media and the diaries
+# keep HOLD or shorter.
+HOLD = 7 * 86400
+def hold_gc(now=None):
+    now = time.time() if now is None else now
+    gone = 0
+    for d, _ds, fs in os.walk(VAULT_DIR):
+        for f in fs:
+            p = os.path.join(d, f)
+            try:
+                if os.path.getmtime(p) < now - HOLD: os.unlink(p); gone += 1
+            except OSError:
+                pass
+    if gone: print(f"[vault] hold: {gone} files older than {HOLD // 86400} days removed", flush=True)
+    return gone
 # THE DOOR SPEAKS TLS ITSELF WHEN ASKED (28.09): a node put up from the phone by its address alone has no name and no
 # certificate authority -- the phone pins the certificate the node made for itself at the first meeting and speaks
 # to this port straight, beside the plain port a front such as nginx proxies to.
@@ -72,13 +90,13 @@ DIAG_FORWARD = os.environ.get("DIAG_FORWARD", "")
 # The box is transit, not storage: a letter waits for its receiver ONE DAY (the author's word
 # 08.09). The sender's queue re-posts a queued letter every five minutes while it lives (7 days),
 # so a letter whose sender is alive never ages out; only a letter whose sender is gone does.
-BOX_TTL = int(os.environ.get("BOX_TTL", str(24 * 3600)))
+BOX_TTL = min(HOLD, int(os.environ.get("BOX_TTL", str(24 * 3600))))
 CAP_OF_PATH = {"/fetch": "box", "/box-del": "box", "/wake": "box", "/turn-cred": "turn", "/diag-put": "diag",
                "/blob-put": "blob", "/blob-get": "blob", "/blob-have": "blob", "/blob-drop": "blob",
                "/signal": "signal", "/signal-fetch": "signal", "/signal-last": "signal",
                "/home-put": "vault", "/home-get": "vault", "/home-have": "vault", "/home-drop": "vault"}
 BLOB_MAX  = 12 * 1024 * 1024   # the body of /blob-put: a 512 KiB chunk, its base64 and a margin
-BLOB_TTL  = 7 * 86400          # media lives a week -- the receiver takes it and keeps it
+BLOB_TTL  = HOLD               # media lives a week -- the receiver takes it and keeps it
 # A CARGO CLOSED OR ABANDONED -- THE NODE TELLS ONE FROM THE OTHER WITHOUT KNOWING THE CONTENT (9-D.5).
 # A piece comes with two marks: cg -- a random cargo label (the same on the pieces of one media, tied to
 # nothing), last -- the sign of the last piece. By the label the node keeps only a count and the moment of
@@ -117,7 +135,7 @@ DIAG_BODY = 512 * 1024
 # that kept the newest half are gone, as on the network node; the one ceiling is the tree's (DIAG_TREE, diag_gc), and a write
 # the disk refuses is answered 507, never ok.
 DIAG_TREE = 24 * 1024 * 1024 * 1024
-DIAG_TTL  = 7 * 86400   # sliding window: the author reads a week back, never further
+DIAG_TTL  = HOLD        # sliding window: the author reads a week back, never further
 RE_DG = re.compile(r"^[0-9A-Fa-f-]{8,64}$")
 # AN ADDRESS IS TAKEN FROM NOBODY. The phone has not written one since 1042 -- but the rule lives on the device,
 # and devices can be old or foreign: the measure of 26.08 found 82 addresses in what build 1013 sent. A foreign
@@ -338,6 +356,7 @@ def prune(db, now=None):
     now = int(time.time()) if now is None else now
     blob_gc()
     diag_gc()
+    hold_gc(now)
     db.execute("DELETE FROM box WHERE at < ?", (now - BOX_TTL,))
     db.execute("DELETE FROM siglast WHERE at < ?", (now - BOX_TTL,))
     db.commit()
@@ -457,24 +476,7 @@ class H(BaseHTTPRequestHandler):
         shelf = self._vault_shelf()
         if shelf is None: return self._m(403, self.path, _t0, {"error": "no token"})
         if self.path == "/home-put":
-            bid = str(body.get("bid", "")); b64 = body.get("data", "")
-            if not RE_HBID.match(bid) or not isinstance(b64, str) or not b64:
-                return self._m(400, "/home-put", _t0, {"error": "bad piece"})
-            try: raw = base64.b64decode(b64, validate=True)
-            except Exception: return self._m(400, "/home-put", _t0, {"error": "bad b64"})
-            if not raw or BLOB_MAX < len(raw): return self._m(413, "/home-put", _t0, {"error": "too big"})
-            pth = _home_path(shelf, bid)
-            # A piece is named by its own bytes and laid once. The owner's book of what is where is one record it rewrites
-            # under one name (over): the same room, the old bytes counted out as the new ones are counted in.
-            was = os.path.getsize(pth) if os.path.exists(pth) else 0
-            if was and not body.get("over"): return self._m(200, "/home-put", _t0, {"ok": True, "held": True, "bytes": was})
-            free = self._vault_free(shelf) + was
-            if free < len(raw): return self._m(507, "/home-put", _t0, {"error": "no room", "free": free})
-            os.makedirs(os.path.dirname(pth), exist_ok=True)
-            with open(pth + ".tmp", "wb") as f: f.write(raw)
-            os.replace(pth + ".tmp", pth)
-            _home_add(shelf, len(raw) - was)
-            return self._m(200, "/home-put", _t0, {"ok": True, "held": True, "bytes": len(raw)})
+            return self._m(403, "/home-put", _t0, {"error": "a relay keeps no copy"})   # decision 1060 = a
         if self.path in ("/home-have", "/home-drop"):
             bids = body.get("bids", [])
             if not isinstance(bids, list) or HOME_HAVE_MAX < len(bids):
@@ -501,46 +503,7 @@ class H(BaseHTTPRequestHandler):
     def do_PUT(self):
         path, _q, query = self.path.partition("?")
         if path != "/vault-put": return self._j(404, {"error": "not found"})
-        if "vault" not in CAPS: return self._j(404, {"error": "no such capability here"})
-        shelf = self._vault_shelf()
-        if shelf is None: return self._j(403, {"error": "no token"})
-        args = dict(urllib.parse.parse_qsl(query))
-        name = args.get("name", ""); want = args.get("sha256", "")
-        n = int(self.headers.get("content-length", 0))
-        if not RE_VNAME.match(name) or not RE_VTOKEN.match(want): return self._j(400, {"error": "bad name"})
-        if n == 0 or n != abs(n): return self._j(400, {"error": "no body"})
-        free = self._vault_free(shelf)
-        if min(n, free) != n: return self._j(507, {"error": "no room", "free": free})
-        d = os.path.join(VAULT_DIR, shelf); os.makedirs(d, exist_ok=True)
-        part = os.path.join(d, name + ".part")
-        h = hashlib.sha256(); got = 0
-        self.connection.settimeout(600)
-        try:
-            with open(part, "wb") as f:
-                while got != n:
-                    chunk = self.rfile.read(min(1048576, n - got))
-                    if not chunk: break
-                    f.write(chunk); h.update(chunk); got += len(chunk)
-        except Exception as e:
-            print(f"[vault] put shelf={shelf[:8]} cut: {str(e)[:60]}", flush=True)
-        if got != n:
-            try: os.unlink(part)
-            except OSError: pass
-            return self._j(400, {"error": "cut short", "got": got})
-        digest = h.hexdigest()
-        if digest != want:
-            try: os.unlink(part)
-            except OSError: pass
-            return self._j(400, {"error": "digest differs", "sha256": digest})
-        os.replace(part, os.path.join(d, name))
-        # THE KEEPER'S RULE: the newest VAULT_KEEP stay; older copies leave only once the new one is held whole.
-        held = self._vault_held(shelf)
-        for old in held[VAULT_KEEP:]:
-            try: os.unlink(os.path.join(d, old["name"]))
-            except OSError: pass
-        held = held[:VAULT_KEEP]
-        print(f"[vault] put shelf={shelf[:8]} bytes={n} held={len(held)}", flush=True)
-        return self._j(200, {"ok": True, "name": name, "bytes": n, "sha256": digest, "held": held, "free": self._vault_free(shelf)})
+        return self._j(403, {"error": "a relay keeps no copy"})   # decision 1060 = a: the copy lives on the device and in iCloud
 
     def do_GET(self):
         path, _q, query = self.path.partition("?")
