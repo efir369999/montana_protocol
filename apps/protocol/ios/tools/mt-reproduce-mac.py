@@ -30,7 +30,7 @@
 # Usage, from a clone of montana_protocol (apps/protocol/ios):
 #   python3 tools/mt-reproduce-mac.py --core ../../../protocol/Code --compare MT-Protocol-1.0-N.dmg
 # prints the reproducible digest of the rebuilt app and of the release, and every file that differs. Needs the Xcode, Rust and
-# Go versions the release names (Xcode 26.2 17C52, Rust 1.92.0 with aarch64-apple-ios-macabi, Go from go.mod).
+# Go versions the release names (Xcode: DTXcodeBuild in the release's Info.plist, Rust 1.92.0 with aarch64-apple-ios-macabi, Go from go.mod).
 import argparse
 import fcntl
 import hashlib
