@@ -2,6 +2,20 @@
 
 Every build of MT Protocol for iPhone, iPad and Mac, newest first. The version is the one Settings shows: 1.0 (build). Each entry is written here by the build road before the build is made, from the release notes the build carries; a build whose entry is not on this page is not built. Each build's full notes are in [`doc/release-notes/protocol/ios`](doc/release-notes/protocol/ios).
 
+## 1.0 (2458) - 2026-11-19
+
+Source commit `d5af87c83636`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2458.md).
+
+- In a video call the picture no longer goes dark by itself; on a congested cellular network the video lowers its quality instead of freezing.
+- A call rings sooner: it no longer waits on a server that has just stopped answering, and during a call the app no longer keeps dialling servers that are down.
+- After switching between Wi-Fi and cellular, the app keeps a separate memory of reachable servers for each network and does not carry a dead server over from the other one.
+- A call through a relay checks the encrypted relay route once per network and does not lose time on it where that route is blocked.
+- A muted chat, group or channel no longer counts toward the number on the app icon, the tabs or a notification; its unread count stays on its own row.
+
+**Security and anonymity**
+
+- Anonymity improves: the call relays no longer keep a journal of callers' addresses. Security is unchanged: the relay's pass is issued by one place on each server under the same keys and term, and the encrypted relay route is unchanged.
+
 ## 1.0 (2456) - 2026-11-19
 
 Source commit `6de1580a7cb2`. [Release notes](doc/release-notes/protocol/ios/release-notes-1.0-2456.md).
